@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #091413;
+  --color-foreground: #e8f5ef;
+  --color-card: #0f1f1c;
+  --color-card-hover: #142a26;
+  --color-accent: #408A71;
+  --color-accent-hover: #285A48;
+  --color-accent-light: #B0E4CC;
+  --color-muted: #6b9b8a;
+  --color-border: #1a3029;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Subtle gradient glow */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(64, 138, 113, 0.07), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* Tag scroll container */
+.tags-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tags-scroll::-webkit-scrollbar {
+  display: none;
+}

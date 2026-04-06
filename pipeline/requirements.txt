@@ -1,0 +1,6 @@
+google-api-python-client    # YouTube Data API v3
+youtube-transcript-api      # Transcrições sem OAuth
+anthropic                   # Claude API
+supabase                    # Supabase Python client
+prefect                     # Orquestração de pipeline
+python-dotenv               # Variáveis de ambiente

@@ -1,0 +1,54 @@
+name: Sync Podcasts
+
+on:
+  schedule:
+    # Toda segunda-feira às 9h (horário de Brasília = 12:00 UTC)
+    - cron: "0 12 * * 1"
+  workflow_dispatch: # Permite execução manual pelo GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: pipeline
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync Os Sócios
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python -m flows.sync_podcast_cli \
+            --playlist-id PLczDDIRnclWRAi9rLUxxUHz2j7XSEothf \
+            --podcast-id a1b2c3d4-0000-0000-0000-000000000001 \
+            --max-results 5
+
+      - name: Sync Modern Wisdom
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python -m flows.sync_podcast_cli \
+            --playlist-id PLkL7BvJXiqSSi0RGkgVLMnkQpMskZw_H3 \
+            --podcast-id a939e952-e29e-4201-a099-b56292691ce0 \
+            --max-results 5

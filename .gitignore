@@ -1,41 +1,27 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Environment variables (API keys, secrets)
+.env
+.env.*
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
 
-# testing
-/coverage
+# Node (web/ has its own .gitignore, but just in case)
+node_modules/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# OS
 .DS_Store
-*.pem
+Thumbs.db
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# IDE
+.vscode/
+.idea/
 
-# env files (can opt-in for committing if needed)
-.env*
+# Prefect
+.prefect/
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Cookies (YouTube session)
+cookies.txt
