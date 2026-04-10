@@ -39,7 +39,7 @@ jobs:
           python -m flows.sync_podcast_cli \
             --playlist-id PLczDDIRnclWRAi9rLUxxUHz2j7XSEothf \
             --podcast-id a1b2c3d4-0000-0000-0000-000000000001 \
-            --max-results 5
+            --max-results 10
 
       - name: Sync Modern Wisdom
         env:
@@ -51,4 +51,4 @@ jobs:
           python -m flows.sync_podcast_cli \
             --playlist-id PLkL7BvJXiqSSi0RGkgVLMnkQpMskZw_H3 \
             --podcast-id a939e952-e29e-4201-a099-b56292691ce0 \
-            --max-results 5
+            --max-results 10
