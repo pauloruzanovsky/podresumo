@@ -98,8 +98,10 @@ docutils==0.22.4
     # via rich-rst
 exceptiongroup==1.3.1
     # via prefect
-fakeredis[lua]==2.35.0
-    # via pydocket
+fakeredis[lua]==2.34.1
+    # via
+    #   -r requirements.in
+    #   pydocket
 fastapi==0.135.3
     # via prefect
 fsspec==2026.3.0

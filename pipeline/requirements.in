@@ -5,3 +5,4 @@ supabase                    # Supabase Python client
 prefect                     # Orquestração de pipeline
 python-dotenv               # Variáveis de ambiente
 pywin32 ; sys_platform == "win32"  # Windows-only transitive from docker; marker preserves CI/Linux install
+fakeredis==2.34.1  # pinned: 2.35+ removed FakeConnection breaking pydocket 0.18.x
