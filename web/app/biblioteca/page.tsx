@@ -1,22 +1,38 @@
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import BibliotecaList from "@/components/BibliotecaList";
 
 export const revalidate = 60;
 
-export default async function BibliotecaPage() {
+export const metadata: Metadata = {
+  title: "Biblioteca",
+  description:
+    "Todos os livros citados nos podcasts, com o trecho do episódio e o minuto de cada recomendação.",
+  alternates: { canonical: "/biblioteca" },
+};
+
+export default async function BibliotecaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+
   const { data: livros, error } = await supabase
     .from("livros")
-    .select("id, titulo, autor, episode_livros(episode_id, episodes(podcasts(nome)))")
+    .select(
+      "id, titulo, autor, temas, capa_url, episode_livros(episode_id, contexto, episodes(data, podcasts(nome)))"
+    )
+    .eq("tipo", "livro") // filme/documentário/série citados ficam de fora
     .order("titulo");
 
   if (error) {
-    return <p className="text-red-400">Erro ao carregar livros: {error.message}</p>;
+    return <p className="text-red-600">Erro ao carregar livros: {error.message}</p>;
   }
 
   const livrosProcessados = (livros ?? [])
     .map((livro: any) => {
       const episodeLivros = livro.episode_livros ?? [];
-      // Unique podcast names for this book
       const podcastNames = [
         ...new Set(
           episodeLivros
@@ -24,12 +40,34 @@ export default async function BibliotecaPage() {
             .filter(Boolean) as string[]
         ),
       ];
+      const datas = episodeLivros
+        .map((rel: any) => rel.episodes?.data)
+        .filter((d: unknown): d is string => typeof d === "string");
+      const ultimaData =
+        datas.length > 0
+          ? datas.reduce((a: string, b: string) => (a > b ? a : b))
+          : null;
+      // O contexto é o diferencial do acervo — mostra POR QUE o livro foi
+      // citado. Pega o da citação mais recente que tenha texto.
+      const contexto =
+        [...episodeLivros]
+          .sort((a: any, b: any) =>
+            (b.episodes?.data ?? "") > (a.episodes?.data ?? "") ? 1 : -1
+          )
+          .map((rel: any) => rel.contexto)
+          .find((c: unknown): c is string => typeof c === "string" && c.length > 0) ??
+        null;
+
       return {
         id: livro.id,
         titulo: livro.titulo,
         autor: livro.autor,
         episodios_count: episodeLivros.length,
         podcasts: podcastNames,
+        ultima_data: ultimaData,
+        temas: (livro.temas ?? []) as string[],
+        contexto,
+        capa_url: livro.capa_url ?? null,
       };
     })
     .filter((livro) => livro.episodios_count > 0)
@@ -42,31 +80,39 @@ export default async function BibliotecaPage() {
 
   return (
     <div>
-      {/* Hero */}
-      <div className="text-center mb-14">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
+      {/* Hero — compacto no celular de propósito. Na versão anterior o
+          cabeçalho + stats + filtros ocupavam ~1.600px numa tela de 812px, e
+          nenhum livro aparecia sem rolar. A estante é o produto; ela precisa
+          estar na primeira tela. */}
+      <div className="text-center mb-6 sm:mb-10">
+        <h1 className="font-serif text-3xl sm:text-5xl font-semibold tracking-tight mb-3 sm:mb-4 leading-tight">
           Biblioteca
-          <br />
-          <span className="text-accent">de livros citados.</span>
         </h1>
-        <p className="text-muted text-base max-w-lg mx-auto leading-relaxed">
+        <p className="hidden sm:block text-muted text-base max-w-lg mx-auto leading-relaxed">
           Todos os livros mencionados nos episódios — ordenados por número de citações.
         </p>
 
-        <div className="flex justify-center gap-8 mt-8">
+        {/* No celular os números viram uma linha só, sem o bloco vertical. */}
+        <p className="sm:hidden text-xs text-muted">
+          <span className="font-semibold text-foreground">{livrosProcessados.length}</span> livros
+          {" · "}
+          <span className="font-semibold text-foreground">{totalEpisodes ?? 0}</span> episódios
+        </p>
+
+        <div className="hidden sm:flex justify-center gap-8 mt-8">
           <div>
-            <div className="text-2xl font-bold text-accent-light">{livrosProcessados.length}</div>
+            <div className="text-2xl font-bold text-foreground">{livrosProcessados.length}</div>
             <div className="text-xs text-muted mt-0.5">livros</div>
           </div>
           <div className="w-px bg-border" />
           <div>
-            <div className="text-2xl font-bold text-accent-light">{totalEpisodes ?? 0}</div>
+            <div className="text-2xl font-bold text-foreground">{totalEpisodes ?? 0}</div>
             <div className="text-xs text-muted mt-0.5">episódios</div>
           </div>
         </div>
       </div>
 
-      <BibliotecaList livros={livrosProcessados} />
+      <BibliotecaList livros={livrosProcessados} initialQuery={q ?? ""} />
     </div>
   );
 }

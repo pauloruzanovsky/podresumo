@@ -87,7 +87,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
             placeholder="Buscar por título, convidado..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted/40 outline-none focus:border-accent/40 transition-all"
+            className="w-full pl-11 pr-4 py-3 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted/40 outline-none focus:border-foreground/30 transition-all"
           />
         </div>
 
@@ -97,7 +97,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
             onClick={() => setView("cards")}
             className={`px-3 py-3 transition-colors ${
               view === "cards"
-                ? "bg-accent/15 text-accent-light"
+                ? "bg-card-hover text-foreground"
                 : "text-muted hover:text-foreground"
             }`}
             title="Cards"
@@ -110,7 +110,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
             onClick={() => setView("table")}
             className={`px-3 py-3 transition-colors ${
               view === "table"
-                ? "bg-accent/15 text-accent-light"
+                ? "bg-card-hover text-foreground"
                 : "text-muted hover:text-foreground"
             }`}
             title="Tabela"
@@ -131,8 +131,8 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
               onClick={() => setActivePodcast(activePodcast === name ? null : name)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                 activePodcast === name
-                  ? "bg-accent text-white shadow-[0_0_12px_rgba(64,138,113,0.3)]"
-                  : "bg-card border border-border text-muted hover:text-foreground hover:border-accent/30"
+                  ? "bg-foreground text-background"
+                  : "bg-card border border-border text-muted hover:text-foreground hover:border-foreground/20"
               }`}
             >
               {name}
@@ -154,8 +154,8 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
               onClick={() => setActiveTag(activeTag === tag ? null : tag)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 activeTag === tag
-                  ? "bg-accent text-white shadow-[0_0_12px_rgba(64,138,113,0.3)]"
-                  : "bg-card border border-border text-muted hover:text-foreground hover:border-accent/30"
+                  ? "bg-foreground text-background"
+                  : "bg-card border border-border text-muted hover:text-foreground hover:border-foreground/20"
               }`}
             >
               {tag}
@@ -180,10 +180,10 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
         <span className="text-xs text-muted">
           {filtered.length} episódio{filtered.length !== 1 ? "s" : ""}
           {activePodcast && (
-            <span className="text-accent-light ml-1">· {activePodcast}</span>
+            <span className="text-foreground ml-1">· {activePodcast}</span>
           )}
           {activeTag && (
-            <span className="text-accent-light ml-1">· {activeTag}</span>
+            <span className="text-foreground ml-1">· {activeTag}</span>
           )}
         </span>
       </div>
@@ -218,7 +218,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
               {filtered.map((ep) => (
                 <tr
                   key={ep.id}
-                  className="border-t border-border hover:bg-accent/[0.04] transition-colors"
+                  className="border-t border-border hover:bg-card-hover transition-colors"
                 >
                   <td className="px-4 py-3 text-xs text-muted">
                     {ep.podcast || "—"}
@@ -226,7 +226,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
                   <td className="px-4 py-3">
                     <Link
                       href={`/episodio/${ep.id}`}
-                      className="font-medium text-foreground hover:text-accent-light transition-colors"
+                      className="font-medium text-foreground hover:text-foreground transition-colors"
                     >
                       {ep.titulo}
                     </Link>
@@ -241,7 +241,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
                           <Link
                             key={livro.id}
                             href={`/livro/${livro.id}`}
-                            className="text-xs text-muted hover:text-accent-light transition-colors"
+                            className="text-xs text-muted hover:text-foreground transition-colors"
                           >
                             {livro.titulo}
                           </Link>

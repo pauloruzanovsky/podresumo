@@ -1,17 +1,28 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #091413;
-  --color-foreground: #e8f5ef;
-  --color-card: #0f1f1c;
-  --color-card-hover: #142a26;
-  --color-accent: #408A71;
-  --color-accent-hover: #285A48;
-  --color-accent-light: #B0E4CC;
-  --color-muted: #6b9b8a;
-  --color-border: #1a3029;
+  /* Base neutra: a interface não tem cor própria. O verde fica reservado pra
+     ação (ouvir o trecho, links) e quem colore a página são as capas. */
+  --color-background: #fafaf9;
+  --color-foreground: #18181b;
+  --color-card: #ffffff;
+  --color-card-hover: #f4f4f5;
+  --color-accent: #17795a;
+  --color-accent-hover: #0f5e45;
+  /* Mantém o nome `accent-light` (usado em ~10 arquivos como cor de destaque
+     de texto), mas no tema claro precisa ser mais escuro que `accent` pra ter
+     contraste sobre fundo branco. */
+  --color-accent-light: #0f5e45;
+  --color-muted: #60646c;
+  --color-border: #e5e5e5;
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-source-serif);
   --font-mono: var(--font-geist-mono);
+}
+
+html {
+  /* Faz os controles nativos (select, scrollbar, autofill) renderizarem claros */
+  color-scheme: light;
 }
 
 *,
@@ -23,18 +34,10 @@
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  /* `@theme inline` não emite --font-sans como variável; apontar pra ela
+     aqui caía em silêncio na fonte do sistema. */
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   min-height: 100vh;
-}
-
-/* Subtle gradient glow */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(64, 138, 113, 0.07), transparent);
-  pointer-events: none;
-  z-index: 0;
 }
 
 ::-webkit-scrollbar {

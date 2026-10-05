@@ -72,26 +72,34 @@ def fetch_episodes(playlist_id: str, max_results: int = 10) -> list[dict]:
 
     # 1. Listar os vídeos da playlist
     print(f"📋 Buscando últimos {max_results} vídeos da playlist...")
-    playlist_response = youtube.playlistItems().list(
-        part="snippet",
-        playlistId=playlist_id,
-        maxResults=min(max_results, 50),
-    ).execute()
-
+    # A API devolve no máximo 50 por página; acima disso, segue o token.
     video_ids = []
-    for item in playlist_response["items"]:
-        video_ids.append(item["snippet"]["resourceId"]["videoId"])
+    pagina = None
+    while len(video_ids) < max_results:
+        playlist_response = youtube.playlistItems().list(
+            part="snippet",
+            playlistId=playlist_id,
+            maxResults=min(max_results - len(video_ids), 50),
+            pageToken=pagina,
+        ).execute()
+        for item in playlist_response["items"]:
+            video_ids.append(item["snippet"]["resourceId"]["videoId"])
+        pagina = playlist_response.get("nextPageToken")
+        if not pagina:
+            break
 
-    # 2. Buscar detalhes de cada vídeo (duração)
+    # 2. Buscar detalhes de cada vídeo (duração), também de 50 em 50
     print(f"📊 Buscando detalhes de {len(video_ids)} vídeos...")
-    videos_response = youtube.videos().list(
-        part="snippet,contentDetails",
-        id=",".join(video_ids),
-    ).execute()
+    videos = []
+    for i in range(0, len(video_ids), 50):
+        videos += youtube.videos().list(
+            part="snippet,contentDetails",
+            id=",".join(video_ids[i:i + 50]),
+        ).execute()["items"]
 
     # 3. Montar a lista final
     episodes = []
-    for video in videos_response["items"]:
+    for video in videos:
         titulo = video["snippet"]["title"]
         ep_number = extract_episode_number(titulo)
         episodes.append({
@@ -101,11 +109,28 @@ def fetch_episodes(playlist_id: str, max_results: int = 10) -> list[dict]:
             "data": video["snippet"]["publishedAt"][:10],
             "duracao": parse_duration(video["contentDetails"]["duration"]),
             "thumbnail": video["snippet"]["thumbnails"]["high"]["url"],
-            "descricao": video["snippet"]["description"][:500],
+            # Inteira: a apresentação do convidado vem depois dos anúncios, e
+            # o corte em 500 caracteres parava antes dela.
+            "descricao": video["snippet"]["description"],
         })
 
     print(f"✅ {len(episodes)} episódios extraídos")
     return episodes
+
+
+def fetch_descricoes(video_ids: list[str]) -> dict[str, str]:
+    """Descrição de cada vídeo, por id. Usado pra reprocessar episódios que já
+    estão no banco, onde a descrição não foi guardada. Custa 1 unidade de
+    cota por chamada (50 vídeos), independente do tamanho."""
+    youtube = get_youtube_client()
+    descricoes = {}
+    for i in range(0, len(video_ids), 50):
+        resposta = youtube.videos().list(
+            part="snippet", id=",".join(video_ids[i:i + 50])
+        ).execute()
+        for video in resposta["items"]:
+            descricoes[video["id"]] = video["snippet"]["description"]
+    return descricoes
 
 
 # ─── Teste direto ───

@@ -1,10 +1,14 @@
 name: Sync Podcasts
 
 on:
-  schedule:
-    # Toda segunda-feira às 9h (horário de Brasília = 12:00 UTC)
-    - cron: "0 12 * * 1"
-  workflow_dispatch: # Permite execução manual pelo GitHub
+  # Cron desabilitado: YouTube bloqueia IPs de cloud providers (incluindo GHA runners),
+  # então `youtube-transcript-api` falha com IpBlocked. Sincronização é feita rodando
+  # `python -m flows.sync_podcast_cli ...` local, onde o IP residencial não é bloqueado.
+  # Manter `workflow_dispatch` permite disparar manualmente caso volte a funcionar
+  # ou seja configurado um proxy residencial / self-hosted runner no futuro.
+  # schedule:
+  #   - cron: "0 12 * * 1"  # Toda segunda 12:00 UTC = 9:00 BRT
+  workflow_dispatch:
 
 jobs:
   sync:
