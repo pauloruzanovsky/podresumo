@@ -6,6 +6,10 @@ import Link from "next/link";
 import Image from "next/image";
 import BibliotecaList from "@/components/BibliotecaList";
 import BookCover from "@/components/BookCover";
+import EpisodeIndex from "@/components/EpisodeIndex";
+import Estante, { type LivroNaEstante } from "@/components/Estante";
+import { carregarIndice } from "@/lib/indice";
+import { podcastVisivel } from "@/lib/podcasts";
 
 export const revalidate = 60;
 
@@ -23,14 +27,14 @@ async function carregar(slug: string) {
     .select("id, nome, youtube_channel_id");
 
   const podcast = acharPorSlug(podcasts ?? [], slug);
-  if (!podcast) return null;
+  if (!podcast || !podcastVisivel(podcast.nome)) return null;
 
   // !inner transforma o join em filtro: só citações cujo episódio é deste
   // podcast e cujo livro não é filme/série.
   const { data: rels } = await supabase
     .from("episode_livros")
     .select(
-      "livro_id, episode_id, contexto, citacao_literal, quem_citou, natureza, timestamp_seg, episodes!inner(data, podcast_id, link_youtube), livros!inner(id, titulo, autor, capa_url, temas, tipo)"
+      "livro_id, episode_id, contexto, citacao_literal, quem_citou, natureza, timestamp_seg, episodes!inner(data, podcast_id, link_youtube, ep_number), livros!inner(id, titulo, autor, capa_url, temas, tipo)"
     )
     .eq("episodes.podcast_id", podcast.id)
     .eq("livros.tipo", "livro");
@@ -46,11 +50,17 @@ async function carregar(slug: string) {
     const l = rel.livros;
     if (!l) continue;
     const data = rel.episodes?.data ?? null;
+    const recomenda = rel.natureza === "recomenda";
     const atual = porLivro.get(l.id);
     if (atual) {
       atual.episodios_count += 1;
+      if (recomenda) {
+        atual.recomendacoes += 1;
+        atual.quem_recomendou ??= rel.quem_citou ?? null;
+      }
       if (data && (!atual.ultima_data || data > atual.ultima_data)) {
         atual.ultima_data = data;
+        atual.ultimo_ep = rel.episodes?.ep_number ?? null;
         if (rel.contexto) atual.contexto = rel.contexto;
       }
       atual.contexto ??= rel.contexto ?? null;
@@ -66,6 +76,10 @@ async function carregar(slug: string) {
         podcasts: [podcast.nome],
         ultima_data: data,
         contexto: rel.contexto ?? null,
+        // pras prateleiras do topo
+        recomendacoes: recomenda ? 1 : 0,
+        quem_recomendou: recomenda ? (rel.quem_citou ?? null) : null,
+        ultimo_ep: rel.episodes?.ep_number ?? null,
       });
     }
   }
@@ -231,7 +245,9 @@ function Secao({
 
 export async function generateStaticParams() {
   const { data } = await supabase.from("podcasts").select("nome");
-  return (data ?? []).map((p: any) => ({ slug: slugify(p.nome) }));
+  return (data ?? [])
+    .filter((p: any) => podcastVisivel(p.nome))
+    .map((p: any) => ({ slug: slugify(p.nome) }));
 }
 
 export async function generateMetadata({
@@ -272,9 +288,55 @@ export default async function PodcastPage({
 
   const { podcast, livros, totalEpisodios, destaques, pessoas, autores, temas, episodios } =
     dados;
+  const indice = await carregarIndice(podcast.id);
   const canal = podcast.youtube_channel_id?.startsWith("@")
     ? podcast.youtube_channel_id
     : null;
+
+  // Três prateleiras, sem repetir livro entre elas: os mais citados, os que
+  // alguém indicou com todas as letras, e os que chegaram por último.
+  const POR_PRATELEIRA = 6;
+  const jaNaEstante = new Set<string>();
+  const prateleira = (
+    ordenados: any[],
+    rotulo: (l: any) => string
+  ): LivroNaEstante[] => {
+    const escolhidos = ordenados
+      .filter((l) => !jaNaEstante.has(l.id))
+      .slice(0, POR_PRATELEIRA);
+    escolhidos.forEach((l) => jaNaEstante.add(l.id));
+    return escolhidos.map((l) => ({
+      id: l.id,
+      titulo: l.titulo,
+      autor: l.autor,
+      capa_url: l.capa_url,
+      rotulo: rotulo(l),
+    }));
+  };
+
+  const maisCitados = prateleira(
+    livros.filter((l) => l.episodios_count > 1),
+    (l) => `${l.autor ? `${l.autor} · ` : ""}${l.episodios_count} citações`
+  );
+  const recomendados = prateleira(
+    livros
+      .filter((l) => l.recomendacoes > 0)
+      .sort(
+        (a, b) =>
+          b.recomendacoes - a.recomendacoes ||
+          (b.ultima_data ?? "").localeCompare(a.ultima_data ?? "")
+      ),
+    (l) => (l.quem_recomendou ? `indicado por ${l.quem_recomendou}` : l.autor ?? "")
+  );
+  const recentes = prateleira(
+    [...livros].sort((a, b) =>
+      (b.ultima_data ?? "").localeCompare(a.ultima_data ?? "")
+    ),
+    (l) =>
+      [l.autor, l.ultimo_ep ? `ep. #${l.ultimo_ep}` : null]
+        .filter(Boolean)
+        .join(" · ")
+  );
 
   const totalCitacoes = livros.reduce(
     (soma, l) => soma + l.episodios_count,
@@ -313,12 +375,41 @@ export default async function PodcastPage({
         )}
       </div>
 
+      <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
+      <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
+      <div className="min-w-0">
+
+      <Estante
+        prateleiras={[
+          {
+            titulo: "Os mais citados",
+            subtitulo: "Voltam em mais de uma conversa.",
+            livros: maisCitados,
+          },
+          {
+            titulo: "Indicados com todas as letras",
+            subtitulo: "Alguém no programa disse: leia.",
+            livros: recomendados,
+          },
+          {
+            titulo: "Chegaram agora",
+            subtitulo: "Dos episódios mais recentes.",
+            livros: recentes,
+          },
+        ]}
+      />
+      <p className="-mt-8 sm:-mt-12 mb-12 sm:mb-16 text-sm text-right">
+        <a href="#todos-os-livros" className="text-muted hover:text-foreground underline underline-offset-4">
+          Ver os {livros.length} livros da estante ↓
+        </a>
+      </p>
+
       {destaques.length > 0 && (
         <Secao
           titulo="Nas palavras de quem indicou"
           subtitulo="A fala do episódio, com o minuto pra ouvir."
         >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             {destaques.map((d) => (
               <article
                 key={d.livro_id}
@@ -497,12 +588,17 @@ export default async function PodcastPage({
         </Secao>
       )}
 
-      <Secao
-        titulo="Todos os livros"
-        subtitulo={`${totalCitacoes} citações no total.`}
-      >
-        <BibliotecaList livros={livros} />
-      </Secao>
+      <div id="todos-os-livros" className="scroll-mt-20">
+        <Secao
+          titulo="Todos os livros"
+          subtitulo={`${totalCitacoes} citações no total.`}
+        >
+          <BibliotecaList livros={livros} />
+        </Secao>
+      </div>
+
+      </div>
+      </div>
     </div>
   );
 }

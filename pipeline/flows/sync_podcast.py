@@ -103,7 +103,10 @@ def sync_podcast(
         # Verificar se já existe no banco
         if skip_existing:
             from load.supabase import supabase
-            existing = supabase.table("episodes").select("id").eq("id", video_id).execute()
+            # `listed` e `pending` ainda não foram extraídos: não contam.
+            existing = supabase.table("episodes").select("id").eq(
+                "id", video_id
+            ).eq("status", "done").execute()
             if existing.data:
                 print(f"   ⏭️ Já processado, pulando...")
                 skipped += 1

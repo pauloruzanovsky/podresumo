@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import EpisodeList from "@/components/EpisodeList";
 
 export const revalidate = 60;
@@ -21,7 +22,9 @@ export default async function EpisodiosPage() {
     return <p className="text-red-600">Erro ao carregar episódios: {error.message}</p>;
   }
 
-  const episodesWithBooks = ((episodes ?? []) as any[]).map((ep: any) => ({
+  const episodesWithBooks = ((episodes ?? []) as any[])
+    .filter((ep: any) => podcastVisivel(ep.podcasts?.nome))
+    .map((ep: any) => ({
     ...ep,
     podcast: ep.podcasts?.nome ?? "",
     livros: (ep.episode_livros ?? []).map((rel: any) => ({

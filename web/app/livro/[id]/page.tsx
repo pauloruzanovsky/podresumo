@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCover from "@/components/BookCover";
@@ -26,13 +27,14 @@ export async function generateMetadata({
 
   if (!livro) return { title: "Livro não encontrado" };
 
-  const citacoes = (livro.episode_livros ?? []).length;
+  const rels = ((livro.episode_livros ?? []) as any[]).filter((r) =>
+    podcastVisivel(r.episodes?.podcasts?.nome)
+  );
+  if (rels.length === 0) return { title: "Livro não encontrado" };
+
+  const citacoes = rels.length;
   const podcasts = [
-    ...new Set(
-      (livro.episode_livros ?? [])
-        .map((r: any) => r.episodes?.podcasts?.nome)
-        .filter(Boolean) as string[]
-    ),
+    ...new Set(rels.map((r) => r.episodes?.podcasts?.nome) as string[]),
   ];
 
   const porQuem = podcasts.length ? ` em ${podcasts.join(" e ")}` : "";
@@ -126,7 +128,7 @@ export default async function LivroPage({
   const { data: livro, error } = await supabase
     .from("livros")
     .select(
-      "*, episode_livros(contexto, timestamp_seg, citacao_literal, quem_citou, natureza, episode_id, episodes(titulo, ep_number, data, link_youtube))"
+      "*, episode_livros(contexto, timestamp_seg, citacao_literal, quem_citou, natureza, episode_id, episodes(titulo, ep_number, data, link_youtube, podcasts(nome)))"
     )
     .eq("id", id)
     .single();
@@ -134,6 +136,8 @@ export default async function LivroPage({
   if (error || !livro) return notFound();
 
   const citacoes: Citacao[] = (livro.episode_livros ?? [])
+    // citação de podcast oculto não aparece (lib/podcasts)
+    .filter((rel: any) => podcastVisivel(rel.episodes?.podcasts?.nome))
     .map((rel: any) => ({
       contexto: rel.contexto,
       timestamp_seg: rel.timestamp_seg,
@@ -150,6 +154,9 @@ export default async function LivroPage({
       (a: Citacao, b: Citacao) =>
         new Date(b.data).getTime() - new Date(a.data).getTime()
     );
+
+  // Livro que só foi citado em podcast oculto não tem página.
+  if (citacoes.length === 0) return notFound();
 
   // Livros citados nos mesmos episódios. É a única recomendação que este
   // acervo pode fazer com honestidade: não é "quem leu isso leu aquilo", é

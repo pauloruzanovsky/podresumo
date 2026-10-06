@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import LessonsList from "@/components/LessonsList";
 
 export const revalidate = 60;
@@ -20,6 +21,7 @@ export default async function LessonsPage() {
   }
 
   const lessons = (episodes ?? [])
+    .filter((ep: any) => podcastVisivel(ep.podcasts?.nome))
     .filter((ep: any) => ep.main_insight || ep.main_action)
     .map((ep: any) => ({
       id: ep.id,

@@ -3,6 +3,9 @@ import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
+import EpisodeIndex from "@/components/EpisodeIndex";
+import { carregarIndice } from "@/lib/indice";
+import { podcastVisivel } from "@/lib/podcasts";
 import { notFound } from "next/navigation";
 
 export async function generateMetadata({
@@ -118,12 +121,17 @@ export default async function EpisodioPage({
   const { data: ep, error } = await supabase
     .from("episodes")
     .select(
-      "*, episode_livros(natureza, livros(id, titulo, autor, tipo, capa_url))"
+      "*, podcasts(nome), episode_livros(natureza, livros(id, titulo, autor, tipo, capa_url))"
     )
     .eq("id", id)
     .single();
 
-  if (error || !ep) return notFound();
+  // Só episódio extraído tem página; os catalogados (listed/pending)
+  // aparecem no índice como "em breve". Podcast oculto também não abre.
+  if (error || !ep || ep.status !== "done" || !podcastVisivel(ep.podcasts?.nome))
+    return notFound();
+
+  const indice = await carregarIndice(ep.podcast_id);
 
   const livros: LivroCitado[] = ((ep.episode_livros ?? []) as any[])
     .filter((rel) => rel.livros && rel.livros.tipo === "livro")
@@ -157,7 +165,9 @@ export default async function EpisodioPage({
   const titulo = tituloLimpo(ep.titulo, ep.ep_number);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
+    <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
+    <div className="min-w-0 max-w-4xl">
       <Link
         href="/episodios"
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
@@ -402,6 +412,7 @@ export default async function EpisodioPage({
           </section>
         )}
       </div>
+    </div>
     </div>
   );
 }

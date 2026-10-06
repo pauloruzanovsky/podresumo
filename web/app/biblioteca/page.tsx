@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import BibliotecaList from "@/components/BibliotecaList";
 
 export const revalidate = 60;
@@ -32,7 +33,10 @@ export default async function BibliotecaPage({
 
   const livrosProcessados = (livros ?? [])
     .map((livro: any) => {
-      const episodeLivros = livro.episode_livros ?? [];
+      // citação de podcast oculto não conta (lib/podcasts)
+      const episodeLivros = (livro.episode_livros ?? []).filter((rel: any) =>
+        podcastVisivel(rel.episodes?.podcasts?.nome)
+      );
       const podcastNames = [
         ...new Set(
           episodeLivros
@@ -73,10 +77,13 @@ export default async function BibliotecaPage({
     .filter((livro) => livro.episodios_count > 0)
     .sort((a, b) => b.episodios_count - a.episodios_count);
 
-  const { count: totalEpisodes } = await supabase
+  const { data: feitos } = await supabase
     .from("episodes")
-    .select("*", { count: "exact", head: true })
+    .select("podcasts(nome)")
     .eq("status", "done");
+  const totalEpisodes = ((feitos ?? []) as any[]).filter((e) =>
+    podcastVisivel(e.podcasts?.nome)
+  ).length;
 
   return (
     <div>

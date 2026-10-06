@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
 export const size = OG_SIZE;
@@ -25,7 +26,9 @@ export default async function Image({
 
   if (!livro) return cartaoOg({ titulo: "Livro não encontrado" });
 
-  const citacoes = (livro.episode_livros ?? []) as any[];
+  const citacoes = ((livro.episode_livros ?? []) as any[]).filter((c) =>
+    podcastVisivel(c.episodes?.podcasts?.nome)
+  );
   const podcasts = [
     ...new Set(citacoes.map((c) => c.episodes?.podcasts?.nome).filter(Boolean)),
   ];

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import { SITE_URL } from "@/lib/site";
 import { slugify } from "@/lib/slug";
 
@@ -22,16 +23,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [livrosRes, episodiosRes, podcastsRes] = await Promise.all([
     supabase
       .from("livros")
-      .select("id, episode_livros(episode_id)")
+      .select("id, episode_livros(episodes(podcasts(nome)))")
       .eq("tipo", "livro"),
     supabase
       .from("episodes")
-      .select("id, processed_at")
+      .select("id, processed_at, podcasts(nome)")
       .eq("status", "done"),
     supabase.from("podcasts").select("nome"),
   ]);
 
-  const podcasts: MetadataRoute.Sitemap = (podcastsRes.data ?? []).map((p: any) => ({
+  const podcasts: MetadataRoute.Sitemap = (podcastsRes.data ?? [])
+    .filter((p: any) => podcastVisivel(p.nome))
+    .map((p: any) => ({
     url: `${SITE_URL}/podcast/${slugify(p.nome)}`,
     changeFrequency: "weekly" as const,
     priority: 0.9,
@@ -40,21 +43,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Livro sem citação não aparece no site; listar no sitemap mandaria o
   // Google pra uma página que o próprio app esconde.
   const livros: MetadataRoute.Sitemap = (livrosRes.data ?? [])
-    .filter((l: any) => (l.episode_livros ?? []).length > 0)
+    .filter((l: any) =>
+      (l.episode_livros ?? []).some((r: any) =>
+        podcastVisivel(r.episodes?.podcasts?.nome)
+      )
+    )
     .map((l: any) => ({
       url: `${SITE_URL}/livro/${l.id}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));
 
-  const episodios: MetadataRoute.Sitemap = (episodiosRes.data ?? []).map(
-    (e: any) => ({
+  const episodios: MetadataRoute.Sitemap = (episodiosRes.data ?? [])
+    .filter((e: any) => podcastVisivel(e.podcasts?.nome))
+    .map((e: any) => ({
       url: `${SITE_URL}/episodio/${e.id}`,
       lastModified: e.processed_at ? new Date(e.processed_at) : undefined,
       changeFrequency: "monthly" as const,
       priority: 0.6,
-    })
-  );
+    }));
 
   return [...fixas, ...podcasts, ...livros, ...episodios];
 }

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import { acharPorSlug } from "@/lib/slug";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
@@ -17,7 +18,8 @@ export default async function Image({
   const { slug } = await params;
   const { data: podcasts } = await supabase.from("podcasts").select("id, nome");
   const podcast = acharPorSlug(podcasts ?? [], slug);
-  if (!podcast) return cartaoOg({ titulo: "Podcast não encontrado" });
+  if (!podcast || !podcastVisivel(podcast.nome))
+    return cartaoOg({ titulo: "Podcast não encontrado" });
 
   const [{ data: rels }, { count: episodios }] = await Promise.all([
     supabase

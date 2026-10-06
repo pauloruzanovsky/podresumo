@@ -38,8 +38,12 @@ PAUSA_SEG = 3
 
 def faltantes(playlist_id: str, maximo: int) -> list[dict]:
     eps = fetch_episodes(playlist_id, maximo)
-    no_banco = {e["id"] for e in supabase.table("episodes").select("id").execute().data}
-    return [e for e in eps if e["video_id"] not in no_banco]
+    # `listed` é só catálogo (catalogar_episodios): ainda falta a transcrição.
+    com_transcricao = {
+        e["id"] for e in supabase.table("episodes").select("id, status").execute().data
+        if e["status"] != "listed"
+    }
+    return [e for e in eps if e["video_id"] not in com_transcricao]
 
 
 def main():
@@ -53,7 +57,7 @@ def main():
 
     podcast = acha_podcast(args.podcast)
     novos = faltantes(args.playlist_id, args.max)
-    print(f"\n{len(novos)} episódio(s) fora do banco:")
+    print(f"\n{len(novos)} episódio(s) sem transcrição no banco:")
     for e in novos:
         print(f"  #{e['ep_number']}  {e['data']}  {e['titulo'][:60]}")
     if args.listar or not novos:
@@ -69,7 +73,8 @@ def main():
             sem_transcricao.append(e)
             continue
 
-        supabase.table("episodes").insert({
+        # upsert: o episódio pode já existir como `listed`.
+        supabase.table("episodes").upsert({
             "id": e["video_id"],
             "podcast_id": podcast["id"],
             "ep_number": e["ep_number"],

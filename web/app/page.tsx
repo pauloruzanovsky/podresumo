@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import HomeSearch from "@/components/HomeSearch";
@@ -25,11 +26,15 @@ export default async function Home() {
       )
       .eq("tipo", "livro"), // filme/documentário/série citados ficam de fora
     supabase.from("podcasts").select("id, nome", { count: "exact" }),
-    supabase
-      .from("episodes")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "done"),
+    supabase.from("episodes").select("podcast_id").eq("status", "done"),
   ]);
+
+  // Podcast oculto (lib/podcasts) some de tudo: estantes, contagens e das
+  // citações que fazem um livro aparecer.
+  const visiveis = ((podcastsRes.data ?? []) as any[]).filter((p) =>
+    podcastVisivel(p.nome)
+  );
+  const idsVisiveis = new Set(visiveis.map((p) => p.id));
 
   if (livrosRes.error) {
     return (
@@ -41,7 +46,9 @@ export default async function Home() {
 
   const livros: LivroCard[] = ((livrosRes.data ?? []) as any[])
     .map((livro: any) => {
-      const rels: any[] = livro.episode_livros ?? [];
+      const rels: any[] = (livro.episode_livros ?? []).filter((r: any) =>
+        idsVisiveis.has(r.episodes?.podcast_id)
+      );
       const datas = rels
         .map((r) => r.episodes?.data)
         .filter((d: unknown): d is string => typeof d === "string");
@@ -79,11 +86,13 @@ export default async function Home() {
     .slice(0, 8);
 
   const totalLivros = livros.length;
-  const totalEpisodes = episodesRes.count ?? 0;
-  const totalPodcasts = podcastsRes.count ?? 0;
+  const totalEpisodes = ((episodesRes.data ?? []) as any[]).filter((e) =>
+    idsVisiveis.has(e.podcast_id)
+  ).length;
+  const totalPodcasts = visiveis.length;
   // Uma estante por podcast: quantos livros ela tem e as capas dos mais
   // citados ali, pra prateleira já mostrar o que tem dentro.
-  const estantes = ((podcastsRes.data ?? []) as any[])
+  const estantes = visiveis
     .map((p) => {
       const daqui = ((livrosRes.data ?? []) as any[])
         .map((livro) => ({
@@ -106,7 +115,8 @@ export default async function Home() {
         nome: p.nome as string,
         slug: slugify(p.nome),
         total: daqui.length,
-        capas: daqui.slice(0, 6),
+        // prateleira larga (estante única) comporta mais livros
+        capas: daqui.slice(0, 12),
       };
     })
     .filter((e) => e.total > 0)
@@ -164,7 +174,9 @@ export default async function Home() {
           title="Estantes"
           subtitle="Os livros de cada podcast, na prateleira dele."
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div
+            className={`grid grid-cols-1 gap-5 ${estantes.length > 1 ? "md:grid-cols-2" : ""}`}
+          >
             {estantes.map((e) => (
               <Link
                 key={e.slug}
@@ -173,13 +185,17 @@ export default async function Home() {
               >
                 {/* Livros de pé sobre a prateleira */}
                 <div className="flex items-end gap-2 sm:gap-3 px-1">
-                  {e.capas.map((l) => (
+                  {e.capas.map((l, i) => (
                     <BookCover
                       key={l.id}
                       titulo={l.titulo}
                       autor={l.autor}
                       capaUrl={l.capaUrl}
-                      className="flex-1 min-w-0 max-w-[84px] shadow-md rounded-b-none"
+                      // Seis cabem no celular e em meia largura; os demais só
+                      // entram quando a estante ocupa a linha inteira.
+                      className={`flex-1 min-w-0 max-w-[84px] shadow-md rounded-b-none ${
+                        i >= 6 ? (estantes.length > 1 ? "hidden" : "hidden md:block") : ""
+                      }`}
                     />
                   ))}
                 </div>
