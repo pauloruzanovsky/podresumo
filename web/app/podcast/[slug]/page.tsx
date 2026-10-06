@@ -136,6 +136,29 @@ async function carregar(slug: string) {
     .slice(0, 6)
     .map((a) => ({ nome: a.nome, citacoes: a.citacoes, livros: a.livros.size }));
 
+  // Do que a estante fala: temas dos livros, contando cada livro uma vez.
+  // A extração escreve o mesmo tema com caixa diferente ("Inteligência
+  // artificial" / "Inteligência Artificial"), então junta ignorando a caixa e
+  // exibe a grafia mais usada.
+  const porTema = new Map<string, { livros: number; grafias: Map<string, number> }>();
+  for (const l of livros) {
+    for (const tema of new Set((l.temas as string[]).map((t) => t.trim()).filter(Boolean))) {
+      const chave = tema.toLowerCase();
+      const t = porTema.get(chave) ?? { livros: 0, grafias: new Map() };
+      t.livros += 1;
+      t.grafias.set(tema, (t.grafias.get(tema) ?? 0) + 1);
+      porTema.set(chave, t);
+    }
+  }
+  const temas = [...porTema.values()]
+    .map((t) => ({
+      nome: [...t.grafias.entries()].sort((a, b) => b[1] - a[1])[0][0],
+      livros: t.livros,
+    }))
+    .filter((t) => t.livros > 1)
+    .sort((a, b) => b.livros - a.livros || a.nome.localeCompare(b.nome))
+    .slice(0, 8);
+
   const livrosPorEpisodio = new Map<string, number>();
   for (const r of citacoes)
     livrosPorEpisodio.set(
@@ -166,6 +189,7 @@ async function carregar(slug: string) {
     destaques,
     pessoas,
     autores,
+    temas,
     episodios,
   };
 }
@@ -246,7 +270,7 @@ export default async function PodcastPage({
   const dados = await carregar(slug);
   if (!dados) return notFound();
 
-  const { podcast, livros, totalEpisodios, destaques, pessoas, autores, episodios } =
+  const { podcast, livros, totalEpisodios, destaques, pessoas, autores, temas, episodios } =
     dados;
   const canal = podcast.youtube_channel_id?.startsWith("@")
     ? podcast.youtube_channel_id
@@ -408,6 +432,38 @@ export default async function PodcastPage({
             </Secao>
           )}
         </div>
+      )}
+
+      {temas.length > 2 && (
+        <Secao
+          titulo="Do que essa estante fala"
+          subtitulo="Temas dos livros citados, por número de livros."
+        >
+          {/* Barras horizontais: é ranking de categorias com nome comprido.
+              Uma série só — sem legenda, valor escrito no fim de cada barra. */}
+          <ul className="flex flex-col gap-2.5 max-w-2xl">
+            {temas.map((t) => (
+              <li
+                key={t.nome}
+                title={`${t.nome}: ${t.livros} livros`}
+                className="group grid grid-cols-[minmax(0,11rem)_1fr] sm:grid-cols-[minmax(0,14rem)_1fr] items-center gap-3"
+              >
+                <span className="text-sm truncate group-hover:text-foreground text-foreground/85">
+                  {t.nome}
+                </span>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-3.5 rounded-r-[4px] bg-chart group-hover:opacity-80 transition-opacity"
+                    style={{ width: `${(t.livros / temas[0].livros) * 100}%`, minWidth: 4 }}
+                  />
+                  <span className="text-xs font-mono text-muted tabular-nums">
+                    {t.livros}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Secao>
       )}
 
       {episodios.length > 0 && (

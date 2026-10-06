@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Base neutra: a interface não tem cor própria. O verde fica reservado pra
-     ação (ouvir o trecho, links) e quem colore a página são as capas. */
-  --color-background: #fafaf9;
-  --color-foreground: #18181b;
-  --color-card: #ffffff;
-  --color-card-hover: #f4f4f5;
-  --color-accent: #17795a;
-  --color-accent-hover: #0f5e45;
-  /* Mantém o nome `accent-light` (usado em ~10 arquivos como cor de destaque
-     de texto), mas no tema claro precisa ser mais escuro que `accent` pra ter
-     contraste sobre fundo branco. */
-  --color-accent-light: #0f5e45;
-  --color-muted: #60646c;
-  --color-border: #e5e5e5;
+  /* Papel e tinta: creme quente no fundo, marrom-café no texto, como uma
+     livraria. A interface continua sem cor própria — o verde-garrafa fica
+     reservado pra ação (ouvir o trecho, minuto) e quem colore a página são
+     as capas. */
+  --color-background: #f7f2e8;
+  --color-foreground: #2b2521;
+  --color-card: #fffcf6;
+  --color-card-hover: #f1e9da;
+  --color-accent: #2f6b52;
+  --color-accent-hover: #24543f;
+  /* Mantém o nome `accent-light` (usado como cor de texto de destaque), mas no
+     tema claro precisa ser mais escuro que `accent` pra ter contraste. */
+  --color-accent-light: #24543f;
+  --color-muted: #6b6155;
+  --color-border: #e4d9c7;
+  /* Madeira da prateleira nas estantes da home. */
+  --color-shelf: #c9b28e;
+  /* Marca dos gráficos. Passou no validador de paleta (luminosidade, croma e
+     contraste 3:1 sobre o card) — não trocar no olho. */
+  --color-chart: #b8693d;
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-source-serif);
   --font-mono: var(--font-geist-mono);
@@ -60,3 +66,4 @@ body {
 .tags-scroll::-webkit-scrollbar {
   display: none;
 }
+

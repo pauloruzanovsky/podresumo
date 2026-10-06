@@ -24,7 +24,7 @@ export default async function Home() {
         "id, titulo, autor, capa_url, episode_livros(episode_id, contexto, episodes(data, podcast_id))"
       )
       .eq("tipo", "livro"), // filme/documentário/série citados ficam de fora
-    supabase.from("podcasts").select("nome", { count: "exact" }),
+    supabase.from("podcasts").select("id, nome", { count: "exact" }),
     supabase
       .from("episodes")
       .select("*", { count: "exact", head: true })
@@ -81,9 +81,36 @@ export default async function Home() {
   const totalLivros = livros.length;
   const totalEpisodes = episodesRes.count ?? 0;
   const totalPodcasts = podcastsRes.count ?? 0;
-  const podcastsLista = ((podcastsRes.data ?? []) as any[])
-    .map((p) => ({ nome: p.nome as string, slug: slugify(p.nome) }))
-    .sort((a, b) => a.nome.localeCompare(b.nome));
+  // Uma estante por podcast: quantos livros ela tem e as capas dos mais
+  // citados ali, pra prateleira já mostrar o que tem dentro.
+  const estantes = ((podcastsRes.data ?? []) as any[])
+    .map((p) => {
+      const daqui = ((livrosRes.data ?? []) as any[])
+        .map((livro) => ({
+          id: livro.id as string,
+          titulo: livro.titulo as string,
+          autor: livro.autor as string | null,
+          capaUrl: (livro.capa_url ?? null) as string | null,
+          vezes: ((livro.episode_livros ?? []) as any[]).filter(
+            (r) => r.episodes?.podcast_id === p.id
+          ).length,
+        }))
+        .filter((l) => l.vezes > 0)
+        // capa real primeiro: prateleira de monogramas não convida ninguém
+        .sort(
+          (a, b) =>
+            Number(Boolean(b.capaUrl)) - Number(Boolean(a.capaUrl)) ||
+            b.vezes - a.vezes
+        );
+      return {
+        nome: p.nome as string,
+        slug: slugify(p.nome),
+        total: daqui.length,
+        capas: daqui.slice(0, 6),
+      };
+    })
+    .filter((e) => e.total > 0)
+    .sort((a, b) => b.total - a.total);
 
   return (
     <div>
@@ -130,6 +157,53 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Estantes — a porta de entrada: é por elas que se chega às páginas
+          /podcast, que são o que cada programa tem motivo pra divulgar. */}
+      {estantes.length > 0 && (
+        <Section
+          title="Estantes"
+          subtitle="Os livros de cada podcast, na prateleira dele."
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {estantes.map((e) => (
+              <Link
+                key={e.slug}
+                href={`/podcast/${e.slug}`}
+                className="group block p-5 sm:p-6 bg-card border border-border rounded-2xl hover:bg-card-hover transition-colors"
+              >
+                {/* Livros de pé sobre a prateleira */}
+                <div className="flex items-end gap-2 sm:gap-3 px-1">
+                  {e.capas.map((l) => (
+                    <BookCover
+                      key={l.id}
+                      titulo={l.titulo}
+                      autor={l.autor}
+                      capaUrl={l.capaUrl}
+                      className="flex-1 min-w-0 max-w-[84px] shadow-md rounded-b-none"
+                    />
+                  ))}
+                </div>
+                <div className="h-2 rounded-sm bg-shelf shadow-[0_3px_6px_-2px_rgba(43,37,33,0.35)]" />
+
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="block text-[10px] uppercase tracking-widest text-muted">
+                      A estante de
+                    </span>
+                    <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
+                      {e.nome}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted whitespace-nowrap">
+                    {e.total} livros →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Mais citados */}
       <Section
         title="Mais citados"
@@ -148,28 +222,6 @@ export default async function Home() {
 
       {/* CTA biblioteca */}
       <div className="mt-16 text-center">
-        {/* Uma estante por podcast. Além de ser navegação útil, é o que dá
-            entrada pras páginas /podcast — sem isso elas ficariam órfãs, sem
-            link apontando e sem o Google chegar nelas. */}
-        {podcastsLista.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
-            {podcastsLista.map((p) => (
-              <Link
-                key={p.slug}
-                href={`/podcast/${p.slug}`}
-                className="group px-5 py-3 bg-card border border-border rounded-xl hover:border-foreground/20 hover:bg-card-hover transition-all text-left"
-              >
-                <span className="block text-[10px] uppercase tracking-widest text-muted">
-                  A estante de
-                </span>
-                <span className="block text-sm font-semibold text-foreground group-hover:underline transition-colors">
-                  {p.nome}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-
         <Link
           href="/biblioteca"
           className="inline-flex items-center gap-2 px-5 py-3 bg-card border border-border rounded-xl text-foreground text-sm font-semibold hover:bg-card-hover transition-colors"
@@ -215,7 +267,7 @@ function Section({
   return (
     <section className="mb-14">
       <div className="mb-6">
-        <h2 className="text-xl font-bold tracking-tight mb-1">{title}</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight mb-1">{title}</h2>
         <p className="text-sm text-muted">{subtitle}</p>
       </div>
       {children}

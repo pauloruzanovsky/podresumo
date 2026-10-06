@@ -122,6 +122,14 @@ ALIASES = [
      "A História da Nvidia"],
 ]
 
+# Títulos genéricos que são de fato obras diferentes de autores diferentes.
+# A regra geral (mesmo título = mesmo livro com metadado ruim) erra aqui:
+# Pedro Calmon e Rocha Pombo escreveram cada um a sua "História do Brasil".
+# Com um destes títulos, só se mescla o que tem o mesmo autor.
+TITULOS_HOMONIMOS = {
+    "História do Brasil",
+}
+
 # Entradas que precisam de decisão humana e que o script não tenta consertar.
 REVISAR_MANUAL = {}
 
@@ -238,12 +246,17 @@ def monta_plano(livros):
     ]
     ids_split = {e["id"] for e, _ in splits}
 
+    homonimos = {slug_titulo(t) for t in TITULOS_HOMONIMOS}
+
     grupos = defaultdict(list)
     for e in estado.values():
         if e["id"] in ids_split:
             continue
         slug = slug_titulo(e["titulo"])
-        grupos[alias_de.get(slug, slug)].append(e)
+        chave = alias_de.get(slug, slug)
+        if slug in homonimos:
+            chave = f"{chave}|{chave_autor(e['autor']) if e['autor'] else ''}"
+        grupos[chave].append(e)
 
     merges, incertos = [], []
     for chave, membros in grupos.items():

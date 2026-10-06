@@ -13,10 +13,10 @@ import { SITE_NAME } from "@/lib/site";
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
-const FUNDO = "#fafaf9";
-const TEXTO = "#18181b";
-const APAGADO = "#60646c";
-const VERDE = "#17795a";
+const FUNDO = "#f7f2e8";
+const TEXTO = "#2b2521";
+const APAGADO = "#6b6155";
+const VERDE = "#2f6b52";
 
 /** Título longo quebra o cartão: corta com reticências. */
 function encurta(texto: string, max: number) {
