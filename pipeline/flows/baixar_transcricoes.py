@@ -32,8 +32,20 @@ from load.supabase import supabase
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-# Pausa entre downloads: são dezenas de pedidos seguidos ao mesmo endpoint.
-PAUSA_SEG = 3
+# Pausa entre downloads: são dezenas de pedidos seguidos ao mesmo endpoint, e
+# o YouTube bloqueia o IP quando acha que é robô (na primeira leva, com 3s de
+# pausa, bloqueou depois de ~18).
+PAUSA_SEG = 8
+
+# Vídeos com a legenda desativada no YouTube: não há transcrição pra baixar,
+# hoje ou depois. Ficam fora da fila pra não gastar uma das ~15 tentativas que
+# o YouTube deixa por dia.
+SEM_LEGENDA = {
+    "hR1gy3THj3o",  # #264 — Estados Unidos vs. Venezuela
+}
+
+# Falhas seguidas que indicam bloqueio: insistir só prolonga o castigo.
+MAX_FALHAS_SEGUIDAS = 2
 
 
 def faltantes(playlist_id: str, maximo: int) -> list[dict]:
@@ -43,7 +55,10 @@ def faltantes(playlist_id: str, maximo: int) -> list[dict]:
         e["id"] for e in supabase.table("episodes").select("id, status").execute().data
         if e["status"] != "listed"
     }
-    return [e for e in eps if e["video_id"] not in com_transcricao]
+    return [
+        e for e in eps
+        if e["video_id"] not in com_transcricao and e["video_id"] not in SEM_LEGENDA
+    ]
 
 
 def main():
@@ -52,11 +67,16 @@ def main():
     p.add_argument("--podcast", required=True, help='trecho do nome, ex.: "socios"')
     p.add_argument("--max", type=int, default=50,
                    help="quantos vídeos da playlist olhar, do mais recente pro mais antigo")
+    p.add_argument("--limite", type=int, help="baixa no máximo N nesta rodada")
+    p.add_argument("--pausa", type=int, default=PAUSA_SEG,
+                   help="segundos entre um download e outro")
     p.add_argument("--listar", action="store_true", help="só mostra o que falta")
     args = p.parse_args()
 
     podcast = acha_podcast(args.podcast)
     novos = faltantes(args.playlist_id, args.max)
+    if args.limite and not args.listar:
+        novos = novos[:args.limite]
     print(f"\n{len(novos)} episódio(s) sem transcrição no banco:")
     for e in novos:
         print(f"  #{e['ep_number']}  {e['data']}  {e['titulo'][:60]}")
@@ -64,14 +84,22 @@ def main():
         return
 
     print()
-    salvos, sem_transcricao = 0, []
+    salvos, sem_transcricao, seguidas = 0, [], 0
+    inicio = time.time()
     for i, e in enumerate(novos):
         if i:
-            time.sleep(PAUSA_SEG)
+            time.sleep(args.pausa)
         transcricao = fetch_transcript(e["video_id"])
         if not transcricao:
             sem_transcricao.append(e)
+            seguidas += 1
+            if seguidas >= MAX_FALHAS_SEGUIDAS:
+                print(f"{seguidas} falhas seguidas: provável bloqueio do "
+                      f"YouTube. Parando depois de {i + 1} tentativas em "
+                      f"{int(time.time() - inicio)}s.")
+                break
             continue
+        seguidas = 0
 
         # upsert: o episódio pode já existir como `listed`.
         supabase.table("episodes").upsert({
