@@ -1,0 +1,38 @@
+name: Manter banco ativo
+
+# No plano gratuito o Supabase pausa o projeto depois de uns dias sem uso, e
+# projeto pausado some do DNS: o site e o pipeline caem juntos (aconteceu em
+# outubro de 2026). A rotina diária no Claude também acessa o banco, mas só
+# roda com o computador ligado; esta aqui roda na nuvem do GitHub, sempre.
+#
+# Uma leitura simples basta. Se o banco não responder 200, o job falha e o
+# GitHub manda e-mail — normalmente é pausa: restaurar em supabase.com/dashboard.
+#
+# Atenção: o GitHub desliga workflows agendados de repositórios sem nenhum
+# commit há 60 dias. Se o repositório ficar parado esse tempo, reative em
+# Actions > Manter banco ativo.
+
+on:
+  schedule:
+    - cron: "17 9 * * *" # todo dia 09:17 UTC = 06:17 em Brasília
+  workflow_dispatch:
+
+jobs:
+  ler-banco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ler uma linha do banco
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 \
+            "${SUPABASE_URL%/}/rest/v1/podcasts?select=id&limit=1" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY") || status="sem resposta"
+          echo "Supabase respondeu: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::O banco respondeu '$status'. Se for pausa, restaure o projeto em supabase.com/dashboard."
+            exit 1
+          fi
