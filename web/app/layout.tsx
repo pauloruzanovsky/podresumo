@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_NAME_BASE,
+  SITE_NAME_TLD,
+  SITE_URL,
+} from "@/lib/site";
+import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,13 +65,15 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="max-w-[1200px] mx-auto px-8 lg:px-12 h-14 flex items-center justify-between">
             <Link href="/" className="text-lg font-bold tracking-tight">
-              Pod<span className="text-accent-light">Resumo</span>
+              {/* a marca é o domínio; o ".audio" vai no verde da ação */}
+              <span className="font-serif">{SITE_NAME_BASE}</span>
+              <span className="text-accent-light">{SITE_NAME_TLD}</span>
             </Link>
             {/* "Descobrir" apontava pro mesmo lugar que o logo. Episódios só
                 existia no rodapé. */}
             <nav className="flex items-center gap-1">
               {[
-                { href: "/biblioteca", rotulo: "Livros" },
+                { href: ESTANTE_PRINCIPAL, rotulo: "Estante" },
                 { href: "/episodios", rotulo: "Episódios" },
               ].map((item) => (
                 <Link
@@ -88,13 +97,13 @@ export default function RootLayout({
         <footer className="relative z-10 border-t border-border mt-20">
           <div className="max-w-300 mx-auto px-8 lg:px-12 py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <p className="text-xs text-muted leading-relaxed max-w-md">
-              <span className="font-semibold text-foreground">PodResumo</span>{" "}
+              <span className="font-semibold text-foreground">{SITE_NAME}</span>{" "}
               — os livros citados nos podcasts, com o minuto de cada menção.
               Extraído por IA a partir das transcrições; pode conter erros.
             </p>
             <nav className="flex items-center gap-5 text-xs text-muted">
-              <Link href="/biblioteca" className="hover:text-foreground transition-colors">
-                Livros
+              <Link href={ESTANTE_PRINCIPAL} className="hover:text-foreground transition-colors">
+                Estante
               </Link>
               <Link href="/episodios" className="hover:text-foreground transition-colors">
                 Episódios

@@ -5,7 +5,7 @@ import LessonsList from "@/components/LessonsList";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Lessons Learned — PodResumo",
+  title: "Lessons Learned",
   description: "Insights e ações práticas extraídos de cada episódio.",
 };
 

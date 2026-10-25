@@ -10,6 +10,28 @@ import { supabase } from "@/lib/supabase";
  */
 export const PODCASTS_OCULTOS = ["Modern Wisdom"];
 
+/**
+ * Pra onde vão os links genéricos de "livros" (menu, busca da home, volta da
+ * página do livro). Com um podcast só no site, a estante dele É o acervo — a
+ * antiga /biblioteca era a mesma lista sem o contexto do programa. Quando
+ * voltar a haver mais de um podcast, a biblioteca (no histórico do git, até o
+ * commit 905162b) volta como catálogo que cruza todos.
+ */
+export const ESTANTE_PRINCIPAL = "/podcast/os-socios";
+export const TODOS_OS_LIVROS = `${ESTANTE_PRINCIPAL}#todos-os-livros`;
+
+/**
+ * Quem apresenta o programa. Livro escrito por um deles sai das prateleiras
+ * de destaque e ganha a "menção honrosa": o Bruno cita o próprio livro em
+ * dezenas de episódios, quase sempre divulgando — no ranking geral ele
+ * passava na frente de tudo sem ser indicação de leitura.
+ */
+export const APRESENTADORES = ["Bruno Perini", "Malu Perini"];
+
+export function livroDaCasa(autor?: string | null): boolean {
+  return Boolean(autor) && APRESENTADORES.includes(autor as string);
+}
+
 export function podcastVisivel(nome?: string | null): boolean {
   return Boolean(nome) && !PODCASTS_OCULTOS.includes(nome as string);
 }

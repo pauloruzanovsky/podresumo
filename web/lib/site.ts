@@ -9,12 +9,17 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
-export const SITE_NAME = "PodResumo";
+// O nome é o próprio domínio: "shelf" (estante) + ".audio" (de onde os
+// livros vêm). Funciona igual em português e em inglês, pensando em podcasts
+// de fora no futuro.
+export const SITE_NAME = "shelf.audio";
+export const SITE_NAME_BASE = "shelf";
+export const SITE_NAME_TLD = ".audio";
 
 export const SITE_DESCRIPTION =
-  "Os livros citados nos podcasts que você ouve — com o trecho do episódio e o minuto exato de cada recomendação.";
+  "Os livros citados nos podcasts que você ouve — com o trecho do episódio e o minuto exato de cada citação.";
 
-/** Título de página: "Alguma coisa — PodResumo", sem repetir na home. */
+/** Título de página: "Alguma coisa — shelf.audio", sem repetir na home. */
 export function pageTitle(titulo?: string) {
   return titulo ? `${titulo} — ${SITE_NAME}` : SITE_NAME;
 }

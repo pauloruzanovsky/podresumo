@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { podcastVisivel } from "@/lib/podcasts";
+import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import HomeSearch from "@/components/HomeSearch";
@@ -22,7 +23,7 @@ export default async function Home() {
     supabase
       .from("livros")
       .select(
-        "id, titulo, autor, capa_url, episode_livros(episode_id, contexto, episodes(data, podcast_id))"
+        "id, titulo, autor, capa_url, episode_livros(episode_id, contexto, quem_citou, episodes(data, podcast_id))"
       )
       .eq("tipo", "livro"), // filme/documentário/série citados ficam de fora
     supabase.from("podcasts").select("id, nome", { count: "exact" }),
@@ -76,15 +77,6 @@ export default async function Home() {
     })
     .filter((l) => l.citacoes > 0);
 
-  const maisCitados = [...livros]
-    .sort((a, b) => b.citacoes - a.citacoes || a.titulo.localeCompare(b.titulo))
-    .slice(0, 8);
-
-  const citadosRecentes = [...livros]
-    .filter((l) => l.ultimaData)
-    .sort((a, b) => (b.ultimaData! > a.ultimaData! ? 1 : -1))
-    .slice(0, 8);
-
   const totalLivros = livros.length;
   const totalEpisodes = ((episodesRes.data ?? []) as any[]).filter((e) =>
     idsVisiveis.has(e.podcast_id)
@@ -111,12 +103,44 @@ export default async function Home() {
             Number(Boolean(b.capaUrl)) - Number(Boolean(a.capaUrl)) ||
             b.vezes - a.vezes
         );
+      // Pódio da estante: 3 livros, 3 convidados, 3 autores. Mesmas regras
+      // dos placares da página do podcast — o livro e os nomes de quem
+      // apresenta ficam de fora da disputa.
+      const citacoesDaqui = ((livrosRes.data ?? []) as any[]).flatMap((livro) =>
+        ((livro.episode_livros ?? []) as any[])
+          .filter((r) => r.episodes?.podcast_id === p.id)
+          .map((r) => ({ livro, quem: (r.quem_citou ?? "").trim() }))
+      );
+      const conta = (chaves: string[]) => {
+        const n = new Map<string, number>();
+        for (const k of chaves) n.set(k, (n.get(k) ?? 0) + 1);
+        return [...n.entries()]
+          .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))
+          .slice(0, 3)
+          .map(([nome, vezes]) => ({ nome, vezes }));
+      };
+      const podioLivros = [...daqui]
+        .filter((l) => !livroDaCasa(l.autor))
+        .sort((x, y) => y.vezes - x.vezes || x.titulo.localeCompare(y.titulo))
+        .slice(0, 3);
+      const podioPessoas = conta(
+        citacoesDaqui.map((c) => c.quem).filter((q) => q && !APRESENTADORES.includes(q))
+      );
+      const podioAutores = conta(
+        citacoesDaqui
+          .map((c) => c.livro.autor as string | null)
+          .filter((a): a is string => Boolean(a) && !livroDaCasa(a))
+      );
+
       return {
         nome: p.nome as string,
         slug: slugify(p.nome),
         total: daqui.length,
         // prateleira larga (estante única) comporta mais livros
         capas: daqui.slice(0, 12),
+        podioLivros,
+        podioPessoas,
+        podioAutores,
       };
     })
     .filter((e) => e.total > 0)
@@ -140,7 +164,7 @@ export default async function Home() {
           </span>
         </h1>
         <p className="hidden sm:block text-muted text-lg max-w-xl mx-auto leading-relaxed mb-8">
-          Os livros citados nos podcasts, com a fala de quem indicou e o
+          Os livros citados nos podcasts, com a fala de quem citou e o
           minuto exato pra ouvir.
         </p>
 
@@ -178,86 +202,114 @@ export default async function Home() {
             className={`grid grid-cols-1 gap-5 ${estantes.length > 1 ? "md:grid-cols-2" : ""}`}
           >
             {estantes.map((e) => (
-              <Link
+              <div
                 key={e.slug}
-                href={`/podcast/${e.slug}`}
-                className="group block p-5 sm:p-6 bg-card border border-border rounded-2xl hover:bg-card-hover transition-colors"
+                className="p-5 sm:p-6 bg-card border border-border rounded-2xl"
               >
-                {/* Livros de pé sobre a prateleira */}
-                <div className="flex items-end gap-2 sm:gap-3 px-1">
-                  {e.capas.map((l, i) => (
-                    <BookCover
-                      key={l.id}
-                      titulo={l.titulo}
-                      autor={l.autor}
-                      capaUrl={l.capaUrl}
-                      // Seis cabem no celular e em meia largura; os demais só
-                      // entram quando a estante ocupa a linha inteira.
-                      className={`flex-1 min-w-0 max-w-[84px] shadow-md rounded-b-none ${
-                        i >= 6 ? (estantes.length > 1 ? "hidden" : "hidden md:block") : ""
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="h-2 rounded-sm bg-shelf shadow-[0_3px_6px_-2px_rgba(43,37,33,0.35)]" />
+                <Link href={`/podcast/${e.slug}`} className="group block">
+                  {/* Livros de pé sobre a prateleira */}
+                  <div className="flex items-end gap-2 sm:gap-3 px-1">
+                    {e.capas.map((l, i) => (
+                      <BookCover
+                        key={l.id}
+                        titulo={l.titulo}
+                        autor={l.autor}
+                        capaUrl={l.capaUrl}
+                        // Seis cabem no celular e em meia largura; os demais só
+                        // entram quando a estante ocupa a linha inteira.
+                        className={`flex-1 min-w-0 max-w-[84px] shadow-md rounded-b-none ${
+                          i >= 6 ? (estantes.length > 1 ? "hidden" : "hidden md:block") : ""
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="h-2 rounded-sm bg-shelf shadow-[0_3px_6px_-2px_rgba(43,37,33,0.35)]" />
 
-                <div className="mt-5 flex items-end justify-between gap-4">
-                  <div className="min-w-0">
-                    <span className="block text-[10px] uppercase tracking-widest text-muted">
-                      A estante de
-                    </span>
-                    <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
-                      {e.nome}
+                  <div className="mt-5 flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                      <span className="block text-[10px] uppercase tracking-widest text-muted">
+                        A estante de
+                      </span>
+                      <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
+                        {e.nome}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted whitespace-nowrap">
+                      {e.total} livros →
                     </span>
                   </div>
-                  <span className="text-sm text-muted whitespace-nowrap">
-                    {e.total} livros →
-                  </span>
+                </Link>
+
+                {/* Pódio: o gosto da estante, cada item leva pra ela já filtrada */}
+                <div
+                  className={`grid grid-cols-1 gap-6 mt-6 pt-6 border-t border-border ${
+                    estantes.length > 1 ? "" : "md:grid-cols-3"
+                  }`}
+                >
+                  <Podio titulo="Livros mais citados">
+                    {e.podioLivros.map((l, i) => (
+                      <li key={l.id}>
+                        <Link href={`/livro/${l.id}`} className="group flex items-center gap-3">
+                          <Posicao i={i} />
+                          <BookCover
+                            titulo={l.titulo}
+                            autor={l.autor}
+                            capaUrl={l.capaUrl}
+                            className="w-8 shrink-0 shadow-sm"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium leading-snug line-clamp-1 group-hover:underline">
+                              {l.titulo}
+                            </span>
+                            <span className="block text-xs text-muted">{l.vezes} citações</span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </Podio>
+                  <Podio titulo="Quem mais cita">
+                    {e.podioPessoas.map((pessoa, i) => (
+                      <li key={pessoa.nome}>
+                        <Link
+                          href={`/podcast/${e.slug}?pessoa=${encodeURIComponent(pessoa.nome)}#todos-os-livros`}
+                          className="group flex items-center gap-3"
+                        >
+                          <Posicao i={i} />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium leading-snug truncate group-hover:underline">
+                              {pessoa.nome}
+                            </span>
+                            <span className="block text-xs text-muted">{pessoa.vezes} citações</span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </Podio>
+                  <Podio titulo="Autores que voltam">
+                    {e.podioAutores.map((autor, i) => (
+                      <li key={autor.nome}>
+                        <Link
+                          href={`/podcast/${e.slug}?q=${encodeURIComponent(autor.nome)}#todos-os-livros`}
+                          className="group flex items-center gap-3"
+                        >
+                          <Posicao i={i} />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium leading-snug truncate group-hover:underline">
+                              {autor.nome}
+                            </span>
+                            <span className="block text-xs text-muted">{autor.vezes} citações</span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </Podio>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Mais citados */}
-      <Section
-        title="Mais citados"
-        subtitle="Livros que aparecem em mais episódios — a recomendação que se repete."
-      >
-        <LivroGrid livros={maisCitados} mode="citacoes" />
-      </Section>
-
-      {/* Citados recentemente */}
-      <Section
-        title="Citados recentemente"
-        subtitle="Livros que apareceram nos episódios mais novos."
-      >
-        <LivroGrid livros={citadosRecentes} mode="data" />
-      </Section>
-
-      {/* CTA biblioteca */}
-      <div className="mt-16 text-center">
-        <Link
-          href="/biblioteca"
-          className="inline-flex items-center gap-2 px-5 py-3 bg-card border border-border rounded-xl text-foreground text-sm font-semibold hover:bg-card-hover transition-colors"
-        >
-          Ver biblioteca completa
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </Link>
-      </div>
     </div>
   );
 }
@@ -291,69 +343,13 @@ function Section({
   );
 }
 
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function LivroGrid({
-  livros,
-  mode,
-}: {
-  livros: LivroCard[];
-  mode: "citacoes" | "data";
-}) {
-  if (livros.length === 0) {
-    return (
-      <p className="text-sm text-muted/60 text-center py-8">
-        Nenhum livro ainda.
-      </p>
-    );
-  }
-
+function Podio({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-      {livros.map((livro) => (
-        <Link
-          key={livro.id}
-          href={`/livro/${livro.id}`}
-          className="group flex gap-4 xl:flex-col p-4 bg-card border border-border rounded-2xl hover:border-foreground/20 hover:bg-card-hover transition-all"
-        >
-          <BookCover
-            titulo={livro.titulo}
-            autor={livro.autor}
-            capaUrl={livro.capaUrl}
-            className="w-24 shrink-0 shadow-sm"
-          />
-
-          <div className="min-w-0 flex flex-col">
-            <h3 className="text-sm font-semibold text-foreground group-hover:underline transition-colors leading-snug line-clamp-2">
-              {livro.titulo}
-            </h3>
-            <p className="text-xs text-muted mt-0.5 line-clamp-1">
-              {livro.autor ?? <span className="italic">autor não citado</span>}
-            </p>
-
-            {livro.contexto && (
-              <p className="text-xs text-muted/90 leading-relaxed mt-2 line-clamp-3">
-                {livro.contexto}
-              </p>
-            )}
-
-            <div className="mt-auto pt-2 text-[11px] font-mono text-muted">
-              {mode === "citacoes"
-                ? `${livro.citacoes} citaç${livro.citacoes === 1 ? "ão" : "ões"}`
-                : livro.ultimaData
-                  ? formatDate(livro.ultimaData)
-                  : ""}
-            </div>
-          </div>
-        </Link>
-      ))}
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
+        {titulo}
+      </h3>
+      <ol className="flex flex-col gap-3">{children}</ol>
     </div>
   );
 }

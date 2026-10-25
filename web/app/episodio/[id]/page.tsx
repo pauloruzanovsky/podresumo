@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import EpisodeIndex from "@/components/EpisodeIndex";
+import Estante from "@/components/Estante";
 import { carregarIndice } from "@/lib/indice";
 import { podcastVisivel } from "@/lib/podcasts";
 import { notFound } from "next/navigation";
@@ -93,6 +94,8 @@ interface LivroCitado {
   autor: string | null;
   capa_url: string | null;
   natureza: string | null;
+  quem_citou: string | null;
+  timestamp_seg: number | null;
 }
 
 function Rotulo({ children }: { children: React.ReactNode }) {
@@ -121,7 +124,7 @@ export default async function EpisodioPage({
   const { data: ep, error } = await supabase
     .from("episodes")
     .select(
-      "*, podcasts(nome), episode_livros(natureza, livros(id, titulo, autor, tipo, capa_url))"
+      "*, podcasts(nome), episode_livros(natureza, quem_citou, timestamp_seg, livros(id, titulo, autor, tipo, capa_url))"
     )
     .eq("id", id)
     .single();
@@ -141,11 +144,12 @@ export default async function EpisodioPage({
       autor: rel.livros.autor,
       capa_url: rel.livros.capa_url ?? null,
       natureza: rel.natureza ?? null,
+      quem_citou: rel.quem_citou ?? null,
+      timestamp_seg: rel.timestamp_seg ?? null,
     }))
-    // recomendação primeiro
+    // na ordem em que aparecem na conversa
     .sort(
-      (a, b) =>
-        Number(b.natureza === "recomenda") - Number(a.natureza === "recomenda")
+      (a, b) => (a.timestamp_seg ?? Infinity) - (b.timestamp_seg ?? Infinity)
     );
 
   // A extração às vezes devolve um capítulo fora de ordem; o minuto está
@@ -263,6 +267,34 @@ export default async function EpisodioPage({
         ))}
       </div>
 
+      {/* Os livros vêm antes de tudo que é texto: é o que o site tem de
+          próprio, e no fim da página ninguém chegava neles. */}
+      <Estante
+        prateleiras={[
+          {
+            titulo: `Livros citados neste episódio`,
+            subtitulo:
+              livros.length === 1
+                ? "Toque no livro pra ver o que foi dito, ou no minuto pra ouvir."
+                : `${livros.length} livros, na ordem em que aparecem na conversa.`,
+            livros: livros.map((l) => ({
+              id: l.id,
+              titulo: l.titulo,
+              autor: l.autor,
+              capa_url: l.capa_url,
+              rotulo: l.quem_citou ? `citado por ${l.quem_citou}` : (l.autor ?? ""),
+              minuto:
+                l.timestamp_seg != null && ep.link_youtube
+                  ? {
+                      href: noMinuto(l.timestamp_seg),
+                      texto: formatTimestamp(l.timestamp_seg),
+                    }
+                  : undefined,
+            })),
+          },
+        ]}
+      />
+
       {/* Insight + Ação */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="md:col-span-3 bg-card border border-border rounded-2xl p-6 sm:p-7">
@@ -323,8 +355,8 @@ export default async function EpisodioPage({
         </section>
       )}
 
-      {/* Capítulos (ou tópicos, nos episódios antigos) + Livros */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-12">
+      {/* Capítulos (ou tópicos, nos episódios antigos) */}
+      <div className="max-w-2xl">
         {capitulos.length > 0 ? (
           <section>
             <Rotulo>Capítulos</Rotulo>
@@ -377,40 +409,6 @@ export default async function EpisodioPage({
           )
         )}
 
-        {livros.length > 0 && (
-          <section>
-            <Rotulo>Livros citados ({livros.length})</Rotulo>
-            <div className="flex flex-col gap-3">
-              {livros.map((livro) => (
-                <Link
-                  key={livro.id}
-                  href={`/livro/${livro.id}`}
-                  className="group flex items-center gap-4 p-3 bg-card border border-border rounded-xl hover:bg-card-hover transition-colors"
-                >
-                  <BookCover
-                    titulo={livro.titulo}
-                    autor={livro.autor}
-                    capaUrl={livro.capa_url}
-                    className="w-11 shrink-0 shadow-sm"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-snug group-hover:underline line-clamp-2">
-                      {livro.titulo}
-                    </p>
-                    <p className="text-xs text-muted mt-0.5 line-clamp-1">
-                      {livro.autor ?? "—"}
-                    </p>
-                  </div>
-                  {livro.natureza === "recomenda" && (
-                    <span className="px-2 py-0.5 rounded-full border border-accent/30 bg-accent/5 text-accent-light text-[11px] font-medium whitespace-nowrap">
-                      Recomenda
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </div>
     </div>

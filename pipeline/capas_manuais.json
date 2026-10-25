@@ -1,0 +1,9 @@
+{
+  "_como_usar": "Capa escolhida à mão, que a busca automática nunca sobrescreve. Chave = título do livro como está no site; valor = URL da imagem, ou caminho /capas/arquivo.jpg pra imagem salva em web/public/capas/. Use null pra forçar a capa gerada (sem foto). Depois de editar: python -m flows.backfill_capas",
+  "Como Fazer Amigos e Influenciar Pessoas": "https://books.google.com/books/content?id=m9z6EQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+  "Bíblia": "/capas/biblia.jpg",
+  "Em Nome do Povo": "https://m.media-amazon.com/images/I/91Zffgxa4YL._SL500_.jpg",
+  "O Padrão Fiduciário": "https://m.media-amazon.com/images/I/51PajQt7XwL._SL500_.jpg",
+  "A Era das Máquinas Espirituais": "https://m.media-amazon.com/images/I/7156Nhh95zL._SL500_.jpg",
+  "Almanaque de Naval Ravikant": "https://m.media-amazon.com/images/I/51BHDRSC0xL._SL500_.jpg"
+}

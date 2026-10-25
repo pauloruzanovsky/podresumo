@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
 
 export default function HomeSearch() {
   const [q, setQ] = useState("");
@@ -10,7 +11,9 @@ export default function HomeSearch() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const query = q.trim();
-    router.push(query ? `/biblioteca?q=${encodeURIComponent(query)}` : "/biblioteca");
+    // a lista completa da estante tem o campo de busca; cai direto nela
+    const busca = query ? `?q=${encodeURIComponent(query)}` : "";
+    router.push(`${ESTANTE_PRINCIPAL}${busca}#todos-os-livros`);
   }
 
   return (

@@ -13,8 +13,10 @@ export interface LivroNaEstante {
   titulo: string;
   autor: string | null;
   capa_url: string | null;
-  /** Linha pequena sob o título: "4 citações", "indicado por Bruno Perini". */
+  /** Linha pequena sob o título: "4 citações", "citado por Bruno Perini". */
   rotulo: string;
+  /** Minuto da citação no YouTube; quando existe, vira um link próprio. */
+  minuto?: { href: string; texto: string };
 }
 
 export interface Prateleira {
@@ -47,6 +49,8 @@ export default function Estante({ prateleiras }: { prateleiras: Prateleira[] }) 
           <ul className="grid grid-cols-3 md:grid-cols-6 gap-y-6">
             {p.livros.map((l) => (
               <li key={l.id} className="min-w-0">
+                {/* O livro leva à página dele; o minuto, separado (link dentro
+                    de link não vale), leva direto ao trecho no YouTube. */}
                 <Link href={`/livro/${l.id}`} className="group block">
                   <div className="px-2 sm:px-3">
                     <BookCover
@@ -59,15 +63,31 @@ export default function Estante({ prateleiras }: { prateleiras: Prateleira[] }) 
                   {/* A tábua: claro em cima (a face), escuro embaixo (a quina),
                       e a sombra que ela projeta no fundo do móvel. */}
                   <div className="h-3 bg-gradient-to-b from-[#d9c6a4] via-shelf to-[#a98f68] shadow-[0_7px_9px_-5px_rgba(43,37,33,0.55)]" />
-                  <div className="px-2 sm:px-3 pt-2.5">
-                    <p className="text-xs font-semibold leading-snug line-clamp-2 group-hover:underline">
-                      {l.titulo}
-                    </p>
+                  <p className="px-2 sm:px-3 pt-2.5 text-xs font-semibold leading-snug line-clamp-2 group-hover:underline">
+                    {l.titulo}
+                  </p>
+                </Link>
+                <div className="px-2 sm:px-3">
+                  {l.rotulo && (
                     <p className="text-[11px] text-muted leading-snug mt-0.5 line-clamp-2">
                       {l.rotulo}
                     </p>
-                  </div>
-                </Link>
+                  )}
+                  {l.minuto && (
+                    <a
+                      href={l.minuto.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-1 font-mono text-[11px] font-semibold text-accent-light hover:text-accent"
+                      aria-label={`Ouvir o trecho em ${l.minuto.texto}`}
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      {l.minuto.texto}
+                    </a>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

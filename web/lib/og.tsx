@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME_BASE, SITE_NAME_TLD } from "@/lib/site";
 
 /**
  * Cartão de compartilhamento (Open Graph), 1200×630 — o que aparece quando o
@@ -133,8 +133,8 @@ export function cartaoOg({
           }}
         >
           <div style={{ display: "flex", fontWeight: 700 }}>
-            <span>Pod</span>
-            <span style={{ color: VERDE }}>{SITE_NAME.replace(/^Pod/, "")}</span>
+            <span>{SITE_NAME_BASE}</span>
+            <span style={{ color: VERDE }}>{SITE_NAME_TLD}</span>
           </div>
           {rodape && (
             <div style={{ display: "flex", color: APAGADO }}>{rodape}</div>

@@ -17,7 +17,6 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const fixas: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
-    { url: `${SITE_URL}/biblioteca`, changeFrequency: "daily", priority: 0.9 },
   ];
 
   const [livrosRes, episodiosRes, podcastsRes] = await Promise.all([

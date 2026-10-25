@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { podcastVisivel } from "@/lib/podcasts";
+import { ESTANTE_PRINCIPAL, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCover from "@/components/BookCover";
+import ListaCitacoes from "@/components/ListaCitacoes";
 
 export const revalidate = 60;
 
@@ -101,21 +102,77 @@ interface Citacao {
   link_youtube: string;
 }
 
-const NATUREZA: Record<string, { rotulo: string; classe: string }> = {
-  recomenda: {
-    rotulo: "Recomenda",
-    classe: "border-accent/30 text-accent-light bg-accent/5",
-  },
-  menciona: { rotulo: "Menciona", classe: "border-border text-muted" },
-  critica: {
-    rotulo: "Critica",
-    classe: "border-amber-300 text-amber-800 bg-amber-50",
-  },
-};
-
 /** "TÍTULO | Os Sócios 296" -> "TÍTULO": o número já aparece no selo. */
 function tituloLimpo(titulo: string, epNumber: string | null) {
   return epNumber ? titulo.replace(/\s*\|[^|]*$/, "") : titulo;
+}
+
+const LIMITE_CARDS = 3;
+function linkMinuto(c: Citacao) {
+  return c.timestamp_seg != null ? `${c.link_youtube}&t=${c.timestamp_seg}s` : null;
+}
+
+/** Citação completa: fala em destaque, quem disse, contexto e o botão pro minuto. */
+function CardCitacao({ c }: { c: Citacao }) {
+  const minuto = linkMinuto(c);
+  return (
+    <article className="p-6 sm:p-7 bg-card border border-border rounded-2xl">
+      {c.citacao_literal ? (
+        <>
+          <blockquote className="font-serif text-xl sm:text-2xl leading-snug text-foreground">
+            “{c.citacao_literal}”
+          </blockquote>
+          <div className="flex items-center gap-3 flex-wrap mt-4">
+            {c.quem_citou && (
+              <span className="text-sm font-semibold text-foreground">
+                — {c.quem_citou}
+              </span>
+            )}
+          </div>
+          {c.contexto && (
+            <p className="text-sm text-muted leading-relaxed mt-4">{c.contexto}</p>
+          )}
+        </>
+      ) : (
+        c.contexto && (
+          <p className="text-base text-foreground/80 leading-relaxed">{c.contexto}</p>
+        )
+      )}
+
+      <div className="flex items-center justify-between gap-4 flex-wrap mt-6 pt-5 border-t border-border">
+        <Link
+          href={`/episodio/${c.episode_id}`}
+          className="min-w-0 text-sm text-muted hover:text-foreground transition-colors leading-snug"
+        >
+          {c.ep_number && <span className="font-mono text-xs mr-2">#{c.ep_number}</span>}
+          {tituloLimpo(c.titulo, c.ep_number)}
+          <span className="text-xs text-muted/70 whitespace-nowrap">
+            {" · "}
+            {formatDate(c.data)}
+          </span>
+        </Link>
+
+        {/* O único botão cheio da página: o minuto exato é o que este site
+            tem e os outros não. */}
+        {minuto && (
+          <a
+            href={minuto}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-full transition-colors shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            Ouvir o trecho
+            <span className="font-mono font-normal opacity-90">
+              {formatTimestamp(c.timestamp_seg!)}
+            </span>
+          </a>
+        )}
+      </div>
+    </article>
+  );
 }
 
 export default async function LivroPage({
@@ -157,6 +214,15 @@ export default async function LivroPage({
 
   // Livro que só foi citado em podcast oculto não tem página.
   if (citacoes.length === 0) return notFound();
+
+  // A citação do card de destaque: com fala literal, recomendação antes de
+  // menção, e a mais recente entre as empatadas (a lista já vem por data).
+  const destaque =
+    [...citacoes].sort(
+      (a, b) =>
+        Number(Boolean(b.citacao_literal)) - Number(Boolean(a.citacao_literal)) ||
+        Number(b.natureza === "recomenda") - Number(a.natureza === "recomenda")
+    )[0];
 
   // Livros citados nos mesmos episódios. É a única recomendação que este
   // acervo pode fazer com honestidade: não é "quem leu isso leu aquilo", é
@@ -201,7 +267,7 @@ export default async function LivroPage({
   return (
     <div className="max-w-3xl mx-auto">
       <Link
-        href="/biblioteca"
+        href={ESTANTE_PRINCIPAL}
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
       >
         <svg
@@ -217,7 +283,7 @@ export default async function LivroPage({
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Biblioteca
+        Estante
       </Link>
 
       {/* Header */}
@@ -270,97 +336,27 @@ export default async function LivroPage({
         </div>
       </div>
 
-      {/* Citações */}
+      {/* Citações. Até três, cada uma ganha o card inteiro. Acima disso
+          (há livro com 20), só a melhor fica em destaque e o resto vira uma
+          lista enxuta, uma linha por episódio, com a fala recolhida e filtro
+          por quem citou. */}
       <h2 className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-4">
         O que disseram sobre este livro
       </h2>
 
-      <div className="flex flex-col gap-5">
-        {citacoes.map((c) => {
-          const natureza = c.natureza ? NATUREZA[c.natureza] : null;
-          return (
-            <article
-              key={c.episode_id}
-              className="p-6 sm:p-7 bg-card border border-border rounded-2xl"
-            >
-              {c.citacao_literal ? (
-                <>
-                  <blockquote className="font-serif text-xl sm:text-2xl leading-snug text-foreground">
-                    “{c.citacao_literal}”
-                  </blockquote>
-                  <div className="flex items-center gap-3 flex-wrap mt-4">
-                    {c.quem_citou && (
-                      <span className="text-sm font-semibold text-foreground">
-                        — {c.quem_citou}
-                      </span>
-                    )}
-                    {natureza && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full border text-[11px] font-medium ${natureza.classe}`}
-                      >
-                        {natureza.rotulo}
-                      </span>
-                    )}
-                  </div>
-                  {c.contexto && (
-                    <p className="text-sm text-muted leading-relaxed mt-4">
-                      {c.contexto}
-                    </p>
-                  )}
-                </>
-              ) : (
-                c.contexto && (
-                  <p className="text-base text-foreground/80 leading-relaxed">
-                    {c.contexto}
-                  </p>
-                )
-              )}
+      {citacoes.length <= LIMITE_CARDS ? (
+        <div className="flex flex-col gap-5">
+          {citacoes.map((c) => (
+            <CardCitacao key={c.episode_id} c={c} />
+          ))}
+        </div>
+      ) : (
+        <>
+          <CardCitacao c={destaque} />
 
-              <div className="flex items-center justify-between gap-4 flex-wrap mt-6 pt-5 border-t border-border">
-                <Link
-                  href={`/episodio/${c.episode_id}`}
-                  className="min-w-0 text-sm text-muted hover:text-foreground transition-colors leading-snug"
-                >
-                  {c.ep_number && (
-                    <span className="font-mono text-xs mr-2">
-                      #{c.ep_number}
-                    </span>
-                  )}
-                  {tituloLimpo(c.titulo, c.ep_number)}
-                  <span className="text-xs text-muted/70 whitespace-nowrap">
-                    {" · "}
-                    {formatDate(c.data)}
-                  </span>
-                </Link>
-
-                {/* O único botão cheio da página: o minuto exato é o que este
-                    site tem e os outros não. */}
-                {c.timestamp_seg != null && (
-                  <a
-                    href={`${c.link_youtube}&t=${c.timestamp_seg}s`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-full transition-colors shrink-0"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Ouvir o trecho
-                    <span className="font-mono font-normal opacity-90">
-                      {formatTimestamp(c.timestamp_seg)}
-                    </span>
-                  </a>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+          <ListaCitacoes citacoes={citacoes} />
+        </>
+      )}
 
       {coCitados.length > 0 && (
         <section className="mt-14">

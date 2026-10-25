@@ -67,6 +67,8 @@ PARENTESE_FINAL = re.compile(r"\s*\([^)]*\)\s*$")
 # por título porque a pista original (o campo autor dizia "(filme)") some
 # depois que o autor-lixo vira NULL.
 NAO_LIVRO_TITULOS = {
+    # o Bruno anunciou que vai escrever (#215) — ainda não existe
+    "Manual de Guerrilha para Investidores",
     "A Felicidade Não Se Compra",
     "Children of Men",
     "Love on the Spectrum",
@@ -97,6 +99,11 @@ AUTHOR_FIXES = {
     "Inteligência do Carisma": "Heni Ozi Cukier",
     "Crepúsculo dos Ídolos": "Friedrich Nietzsche",
     "Homens ou Fogo": "S. L. A. Marshall",
+    "Suma Teológica": "Tomás de Aquino",
+    "Guerra e Paz": "Liev Tolstói",
+    "Divina Comédia": "Dante Alighieri",
+    # o almanaque é sobre o Naval, mas quem escreveu foi o Jorgenson
+    "Almanaque de Naval Ravikant": "Eric Jorgenson",
 }
 
 # Uma entrada que na verdade são duas obras. O extrator às vezes junta dois
@@ -120,6 +127,11 @@ ALIASES = [
     # pela descrição que o host deu no ar.
     ["A Máquina que Pensa", "A criação da Nvidia e a máquina de pensar",
      "A História da Nvidia"],
+    # O livro do Bruno, com o título ouvido errado pela transcrição. O
+    # "Inimigos do Povo" é ele divulgando o mesmo livro (ganhar o dinheiro
+    # duas vezes por causa da inflação) no #254.
+    ["Em Nome do Povo", "O Nome do Povo", "Inimigos do Povo"],
+    ["Como Fazer Amigos e Influenciar Pessoas", "Como Fazer Amigos"],
 ]
 
 # Títulos genéricos que são de fato obras diferentes de autores diferentes.
@@ -128,6 +140,13 @@ ALIASES = [
 # Com um destes títulos, só se mescla o que tem o mesmo autor.
 TITULOS_HOMONIMOS = {
     "História do Brasil",
+    # biografias de Ashlee Vance (2015) e Walter Isaacson (2023)
+    "Elon Musk",
+    # o livro do Orwell e a entrada `outro` sem autor, que guarda a carta da
+    # Kinea com tema do filme — juntar as duas promoveria o filme a livro
+    "1984",
+    # a de Homero e "A Odisseia" do Nolan (filme, tipo `outro`)
+    "Odisseia",
 }
 
 # Entradas que precisam de decisão humana e que o script não tenta consertar.
@@ -141,12 +160,16 @@ def sem_acento(s: str) -> str:
 
 
 def slug_titulo(titulo: str) -> str:
-    """Chave de comparação: sem subtítulo, sem acento, sem pontuação."""
+    """Chave de comparação: sem subtítulo, sem acento, sem pontuação e sem
+    artigo inicial."""
     t = titulo.split(":")[0]
     t = re.split(r"\s+[-–—]\s+", t)[0]
     t = sem_acento(t).lower()
     t = re.sub(r"[^\w\s]", " ", t)
-    return re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"\s+", " ", t).strip()
+    # Artigo inicial não distingue livro: "A Psicologia Financeira" e
+    # "Psicologia Financeira" ficavam em grupos separados e nunca se fundiam.
+    return re.sub(r"^(a|o|as|os|um|uma|the|an)\s+", "", t)
 
 
 def chave_autor(autor: str) -> str:
@@ -186,6 +209,8 @@ def escolhe_forma(counter: Counter) -> str:
 def monta_plano(livros):
     """Decide tudo em memória, a partir do snapshot. Não escreve nada."""
     nao_livro_slugs = {slug_titulo(t) for t in NAO_LIVRO_TITULOS}
+    # por chave (sem artigo, acento, subtítulo), não pelo texto exato
+    autor_por_slug = {slug_titulo(t): a for t, a in AUTHOR_FIXES.items()}
 
     estado = {}
     for l in livros:
@@ -203,8 +228,9 @@ def monta_plano(livros):
             or bool(NAO_LIVRO.search(l["titulo"] or ""))
         )
         autor = None if eh_outro else limpa_autor(l.get("autor"))
-        if titulo in AUTHOR_FIXES:
-            autor = AUTHOR_FIXES[titulo]
+        correcao = autor_por_slug.get(slug_titulo(titulo))
+        if correcao:
+            autor = correcao
 
         estado[l["id"]] = {
             "id": l["id"],
@@ -272,8 +298,15 @@ def monta_plano(livros):
         if chave.startswith("alias:"):
             membros.sort(key=lambda m: ordem_alias.get(slug_titulo(m["titulo"]), 99))
         else:
-            # mesmo título: fica o mais curto (sem subtítulo), com mais citações
-            membros.sort(key=lambda m: (len(m["titulo"]), -m["citacoes"]))
+            # mesmo título: fica a forma sem subtítulo e, entre essas, a mais
+            # citada. "Mais curto" sozinho tirava o artigo ("O Padrão Bitcoin"
+            # virava "Padrão Bitcoin") desde que a chave passou a ignorá-lo.
+            def tem_subtitulo(m):
+                return bool(re.search(r":|\s[-–—]\s", m["titulo"]))
+
+            membros.sort(
+                key=lambda m: (tem_subtitulo(m), -m["citacoes"], len(m["titulo"]))
+            )
 
         canonico, duplicatas = membros[0], membros[1:]
         canonico["autor"] = " / ".join(autores) if autores else None
@@ -282,6 +315,8 @@ def monta_plano(livros):
         for d in duplicatas:
             if d["titulo"] != canonico["titulo"]:
                 canonico["titulo_alt"].append(d["titulo"])
+            # os títulos que a duplicata já tinha absorvido também vêm junto
+            canonico["titulo_alt"].extend(d["titulo_alt"])
         # Só continua sendo 'outro' se nenhum membro do grupo era livro: "A
         # Grande Aposta" existe como livro do Michael Lewis e como filme, e a
         # entrada do filme não pode contaminar a do livro.

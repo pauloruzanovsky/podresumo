@@ -47,6 +47,20 @@ CAPA = "https://covers.openlibrary.org/b/id/{}-M.jpg"
 UA = "PodResumo/1.0 (acervo de livros citados em podcasts)"
 PAUSA = 0.35  # gentileza com uma API pública e gratuita
 
+# Capas escolhidas à mão (ver o próprio arquivo pra como usar). Valem acima
+# de qualquer busca e nunca são sobrescritas.
+CAPAS_MANUAIS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "capas_manuais.json"
+)
+
+
+def capas_manuais() -> dict:
+    if not os.path.exists(CAPAS_MANUAIS):
+        return {}
+    with open(CAPAS_MANUAIS, encoding="utf-8") as f:
+        return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+
+
 GOOGLE = "https://www.googleapis.com/books/v1/volumes"
 # Sem chave o Google Books usa uma cota anônima compartilhada pelo mundo
 # inteiro, que vive estourada (429 na primeira chamada). Com chave a cota é
@@ -89,7 +103,9 @@ def combina(doc: dict, titulo: str, autor: str | None) -> bool:
         partes = normaliza(autor).split()
         sobrenome = partes[-1] if partes else ""
         autores = " ".join(normaliza(a) for a in (doc.get("author_name") or []))
-        if sobrenome and autores and sobrenome not in autores:
+        # Resultado sem autor nenhum também não passa: foi assim que uma
+        # edição anônima de "Como Fazer Amigos" entrou com foto de cachorro.
+        if sobrenome and sobrenome not in autores:
             return False
 
     return True
@@ -215,7 +231,18 @@ def main():
 
     # Só livros que aparecem no site — não gastar requisição com órfão.
     livros = [l for l in resp.data if (l.get("episode_livros") or [])]
-    alvos = livros if args.refazer else [l for l in livros if not l.get("capa_url")]
+    manuais = capas_manuais()
+    if manuais and not args.simular:
+        for livro in livros:
+            if livro["titulo"] in manuais and livro.get("capa_url") != manuais[livro["titulo"]]:
+                supabase.table("livros").update(
+                    {"capa_url": manuais[livro["titulo"]]}
+                ).eq("id", livro["id"]).execute()
+                livro["capa_url"] = manuais[livro["titulo"]]
+                print(f"  capa manual: {livro['titulo']}")
+    livros_busca = [l for l in livros if l["titulo"] not in manuais]
+
+    alvos = livros_busca if args.refazer else [l for l in livros_busca if not l.get("capa_url")]
     if args.limite:
         alvos = alvos[:args.limite]
 

@@ -4,7 +4,7 @@ import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
-export const alt = "PodResumo — os livros citados nos podcasts";
+export const alt = "shelf.audio — os livros citados nos podcasts";
 export const revalidate = 3600;
 
 /** Cartão da home, e o padrão de toda página que não tem o seu. */
