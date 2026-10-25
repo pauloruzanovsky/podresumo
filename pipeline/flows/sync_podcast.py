@@ -10,7 +10,7 @@ import unicodedata
 from prefect import flow, task
 from extract.youtube import fetch_episodes
 from extract.transcript import fetch_transcript
-from transform.claude import process_transcript
+from transform.claude import extrator, process_transcript
 from load.supabase import save_episode
 
 
@@ -58,15 +58,15 @@ def task_fetch_transcript(video_id: str) -> str:
 
 
 @task(name="process-with-ai", retries=1, retry_delay_seconds=30)
-def task_process_with_ai(transcript: str, titulo: str) -> dict:
+def task_process_with_ai(transcript: str, titulo: str, descricao: str = None) -> dict:
     """Processa transcrição com Claude."""
-    return process_transcript(transcript, titulo)
+    return process_transcript(transcript, titulo, descricao=descricao)
 
 
 @task(name="save-to-db", retries=2, retry_delay_seconds=5)
 def task_save_to_db(video_id: str, podcast_id: str, metadata: dict, ai_data: dict, transcript: str = None):
     """Salva episódio no Supabase."""
-    save_episode(video_id, podcast_id, metadata, ai_data, transcript)
+    save_episode(video_id, podcast_id, metadata, ai_data, transcript, extrator())
 
 
 @flow(name="sync-podcast", log_prints=True)
@@ -103,7 +103,10 @@ def sync_podcast(
         # Verificar se já existe no banco
         if skip_existing:
             from load.supabase import supabase
-            existing = supabase.table("episodes").select("id").eq("id", video_id).execute()
+            # `listed` e `pending` ainda não foram extraídos: não contam.
+            existing = supabase.table("episodes").select("id").eq(
+                "id", video_id
+            ).eq("status", "done").execute()
             if existing.data:
                 print(f"   ⏭️ Já processado, pulando...")
                 skipped += 1
@@ -124,7 +127,7 @@ def sync_podcast(
         ai_data = None
         for attempt in range(3):
             try:
-                ai_data = task_process_with_ai(transcript, titulo)
+                ai_data = task_process_with_ai(transcript, titulo, ep.get("descricao"))
                 break
             except Exception as e:
                 if "rate_limit" in str(e) and attempt < 2:
@@ -137,9 +140,13 @@ def sync_podcast(
             print(f"   ⚠️ Erro no processamento IA, pulando...")
             continue
 
-        # 3.5. ENRICH — buscar timestamps reais dos livros na transcrição
+        # 3.5. ENRICH — a extração já devolve o minuto ("timestamp"), copiado
+        # da linha da transcrição. A busca por palavra-chave fica só de
+        # reserva pra obra que veio sem ele: ela erra justamente nos livros
+        # citados por descrição.
         for livro in ai_data.get("livros", []):
-            livro["timestamp_seg"] = _find_timestamp(transcript, livro["titulo"])
+            if not livro.get("timestamp"):
+                livro["timestamp_seg"] = _find_timestamp(transcript, livro["titulo"])
 
         # 4. LOAD — salvar no banco
         metadata = {
