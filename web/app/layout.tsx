@@ -4,8 +4,8 @@ import Link from "next/link";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
-  SITE_NAME_BASE,
-  SITE_NAME_TLD,
+  SITE_NAME_POD,
+  SITE_NAME_LIBRIS,
   SITE_URL,
 } from "@/lib/site";
 import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
@@ -65,9 +65,9 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="max-w-[1200px] mx-auto px-8 lg:px-12 h-14 flex items-center justify-between">
             <Link href="/" className="text-lg font-bold tracking-tight">
-              {/* a marca é o domínio; o ".audio" vai no verde da ação */}
-              <span className="font-serif">{SITE_NAME_BASE}</span>
-              <span className="text-accent-light">{SITE_NAME_TLD}</span>
+              {/* "libris" no verde da ação */}
+              <span className="font-serif">{SITE_NAME_POD}</span>
+              <span className="text-accent-light">{SITE_NAME_LIBRIS}</span>
             </Link>
             {/* "Descobrir" apontava pro mesmo lugar que o logo. Episódios só
                 existia no rodapé. */}
