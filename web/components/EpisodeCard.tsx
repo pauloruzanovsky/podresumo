@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hrefEpisodio } from "@/lib/links";
 import Image from "next/image";
 
 interface EpisodeCardProps {
@@ -28,7 +29,7 @@ function formatDate(dateStr: string) {
 
 export default function EpisodeCard({ episode }: EpisodeCardProps) {
   return (
-    <Link href={`/episodio/${episode.id}`}>
+    <Link href={hrefEpisodio(episode)}>
       <div className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-foreground/20 transition-all duration-300 cursor-pointer">
         {/* Thumbnail */}
         {episode.thumbnail && (

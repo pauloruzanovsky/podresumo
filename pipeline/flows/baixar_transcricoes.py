@@ -117,6 +117,10 @@ def main():
         salvos += 1
 
     print(f"\n=== {salvos} transcrição(ões) salva(s) como pending ===")
+    if salvos:
+        # endereço legível pros episódios que acabaram de entrar
+        from flows.preencher_slugs import main as preencher_slugs
+        preencher_slugs()
     if sem_transcricao:
         print(f"{len(sem_transcricao)} sem transcrição disponível:")
         for e in sem_transcricao:

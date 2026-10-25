@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import { SITE_URL } from "@/lib/site";
+import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import { slugify } from "@/lib/slug";
 
 // Revalida junto com as páginas: o sitemap precisa acompanhar livro novo
@@ -22,11 +23,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [livrosRes, episodiosRes, podcastsRes] = await Promise.all([
     supabase
       .from("livros")
-      .select("id, episode_livros(episodes(podcasts(nome)))")
+      .select("id, slug, episode_livros(episodes(podcasts(nome)))")
       .eq("tipo", "livro"),
     supabase
       .from("episodes")
-      .select("id, processed_at, podcasts(nome)")
+      .select("id, slug, processed_at, podcasts(nome)")
       .eq("status", "done"),
     supabase.from("podcasts").select("nome"),
   ]);
@@ -48,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       )
     )
     .map((l: any) => ({
-      url: `${SITE_URL}/livro/${l.id}`,
+      url: `${SITE_URL}${hrefLivro(l)}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));
@@ -56,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const episodios: MetadataRoute.Sitemap = (episodiosRes.data ?? [])
     .filter((e: any) => podcastVisivel(e.podcasts?.nome))
     .map((e: any) => ({
-      url: `${SITE_URL}/episodio/${e.id}`,
+      url: `${SITE_URL}${hrefEpisodio(e)}`,
       lastModified: e.processed_at ? new Date(e.processed_at) : undefined,
       changeFrequency: "monthly" as const,
       priority: 0.6,

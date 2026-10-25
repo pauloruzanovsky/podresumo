@@ -5,6 +5,7 @@ import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import HomeSearch from "@/components/HomeSearch";
 import { slugify } from "@/lib/slug";
+import { hrefLivro } from "@/lib/links";
 
 export const revalidate = 60;
 
@@ -23,7 +24,7 @@ export default async function Home() {
     supabase
       .from("livros")
       .select(
-        "id, titulo, autor, capa_url, episode_livros(episode_id, contexto, quem_citou, episodes(data, podcast_id))"
+        "id, slug, titulo, autor, capa_url, episode_livros(episode_id, contexto, quem_citou, episodes(data, podcast_id))"
       )
       .eq("tipo", "livro"), // filme/documentário/série citados ficam de fora
     supabase.from("podcasts").select("id, nome", { count: "exact" }),
@@ -89,6 +90,7 @@ export default async function Home() {
       const daqui = ((livrosRes.data ?? []) as any[])
         .map((livro) => ({
           id: livro.id as string,
+          slug: (livro.slug ?? null) as string | null,
           titulo: livro.titulo as string,
           autor: livro.autor as string | null,
           capaUrl: (livro.capa_url ?? null) as string | null,
@@ -249,7 +251,7 @@ export default async function Home() {
                   <Podio titulo="Livros mais citados">
                     {e.podioLivros.map((l, i) => (
                       <li key={l.id}>
-                        <Link href={`/livro/${l.id}`} className="group flex items-center gap-3">
+                        <Link href={hrefLivro(l)} className="group flex items-center gap-3">
                           <Posicao i={i} />
                           <BookCover
                             titulo={l.titulo}

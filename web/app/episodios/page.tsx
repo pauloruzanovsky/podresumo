@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function EpisodiosPage() {
   const { data: episodes, error } = await supabase
     .from("episodes")
-    .select("id, titulo, data, duracao, thumbnail, resumo, main_insight, main_action, tags, convidados, ep_number, podcasts(nome), episode_livros(livro_id, livros(titulo, autor))")
+    .select("id, slug, titulo, data, duracao, thumbnail, resumo, main_insight, main_action, tags, convidados, ep_number, podcasts(nome), episode_livros(livro_id, livros(slug, titulo, autor))")
     .eq("status", "done")
     .order("data", { ascending: false });
 
@@ -29,6 +29,7 @@ export default async function EpisodiosPage() {
     podcast: ep.podcasts?.nome ?? "",
     livros: (ep.episode_livros ?? []).map((rel: any) => ({
       id: rel.livro_id,
+      slug: rel.livros?.slug ?? null,
       titulo: rel.livros?.titulo,
       autor: rel.livros?.autor,
     })),

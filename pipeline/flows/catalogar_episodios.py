@@ -72,6 +72,8 @@ def main():
     for i in range(0, len(linhas), 100):
         supabase.table("episodes").insert(linhas[i:i + 100]).execute()
     print(f"\n=== {len(linhas)} episódio(s) catalogado(s) como listed ===")
+    from flows.preencher_slugs import main as preencher_slugs
+    preencher_slugs()
 
 
 if __name__ == "__main__":

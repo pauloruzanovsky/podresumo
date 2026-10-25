@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import EpisodeCard from "./EpisodeCard";
 
 interface Episode {
@@ -225,7 +226,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/episodio/${ep.id}`}
+                      href={hrefEpisodio(ep)}
                       className="font-medium text-foreground hover:text-foreground transition-colors"
                     >
                       {ep.titulo}
@@ -240,7 +241,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
                         {ep.livros.map((livro) => (
                           <Link
                             key={livro.id}
-                            href={`/livro/${livro.id}`}
+                            href={hrefLivro(livro)}
                             className="text-xs text-muted hover:text-foreground transition-colors"
                           >
                             {livro.titulo}

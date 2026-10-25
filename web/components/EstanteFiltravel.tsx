@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
+import { hrefLivro } from "@/lib/links";
 
 /**
  * A estante inteira do podcast, filtrável: busca, quem citou, tema e ordem em
@@ -14,6 +15,7 @@ import BookCover from "./BookCover";
  */
 export interface LivroEstante {
   id: string;
+  slug: string | null;
   titulo: string;
   autor: string | null;
   capa_url: string | null;
@@ -211,7 +213,7 @@ export default function EstanteFiltravel({
           <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-y-7">
             {visiveis.map((l) => (
               <li key={l.id} className="min-w-0">
-                <Link href={`/livro/${l.id}`} className="group block">
+                <Link href={hrefLivro(l)} className="group block">
                   <div className="relative px-2 sm:px-3">
                     <BookCover
                       titulo={l.titulo}

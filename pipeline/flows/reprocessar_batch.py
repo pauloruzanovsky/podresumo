@@ -288,6 +288,10 @@ def coletar(batch_id):
     print(f"  citações gravadas:  {total_livros}")
     print(f"  tokens: {tokens_in:,} entrada / {tokens_out:,} saída")
     print(f"  custo real: US$ {custo:.2f}  (R$ {custo * USD_BRL:.2f})")
+    # episódio e livro novos ganham endereço legível (/livro/titulo)
+    from flows.preencher_slugs import main as preencher_slugs
+    preencher_slugs()
+
     print("\nAgora rode, nesta ordem:")
     print("  python -m flows.normalize_livros          # confira o plano")
     print("  python -m flows.normalize_livros --apply")

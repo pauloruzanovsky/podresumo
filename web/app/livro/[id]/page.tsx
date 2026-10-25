@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { ESTANTE_PRINCIPAL, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { resolverLivro } from "@/lib/resolver";
 import BookCover from "@/components/BookCover";
 import ListaCitacoes from "@/components/ListaCitacoes";
 
@@ -23,7 +25,11 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
+  const ref = await resolverLivro(param);
+  if (!ref) return { title: "Livro não encontrado" };
+  const id = ref.id;
+  const endereco = hrefLivro(ref);
 
   const { data: livro } = await supabase
     .from("livros")
@@ -51,12 +57,12 @@ export async function generateMetadata({
   return {
     title: titulo,
     description: descricao,
-    alternates: { canonical: `/livro/${id}` },
+    alternates: { canonical: endereco },
     openGraph: {
       type: "article",
       title: titulo,
       description: descricao,
-      url: `/livro/${id}`,
+      url: endereco,
       // A imagem vem de opengraph-image.tsx (título, autor e a fala de quem
       // indicou). A capa sozinha era pequena demais pro card do WhatsApp.
     },
@@ -101,6 +107,7 @@ interface Citacao {
   quem_citou: string | null;
   natureza: "recomenda" | "menciona" | "critica" | null;
   episode_id: string;
+  episode_slug: string | null;
   titulo: string;
   ep_number: string | null;
   data: string;
@@ -146,7 +153,7 @@ function CardCitacao({ c }: { c: Citacao }) {
 
       <div className="flex items-center justify-between gap-4 flex-wrap mt-6 pt-5 border-t border-border">
         <Link
-          href={`/episodio/${c.episode_id}`}
+          href={hrefEpisodio({ id: c.episode_id, slug: c.episode_slug })}
           className="min-w-0 text-sm text-muted hover:text-foreground transition-colors leading-snug"
         >
           {c.ep_number && <span className="font-mono text-xs mr-2">#{c.ep_number}</span>}
@@ -185,12 +192,17 @@ export default async function LivroPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  // aceita o slug (/livro/em-nome-do-povo) e o id antigo, que redireciona
+  const { id: param } = await params;
+  const ref = await resolverLivro(param);
+  if (!ref) return notFound();
+  if (ref.slug && param !== ref.slug) permanentRedirect(hrefLivro(ref));
+  const id = ref.id;
 
   const { data: livro, error } = await supabase
     .from("livros")
     .select(
-      "*, episode_livros(contexto, timestamp_seg, citacao_literal, quem_citou, natureza, episode_id, episodes(titulo, ep_number, data, link_youtube, podcasts(nome)))"
+      "*, episode_livros(contexto, timestamp_seg, citacao_literal, quem_citou, natureza, episode_id, episodes(titulo, slug, ep_number, data, link_youtube, podcasts(nome)))"
     )
     .eq("id", id)
     .single();
@@ -207,6 +219,7 @@ export default async function LivroPage({
       quem_citou: rel.quem_citou,
       natureza: rel.natureza,
       episode_id: rel.episode_id,
+      episode_slug: rel.episodes.slug ?? null,
       titulo: rel.episodes.titulo,
       ep_number: rel.episodes.ep_number,
       data: rel.episodes.data,
@@ -236,7 +249,7 @@ export default async function LivroPage({
   const { data: coCitadosRaw } = episodeIds.length
     ? await supabase
         .from("episode_livros")
-        .select("livro_id, livros(id, titulo, autor, tipo, capa_url)")
+        .select("livro_id, livros(id, slug, titulo, autor, tipo, capa_url)")
         .in("episode_id", episodeIds)
         .neq("livro_id", id)
     : { data: [] };
@@ -248,6 +261,7 @@ export default async function LivroPage({
       titulo: string;
       autor: string | null;
       capa_url: string | null;
+      slug: string | null;
       vezes: number;
     }
   >();
@@ -262,6 +276,7 @@ export default async function LivroPage({
         titulo: l.titulo,
         autor: l.autor,
         capa_url: l.capa_url ?? null,
+        slug: l.slug ?? null,
         vezes: 1,
       });
   }
@@ -376,7 +391,7 @@ export default async function LivroPage({
             {coCitados.map((l) => (
               <Link
                 key={l.id}
-                href={`/livro/${l.id}`}
+                href={hrefLivro(l)}
                 className="group flex gap-3 p-3 bg-card border border-border rounded-xl hover:border-accent/30 hover:bg-card-hover transition-all"
               >
                 <BookCover

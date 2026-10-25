@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { hrefEpisodio } from "@/lib/links";
 import type { ItemIndice } from "@/lib/indice";
 
 /**
@@ -128,7 +129,7 @@ export default function EpisodeIndex({
             return (
               <li key={item.id} ref={ehAtual ? atual : undefined}>
                 <Link
-                  href={`/episodio/${item.id}`}
+                  href={hrefEpisodio(item)}
                   aria-current={ehAtual ? "page" : undefined}
                   className={`group flex gap-2 px-4 py-2.5 transition-colors ${
                     ehAtual

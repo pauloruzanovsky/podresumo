@@ -38,7 +38,7 @@ async function carregar(slug: string) {
   const { data: rels } = await supabase
     .from("episode_livros")
     .select(
-      "livro_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, titulo, autor, capa_url, temas, tipo)"
+      "livro_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, slug, titulo, autor, capa_url, temas, tipo)"
     )
     .eq("episodes.podcast_id", podcast.id)
     .eq("livros.tipo", "livro");
@@ -61,6 +61,7 @@ async function carregar(slug: string) {
       porLivro
         .set(l.id, {
           id: l.id,
+          slug: l.slug ?? null,
           titulo: l.titulo,
           autor: l.autor,
           capa_url: l.capa_url ?? null,

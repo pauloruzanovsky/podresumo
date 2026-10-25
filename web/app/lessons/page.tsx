@@ -12,7 +12,7 @@ export const metadata = {
 export default async function LessonsPage() {
   const { data: episodes, error } = await supabase
     .from("episodes")
-    .select("id, titulo, main_insight, main_action, data, podcasts(nome)")
+    .select("id, slug, titulo, main_insight, main_action, data, podcasts(nome)")
     .eq("status", "done")
     .order("data", { ascending: false });
 
@@ -25,6 +25,7 @@ export default async function LessonsPage() {
     .filter((ep: any) => ep.main_insight || ep.main_action)
     .map((ep: any) => ({
       id: ep.id,
+      slug: ep.slug ?? null,
       titulo: ep.titulo,
       main_insight: ep.main_insight,
       main_action: ep.main_action,

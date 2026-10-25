@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { hrefEpisodio } from "@/lib/links";
 
 /**
  * Lista enxuta das citações de um livro: uma linha por episódio, com quem
@@ -11,6 +12,7 @@ import Link from "next/link";
  */
 export interface CitacaoLinha {
   episode_id: string;
+  episode_slug: string | null;
   ep_number: string | null;
   titulo: string;
   data: string;
@@ -107,7 +109,7 @@ function Linha({ c }: { c: CitacaoLinha }) {
   return (
     <li className="py-3">
       <div className={`grid grid-cols-[minmax(0,1fr)_auto] ${COLUNAS} gap-x-4 gap-y-1 items-center`}>
-        <Link href={`/episodio/${c.episode_id}`} className="min-w-0 text-sm leading-snug hover:underline">
+        <Link href={hrefEpisodio({ id: c.episode_id, slug: c.episode_slug })} className="min-w-0 text-sm leading-snug hover:underline">
           {c.ep_number && <span className="font-mono text-xs text-muted mr-2">#{c.ep_number}</span>}
           {tituloLimpo(c.titulo, c.ep_number)}
         </Link>

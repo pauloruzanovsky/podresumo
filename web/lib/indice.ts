@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
  */
 export interface ItemIndice {
   id: string;
+  slug: string | null;
   numero: string | null;
   titulo: string;
   /** Tem página no site. */
@@ -26,12 +27,13 @@ function semSufixo(titulo: string) {
 export async function carregarIndice(podcastId: string): Promise<ItemIndice[]> {
   const { data } = await supabase
     .from("episodes")
-    .select("id, ep_number, titulo, status, episode_livros(livros(tipo))")
+    .select("id, slug, ep_number, titulo, status, episode_livros(livros(tipo))")
     .eq("podcast_id", podcastId)
     .order("data", { ascending: false });
 
   return ((data ?? []) as any[]).map((e) => ({
     id: e.id,
+    slug: e.slug ?? null,
     numero: e.ep_number ?? null,
     titulo: e.ep_number ? semSufixo(e.titulo) : e.titulo,
     mapeado: e.status === "done",

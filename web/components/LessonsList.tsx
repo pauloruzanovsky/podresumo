@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { hrefEpisodio } from "@/lib/links";
 import PodcastFilter from "./PodcastFilter";
 
 interface Lesson {
@@ -71,7 +72,7 @@ export default function LessonsList({ lessons }: { lessons: Lesson[] }) {
             </div>
 
             <Link
-              href={`/episodio/${ep.id}`}
+              href={hrefEpisodio(ep)}
               className="text-[15px] font-semibold text-foreground hover:text-foreground transition-colors"
             >
               {ep.titulo}

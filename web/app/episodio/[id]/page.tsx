@@ -8,7 +8,9 @@ import Estante from "@/components/Estante";
 import { carregarIndice } from "@/lib/indice";
 import { podcastVisivel } from "@/lib/podcasts";
 import { slugify } from "@/lib/slug";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { resolverEpisodio } from "@/lib/resolver";
 
 // Em cache e atualizada a cada minuto. Sem isto a página era montada do zero
 // a cada visita (~1 a 5 s na Vercel). A lista vazia em generateStaticParams
@@ -24,7 +26,11 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
+  const ref = await resolverEpisodio(param);
+  if (!ref) return { title: "Episódio não encontrado" };
+  const id = ref.id;
+  const endereco = hrefEpisodio(ref);
 
   const { data: ep } = await supabase
     .from("episodes")
@@ -45,12 +51,12 @@ export async function generateMetadata({
   return {
     title: ep.titulo,
     description: descricao,
-    alternates: { canonical: `/episodio/${id}` },
+    alternates: { canonical: endereco },
     openGraph: {
       type: "article",
       title: ep.titulo,
       description: descricao,
-      url: `/episodio/${id}`,
+      url: endereco,
       images: ep.thumbnail ? [{ url: ep.thumbnail }] : undefined,
     },
     twitter: {
@@ -100,6 +106,7 @@ interface ConvidadoInfo {
 }
 interface LivroCitado {
   id: string;
+  slug: string | null;
   titulo: string;
   autor: string | null;
   capa_url: string | null;
@@ -129,12 +136,17 @@ export default async function EpisodioPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  // aceita o slug (/episodio/312-...) e o id do vídeo, que redireciona
+  const { id: param } = await params;
+  const ref = await resolverEpisodio(param);
+  if (!ref) return notFound();
+  if (ref.slug && param !== ref.slug) permanentRedirect(hrefEpisodio(ref));
+  const id = ref.id;
 
   const { data: ep, error } = await supabase
     .from("episodes")
     .select(
-      "*, podcasts(nome), episode_livros(natureza, quem_citou, timestamp_seg, livros(id, titulo, autor, tipo, capa_url))"
+      "*, podcasts(nome), episode_livros(natureza, quem_citou, timestamp_seg, livros(id, slug, titulo, autor, tipo, capa_url))"
     )
     .eq("id", id)
     .single();
@@ -150,6 +162,7 @@ export default async function EpisodioPage({
     .filter((rel) => rel.livros && rel.livros.tipo === "livro")
     .map((rel) => ({
       id: rel.livros.id,
+      slug: rel.livros.slug ?? null,
       titulo: rel.livros.titulo,
       autor: rel.livros.autor,
       capa_url: rel.livros.capa_url ?? null,
@@ -291,6 +304,7 @@ export default async function EpisodioPage({
                 : `${livros.length} livros, na ordem em que aparecem na conversa.`,
             livros: livros.map((l) => ({
               id: l.id,
+              slug: l.slug,
               titulo: l.titulo,
               autor: l.autor,
               capa_url: l.capa_url,

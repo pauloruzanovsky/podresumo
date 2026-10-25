@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookCover from "./BookCover";
+import { hrefLivro } from "@/lib/links";
 
 /**
  * Estante de biblioteca: um móvel com prateleiras, cada uma com uma plaquinha
@@ -10,6 +11,7 @@ import BookCover from "./BookCover";
  */
 export interface LivroNaEstante {
   id: string;
+  slug?: string | null;
   titulo: string;
   autor: string | null;
   capa_url: string | null;
@@ -51,7 +53,7 @@ export default function Estante({ prateleiras }: { prateleiras: Prateleira[] }) 
               <li key={l.id} className="min-w-0">
                 {/* O livro leva à página dele; o minuto, separado (link dentro
                     de link não vale), leva direto ao trecho no YouTube. */}
-                <Link href={`/livro/${l.id}`} className="group block">
+                <Link href={hrefLivro(l)} className="group block">
                   <div className="px-2 sm:px-3">
                     <BookCover
                       titulo={l.titulo}

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
+import { resolverLivro } from "@/lib/resolver";
 
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
@@ -15,7 +16,10 @@ export default async function Image({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: param } = await params;
+  const ref = await resolverLivro(param);
+  if (!ref) return cartaoOg({ titulo: "Livro não encontrado" });
+  const id = ref.id;
   const { data: livro } = await supabase
     .from("livros")
     .select(
