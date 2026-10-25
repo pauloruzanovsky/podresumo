@@ -9,6 +9,7 @@ import {
   SITE_URL,
 } from "@/lib/site";
 import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
+import Newsletter from "@/components/Newsletter";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -101,6 +102,9 @@ export default function RootLayout({
               — os livros citados nos podcasts, com o minuto de cada menção.
               Extraído por IA a partir das transcrições; pode conter erros.
             </p>
+            <Newsletter variante="rodape" />
+          </div>
+          <div className="max-w-300 mx-auto px-8 lg:px-12 pb-8">
             <nav className="flex items-center gap-5 text-xs text-muted">
               <Link href={ESTANTE_PRINCIPAL} className="hover:text-foreground transition-colors">
                 Estante

@@ -6,6 +6,7 @@ import { acharPorSlug, slugify } from "@/lib/slug";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import EstanteFiltravel, { type LivroEstante } from "@/components/EstanteFiltravel";
 import EstanteDaUrl from "@/components/EstanteDaUrl";
+import Newsletter from "@/components/Newsletter";
 import Rankings, { type AutorPlacar, type PessoaPlacar } from "@/components/Rankings";
 import { carregarIndice } from "@/lib/indice";
 import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
@@ -229,6 +230,7 @@ export default async function PodcastPage({
             <EstanteDaUrl livros={livros} totalCitacoes={totalCitacoes} />
           </Suspense>
           <Rankings pessoas={pessoas} autores={autores} apresentadores={APRESENTADORES} />
+          <Newsletter />
         </div>
       </div>
     </div>

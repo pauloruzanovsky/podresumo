@@ -7,6 +7,7 @@ import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import { resolverLivro } from "@/lib/resolver";
 import BookCover from "@/components/BookCover";
 import ListaCitacoes from "@/components/ListaCitacoes";
+import Newsletter from "@/components/Newsletter";
 
 export const revalidate = 60;
 // Liga o cache por livro sem pré-montar os ~470 no build: cada um entra no
@@ -95,7 +96,12 @@ function formatDate(dateStr: string) {
  */
 function getAmazonLink(titulo: string, autor?: string | null) {
   const termo = autor ? `${titulo} ${autor}` : titulo;
-  return `https://www.amazon.com.br/s?k=${encodeURIComponent(termo)}&i=stripbooks`;
+  // Com a identificação de afiliado (NEXT_PUBLIC_AMAZON_TAG, ex.: podlibris-20)
+  // a compra vinda daqui gera comissão; sem ela, o link é a busca comum.
+  const tag = process.env.NEXT_PUBLIC_AMAZON_TAG;
+  return `https://www.amazon.com.br/s?k=${encodeURIComponent(termo)}&i=stripbooks${
+    tag ? `&tag=${encodeURIComponent(tag)}` : ""
+  }`;
 }
 
 interface Citacao {
@@ -413,6 +419,10 @@ export default async function LivroPage({
           </div>
         </section>
       )}
+
+      {/* quem chegou por um livro compartilhado é o leitor mais provável de
+          querer mais livros */}
+      <Newsletter />
     </div>
   );
 }

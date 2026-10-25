@@ -6,6 +6,7 @@ import BookCover from "@/components/BookCover";
 import HomeSearch from "@/components/HomeSearch";
 import { slugify } from "@/lib/slug";
 import { hrefLivro } from "@/lib/links";
+import Newsletter from "@/components/Newsletter";
 
 export const revalidate = 60;
 
@@ -312,6 +313,7 @@ export default async function Home() {
         </Section>
       )}
 
+      <Newsletter />
     </div>
   );
 }
