@@ -7,6 +7,7 @@ import EpisodeIndex from "@/components/EpisodeIndex";
 import Estante from "@/components/Estante";
 import { carregarIndice } from "@/lib/indice";
 import { podcastVisivel } from "@/lib/podcasts";
+import { slugify } from "@/lib/slug";
 import { notFound } from "next/navigation";
 
 export async function generateMetadata({
@@ -173,13 +174,15 @@ export default async function EpisodioPage({
     <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
     <div className="min-w-0 max-w-4xl">
       <Link
-        href="/episodios"
+        // volta pra estante do podcast deste episódio; a lista de episódios
+        // fica no menu e na lateral
+        href={`/podcast/${slugify(ep.podcasts?.nome ?? "")}`}
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
         </svg>
-        Episódios
+        Estante
       </Link>
 
       {/* Hero */}
