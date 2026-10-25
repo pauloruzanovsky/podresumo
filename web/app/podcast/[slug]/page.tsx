@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { acharPorSlug, slugify } from "@/lib/slug";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import EstanteFiltravel, { type LivroEstante } from "@/components/EstanteFiltravel";
+import EstanteDaUrl from "@/components/EstanteDaUrl";
 import Rankings, { type AutorPlacar, type PessoaPlacar } from "@/components/Rankings";
 import { carregarIndice } from "@/lib/indice";
 import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
@@ -169,14 +171,10 @@ export async function generateMetadata({
 
 export default async function PodcastPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; pessoa?: string }>;
 }) {
   const { slug } = await params;
-  // busca da home, nome de autor ou de convidado: abre a estante já filtrada
-  const { q, pessoa } = await searchParams;
   const dados = await carregar(slug);
   if (!dados) return notFound();
 
@@ -221,15 +219,14 @@ export default async function PodcastPage({
       <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
         <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
         <div className="min-w-0">
-          {/* key: trocar ?pessoa= ou ?q= pelos links do placar remonta a
-              estante com o filtro novo, em vez de manter o estado antigo. */}
-          <EstanteFiltravel
-            key={`${q ?? ""}|${pessoa ?? ""}`}
-            livros={livros}
-            totalCitacoes={totalCitacoes}
-            initialQuery={q ?? ""}
-            initialPessoa={pessoa ?? ""}
-          />
+          {/* O filtro da URL (?q=, ?pessoa=) é lido no navegador, pra página
+              poder ficar em cache. A estante sem filtro é o que vai no HTML
+              (e o que o Google vê); o filtro entra logo depois. */}
+          <Suspense
+            fallback={<EstanteFiltravel livros={livros} totalCitacoes={totalCitacoes} />}
+          >
+            <EstanteDaUrl livros={livros} totalCitacoes={totalCitacoes} />
+          </Suspense>
           <Rankings pessoas={pessoas} autores={autores} apresentadores={APRESENTADORES} />
         </div>
       </div>

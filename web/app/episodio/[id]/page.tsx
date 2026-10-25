@@ -10,6 +10,15 @@ import { podcastVisivel } from "@/lib/podcasts";
 import { slugify } from "@/lib/slug";
 import { notFound } from "next/navigation";
 
+// Em cache e atualizada a cada minuto. Sem isto a página era montada do zero
+// a cada visita (~1 a 5 s na Vercel). A lista vazia em generateStaticParams
+// liga o cache sem pré-montar todos os episódios no build: cada um entra no
+// cache na primeira visita.
+export const revalidate = 60;
+export async function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

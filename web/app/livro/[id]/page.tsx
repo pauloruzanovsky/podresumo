@@ -7,6 +7,11 @@ import BookCover from "@/components/BookCover";
 import ListaCitacoes from "@/components/ListaCitacoes";
 
 export const revalidate = 60;
+// Liga o cache por livro sem pré-montar os ~470 no build: cada um entra no
+// cache na primeira visita (ver a página do episódio).
+export async function generateStaticParams() {
+  return [];
+}
 
 /**
  * Metadata por livro. É esta página que viaja no WhatsApp, então o título e a
