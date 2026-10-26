@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 76" role="img" aria-label="Podlibris">
+  <g fill="#F7F2E7">
+    <rect x="18.20" y="17.9" width="6.4" height="27.1" rx="3.2"/>
+    <rect x="32.50" y="10.7" width="6.4" height="36.8" rx="3.2"/>
+    <rect x="46.80" y="0" width="6.4" height="59.3" rx="3.2"/>
+    <rect x="61.10" y="10.7" width="6.4" height="36.8" rx="3.2"/>
+    <rect x="75.40" y="17.9" width="6.4" height="27.1" rx="3.2"/>
+  </g>
+  <path fill="#C9A06B" d="M0 20 L10.7 22.9 V49.3 Q32 52 50 72.9 Q68 52 89.3 49.3 V22.9 L100 20 V61.8 Q72 63 50 75.7 Q28 63 0 61.8 Z"/>
+</svg>

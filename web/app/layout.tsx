@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
-import {
-  SITE_DESCRIPTION,
-  SITE_NAME,
-  SITE_NAME_POD,
-  SITE_NAME_LIBRIS,
-  SITE_URL,
-} from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
 import Newsletter from "@/components/Newsletter";
+import { IconePodlibris } from "@/components/Logo";
+import TrocaTema, { SCRIPT_TEMA } from "@/components/TrocaTema";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,17 +54,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="w-full">
+    // suppressHydrationWarning: o SCRIPT_TEMA mexe no data-theme antes do React
+    <html lang="pt-BR" className="w-full" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} antialiased max-w-300 mx-auto`}
       >
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="max-w-[1200px] mx-auto px-8 lg:px-12 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              {/* "libris" no verde da ação */}
-              <span className="font-serif">{SITE_NAME_POD}</span>
-              <span className="text-accent-light">{SITE_NAME_LIBRIS}</span>
+            <Link href="/" className="flex items-center gap-2 text-marca">
+              <IconePodlibris className="h-7 w-auto" ondas="currentColor" />
+              <span className="font-serif text-xl font-bold tracking-tight">{SITE_NAME}</span>
             </Link>
             {/* "Descobrir" apontava pro mesmo lugar que o logo. Episódios só
                 existia no rodapé. */}
@@ -85,6 +84,7 @@ export default function RootLayout({
                   {item.rotulo}
                 </Link>
               ))}
+              <TrocaTema />
             </nav>
           </div>
         </header>

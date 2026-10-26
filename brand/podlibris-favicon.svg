@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Podlibris">
+  <rect width="100" height="100" rx="22" fill="#0F2E24"/>
+  <g transform="translate(8.00 18.21) scale(0.84)">
+    <g fill="#F7F2E7">
+      <rect x="16.90" y="17.9" width="9" height="27.1" rx="4.5"/>
+      <rect x="31.20" y="10.7" width="9" height="36.8" rx="4.5"/>
+      <rect x="45.50" y="0" width="9" height="59.3" rx="4.5"/>
+      <rect x="59.80" y="10.7" width="9" height="36.8" rx="4.5"/>
+      <rect x="74.10" y="17.9" width="9" height="27.1" rx="4.5"/>
+    </g>
+    <path fill="#C9A06B" d="M0 20 L10.7 22.9 V49.3 Q32 52 50 72.9 Q68 52 89.3 49.3 V22.9 L100 20 V61.8 Q72 63 50 75.7 Q28 63 0 61.8 Z"/>
+  </g>
+</svg>

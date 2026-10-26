@@ -276,7 +276,7 @@ export default async function EpisodioPage({
             href={ep.link_youtube}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-full transition-colors mr-2"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors mr-2"
           >
             <IconePlay />
             Assistir no YouTube

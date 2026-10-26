@@ -204,7 +204,7 @@ export default function EstanteFiltravel({
       </p>
 
       {/* O móvel */}
-      <div className="rounded-2xl border border-shelf/60 bg-[#efe5d3] shadow-[inset_0_2px_10px_rgba(43,37,33,0.10)] px-3 sm:px-6 pt-7 pb-4">
+      <div className="rounded-2xl border border-shelf/60 bg-movel shadow-[inset_0_2px_10px_rgba(43,37,33,0.10)] px-3 sm:px-6 pt-7 pb-4">
         {visiveis.length === 0 ? (
           <p className="text-sm text-muted text-center py-16">Nenhum livro com esse filtro.</p>
         ) : (

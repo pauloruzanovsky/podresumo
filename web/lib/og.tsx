@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
-import { SITE_NAME_POD, SITE_NAME_LIBRIS } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
+import { COR_CREME, COR_OURO, COR_VERDE, LIVRO_D, ONDAS } from "@/components/Logo";
 
 /**
  * Cartão de compartilhamento (Open Graph), 1200×630 — o que aparece quando o
@@ -13,10 +14,22 @@ import { SITE_NAME_POD, SITE_NAME_LIBRIS } from "@/lib/site";
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
-const FUNDO = "#f7f2e8";
+const FUNDO = COR_CREME;
 const TEXTO = "#2b2521";
 const APAGADO = "#6b6155";
-const VERDE = "#2f6b52";
+const VERDE = COR_VERDE;
+
+/** O ícone da marca em SVG puro (o satori não lê componentes com className). */
+export function iconeOg(largura: number, ondas: string = COR_VERDE) {
+  return (
+    <svg width={largura} height={(largura * 76) / 100} viewBox="0 0 100 76">
+      {ONDAS.map(([x, y, h]) => (
+        <rect key={x} x={x} y={y} width={6.4} height={h} rx={3.2} fill={ondas} />
+      ))}
+      <path fill={COR_OURO} d={LIVRO_D} />
+    </svg>
+  );
+}
 
 /** Título longo quebra o cartão: corta com reticências. */
 function encurta(texto: string, max: number) {
@@ -132,9 +145,9 @@ export function cartaoOg({
             fontSize: 28,
           }}
         >
-          <div style={{ display: "flex", fontWeight: 700 }}>
-            <span>{SITE_NAME_POD}</span>
-            <span style={{ color: VERDE }}>{SITE_NAME_LIBRIS}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, fontWeight: 700, color: VERDE }}>
+            {iconeOg(56)}
+            <span>{SITE_NAME}</span>
           </div>
           {rodape && (
             <div style={{ display: "flex", color: APAGADO }}>{rodape}</div>

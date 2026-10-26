@@ -17,7 +17,7 @@ export default async function LessonsPage() {
     .order("data", { ascending: false });
 
   if (error) {
-    return <p className="text-red-600">Erro ao carregar: {error.message}</p>;
+    return <p className="text-erro">Erro ao carregar: {error.message}</p>;
   }
 
   const lessons = (episodes ?? [])

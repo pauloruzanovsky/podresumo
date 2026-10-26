@@ -11,10 +11,8 @@ export const SITE_URL =
 
 // "Pod" (podcast) + "libris" (livros, em latim — o de "ex libris"). Funciona
 // igual em português e em inglês, pensando em podcasts de fora no futuro.
-// As duas metades vão separadas pro logotipo, com "libris" no verde.
+// Logotipo e cores: brand/README.md.
 export const SITE_NAME = "Podlibris";
-export const SITE_NAME_POD = "Pod";
-export const SITE_NAME_LIBRIS = "libris";
 
 export const SITE_DESCRIPTION =
   "Os livros citados nos podcasts que você ouve — com o trecho do episódio e o minuto exato de cada citação.";

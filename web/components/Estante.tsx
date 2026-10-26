@@ -34,7 +34,7 @@ export default function Estante({ prateleiras }: { prateleiras: Prateleira[] }) 
   return (
     // O móvel: fundo um tom mais escuro que o papel, com sombra interna, pra
     // os livros parecerem estar dentro de um nicho e não soltos na página.
-    <div className="rounded-2xl border border-shelf/60 bg-[#efe5d3] shadow-[inset_0_2px_10px_rgba(43,37,33,0.10)] px-3 sm:px-6 pt-6 pb-2 mb-12 sm:mb-16">
+    <div className="rounded-2xl border border-shelf/60 bg-movel shadow-[inset_0_2px_10px_rgba(43,37,33,0.10)] px-3 sm:px-6 pt-6 pb-2 mb-12 sm:mb-16">
       {comLivros.map((p) => (
         <section key={p.titulo} className="mb-8 last:mb-4">
           {/* Plaquinha da seção, como nas estantes de livraria */}

@@ -19,7 +19,7 @@ export default async function EpisodiosPage() {
     .order("data", { ascending: false });
 
   if (error) {
-    return <p className="text-red-600">Erro ao carregar episódios: {error.message}</p>;
+    return <p className="text-erro">Erro ao carregar episódios: {error.message}</p>;
   }
 
   const episodesWithBooks = ((episodes ?? []) as any[])

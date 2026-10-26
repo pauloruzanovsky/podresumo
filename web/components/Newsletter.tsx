@@ -80,7 +80,7 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
       <button
         type="submit"
         disabled={estado === "enviando"}
-        className={`${rodape ? "px-4 py-2 text-xs" : "px-5 py-2.5 text-sm"} bg-accent hover:bg-accent-hover text-white font-semibold rounded-full transition-colors disabled:opacity-60 whitespace-nowrap`}
+        className={`${rodape ? "px-4 py-2 text-xs" : "px-5 py-2.5 text-sm"} bg-accent hover:bg-accent-hover text-on-accent font-semibold rounded-full transition-colors disabled:opacity-60 whitespace-nowrap`}
       >
         {estado === "enviando" ? "Enviando…" : "Quero receber"}
       </button>
@@ -92,7 +92,7 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
       <div className="w-full max-w-sm">
         <p className="text-xs font-semibold text-foreground mb-2">Os livros novos, toda semana</p>
         {formulario}
-        {estado === "erro" && <p className="text-xs text-red-700 mt-1.5" role="alert">{erro}</p>}
+        {estado === "erro" && <p className="text-xs text-erro mt-1.5" role="alert">{erro}</p>}
       </div>
     );
   }
@@ -108,7 +108,7 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
           de quem citou e o minuto pra ouvir. Sem spam; dá pra sair quando quiser.
         </p>
         <div className="mt-5">{formulario}</div>
-        {estado === "erro" && <p className="text-sm text-red-700 mt-2" role="alert">{erro}</p>}
+        {estado === "erro" && <p className="text-sm text-erro mt-2" role="alert">{erro}</p>}
         <p className="text-[11px] text-muted mt-3">
           Ao se inscrever, você aceita receber esse e-mail semanal. Seu endereço
           não é compartilhado.

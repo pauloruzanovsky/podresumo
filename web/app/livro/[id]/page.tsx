@@ -177,7 +177,7 @@ function CardCitacao({ c }: { c: Citacao }) {
             href={minuto}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-full transition-colors shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors shrink-0"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M8 5v14l11-7z" />

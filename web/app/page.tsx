@@ -41,7 +41,7 @@ export default async function Home() {
 
   if (livrosRes.error) {
     return (
-      <p className="text-red-600">
+      <p className="text-erro">
         Erro ao carregar livros: {livrosRes.error.message}
       </p>
     );
