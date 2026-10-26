@@ -1,14 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import BookCover from "@/components/BookCover";
+
+interface CapaRecente {
+  id: string;
+  titulo: string;
+  autor: string | null;
+  capaUrl: string | null;
+}
 
 /**
  * Inscrição na newsletter semanal (os livros novos citados na semana).
  *
- * "cartao": bloco com título, no meio do conteúdo (home, estante, livro).
+ * "cartao": bloco com título, no meio do conteúdo (estante, livro).
+ * "hero": faixa compacta logo abaixo da busca da home, com as capas dos
+ *         livros mais recentes — mostra o que chega no e-mail.
  * "rodape": versão compacta, presente em todas as páginas.
  */
-export default function Newsletter({ variante = "cartao" }: { variante?: "cartao" | "rodape" }) {
+export default function Newsletter({
+  variante = "cartao",
+  capas = [],
+}: {
+  variante?: "cartao" | "hero" | "rodape";
+  capas?: CapaRecente[];
+}) {
   const [email, setEmail] = useState("");
   const [site, setSite] = useState(""); // armadilha pra robô
   const [estado, setEstado] = useState<"livre" | "enviando" | "ok" | "erro">("livre");
@@ -38,11 +54,28 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
   }
 
   const rodape = variante === "rodape";
+  const hero = variante === "hero";
 
   if (estado === "ok") {
     return (
-      <div className={rodape ? "text-xs" : "bg-card border border-border rounded-2xl p-6 sm:p-7"}>
-        <p className={rodape ? "text-foreground" : "font-serif text-xl font-semibold"}>
+      <div
+        className={
+          rodape
+            ? "text-xs"
+            : hero
+              ? "bg-card border border-border rounded-2xl p-4 sm:p-5 text-left"
+              : "bg-card border border-border rounded-2xl p-6 sm:p-7"
+        }
+      >
+        <p
+          className={
+            rodape
+              ? "text-foreground"
+              : hero
+                ? "font-serif text-lg font-semibold"
+                : "font-serif text-xl font-semibold"
+          }
+        >
           Quase lá — confira seu e-mail.
         </p>
         <p className={`text-muted ${rodape ? "" : "text-sm mt-1"}`}>
@@ -53,7 +86,8 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
   }
 
   const formulario = (
-    <form onSubmit={enviar} className="flex flex-col sm:flex-row gap-2">
+    // na faixa da home, sempre numa linha: a faixa precisa caber na primeira tela
+    <form onSubmit={enviar} className={`flex ${hero ? "flex-row" : "flex-col sm:flex-row"} gap-2`}>
       <label className="sr-only" htmlFor={`email-${variante}`}>
         Seu e-mail
       </label>
@@ -86,6 +120,46 @@ export default function Newsletter({ variante = "cartao" }: { variante?: "cartao
       </button>
     </form>
   );
+
+  if (hero) {
+    return (
+      <section
+        aria-label="Newsletter semanal"
+        className="bg-card border border-border rounded-2xl p-4 sm:p-5 text-left"
+      >
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0 md:flex-1">
+            {capas.length > 0 && (
+              // capas sobrepostas, como livros recém-chegados na mesa
+              <div className="flex shrink-0 -space-x-3" aria-hidden="true">
+                {capas.slice(0, 3).map((l, i) => (
+                  <BookCover
+                    key={l.id}
+                    titulo={l.titulo}
+                    autor={l.autor}
+                    capaUrl={l.capaUrl}
+                    className={`w-9 sm:w-10 shadow-md ring-2 ring-card ${
+                      i === 1 ? "-translate-y-1" : ""
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="font-serif text-lg font-semibold leading-tight md:whitespace-nowrap">
+                Os livros novos, toda semana
+              </h2>
+              <p className="text-xs sm:text-sm text-muted mt-0.5 leading-snug">
+                Um e-mail por semana, com a fala de quem citou e o minuto pra ouvir.
+              </p>
+            </div>
+          </div>
+          <div className="md:w-80 shrink-0">{formulario}</div>
+        </div>
+        {estado === "erro" && <p className="text-sm text-erro mt-2" role="alert">{erro}</p>}
+      </section>
+    );
+  }
 
   if (rodape) {
     return (

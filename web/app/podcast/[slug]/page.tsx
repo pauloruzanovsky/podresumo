@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 import { acharPorSlug, slugify } from "@/lib/slug";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import EstanteFiltravel, { type LivroEstante } from "@/components/EstanteFiltravel";
@@ -36,13 +36,18 @@ async function carregar(slug: string) {
 
   // !inner transforma o join em filtro: só citações cujo episódio é deste
   // podcast e cujo livro não é filme/série.
-  const { data: rels } = await supabase
-    .from("episode_livros")
-    .select(
-      "livro_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, slug, titulo, autor, capa_url, temas, tipo)"
-    )
-    .eq("episodes.podcast_id", podcast.id)
-    .eq("livros.tipo", "livro");
+  const { data: rels } = await todas((de, ate) =>
+    supabase
+      .from("episode_livros")
+      .select(
+        "livro_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, slug, titulo, autor, capa_url, temas, tipo)"
+      )
+      .eq("episodes.podcast_id", podcast.id)
+      .eq("livros.tipo", "livro")
+      .order("episode_id")
+      .order("livro_id")
+      .range(de, ate)
+  );
 
   const { count: totalEpisodios } = await supabase
     .from("episodes")

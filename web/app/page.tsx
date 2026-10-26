@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
@@ -22,12 +22,16 @@ interface LivroCard {
 
 export default async function Home() {
   const [livrosRes, podcastsRes, episodesRes] = await Promise.all([
-    supabase
-      .from("livros")
-      .select(
-        "id, slug, titulo, autor, capa_url, episode_livros(episode_id, contexto, quem_citou, episodes(data, podcast_id))"
-      )
-      .eq("tipo", "livro"), // filme/documentário/série citados ficam de fora
+    todas((de, ate) =>
+      supabase
+        .from("livros")
+        .select(
+          "id, slug, titulo, autor, capa_url, episode_livros(episode_id, contexto, quem_citou, episodes(data, podcast_id))"
+        )
+        .eq("tipo", "livro") // filme/documentário/série citados ficam de fora
+        .order("id")
+        .range(de, ate)
+    ),
     supabase.from("podcasts").select("id, nome", { count: "exact" }),
     supabase.from("episodes").select("podcast_id").eq("status", "done"),
   ]);
@@ -80,6 +84,12 @@ export default async function Home() {
     .filter((l) => l.citacoes > 0);
 
   const totalLivros = livros.length;
+  // As capas da faixa da newsletter: os livros citados mais recentemente,
+  // capa real primeiro — é a amostra do que chega no e-mail.
+  const recentes = [...livros]
+    .filter((l) => l.capaUrl)
+    .sort((a, b) => ((b.ultimaData ?? "") > (a.ultimaData ?? "") ? 1 : -1))
+    .slice(0, 3);
   const totalEpisodes = ((episodesRes.data ?? []) as any[]).filter((e) =>
     idsVisiveis.has(e.podcast_id)
   ).length;
@@ -173,6 +183,12 @@ export default async function Home() {
 
         <div className="mt-4 sm:mt-0">
           <HomeSearch />
+        </div>
+
+        {/* Newsletter na primeira tela: abaixo da busca, que segue sendo a
+            ação principal, num cartão mais discreto que ela. */}
+        <div className="max-w-3xl mx-auto mt-4 sm:mt-6">
+          <Newsletter variante="hero" capas={recentes} />
         </div>
 
         {/* Celular: os três números numa linha de texto. Desktop: o bloco. */}
@@ -312,8 +328,6 @@ export default async function Home() {
           </div>
         </Section>
       )}
-
-      <Newsletter />
     </div>
   );
 }

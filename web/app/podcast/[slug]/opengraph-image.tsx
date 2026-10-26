@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import { acharPorSlug } from "@/lib/slug";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
@@ -22,11 +22,16 @@ export default async function Image({
     return cartaoOg({ titulo: "Podcast não encontrado" });
 
   const [{ data: rels }, { count: episodios }] = await Promise.all([
-    supabase
-      .from("episode_livros")
-      .select("livro_id, episodes!inner(podcast_id), livros!inner(tipo)")
-      .eq("episodes.podcast_id", podcast.id)
-      .eq("livros.tipo", "livro"),
+    todas((de, ate) =>
+      supabase
+        .from("episode_livros")
+        .select("livro_id, episodes!inner(podcast_id), livros!inner(tipo)")
+        .eq("episodes.podcast_id", podcast.id)
+        .eq("livros.tipo", "livro")
+        .order("episode_id")
+        .order("livro_id")
+        .range(de, ate)
+    ),
     supabase
       .from("episodes")
       .select("*", { count: "exact", head: true })

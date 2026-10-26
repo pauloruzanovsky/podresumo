@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import { SITE_URL } from "@/lib/site";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
@@ -21,14 +21,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const [livrosRes, episodiosRes, podcastsRes] = await Promise.all([
-    supabase
-      .from("livros")
-      .select("id, slug, episode_livros(episodes(podcasts(nome)))")
-      .eq("tipo", "livro"),
-    supabase
-      .from("episodes")
-      .select("id, slug, processed_at, podcasts(nome)")
-      .eq("status", "done"),
+    todas((de, ate) =>
+      supabase
+        .from("livros")
+        .select("id, slug, episode_livros(episodes(podcasts(nome)))")
+        .eq("tipo", "livro")
+        .order("id")
+        .range(de, ate)
+    ),
+    todas((de, ate) =>
+      supabase
+        .from("episodes")
+        .select("id, slug, processed_at, podcasts(nome)")
+        .eq("status", "done")
+        .order("id")
+        .range(de, ate)
+    ),
     supabase.from("podcasts").select("nome"),
   ]);
 

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
@@ -10,10 +10,14 @@ export const revalidate = 3600;
 /** Cartão da home, e o padrão de toda página que não tem o seu. */
 export default async function Image() {
   const [{ data: acervo }, { data: feitos }] = await Promise.all([
-    supabase
-      .from("livros")
-      .select("id, episode_livros(episodes(podcasts(nome)))")
-      .eq("tipo", "livro"),
+    todas((de, ate) =>
+      supabase
+        .from("livros")
+        .select("id, episode_livros(episodes(podcasts(nome)))")
+        .eq("tipo", "livro")
+        .order("id")
+        .range(de, ate)
+    ),
     supabase.from("episodes").select("podcasts(nome)").eq("status", "done"),
   ]);
 
