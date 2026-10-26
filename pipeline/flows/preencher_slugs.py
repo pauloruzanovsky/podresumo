@@ -21,7 +21,7 @@ import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from load.supabase import supabase
+from load.supabase import supabase, todas
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -67,7 +67,11 @@ def candidatos_episodio(titulo: str, numero: str | None):
 
 
 def preencher(tabela: str, campos: str, candidatos, ordem: str, prioridade=None):
-    linhas = supabase.table(tabela).select(f"id, slug, {campos}").order(ordem).execute().data
+    # Paginado: sem isso, um slug já usado além da linha 1000 parecia livre
+    # e o update estourava na constraint unique.
+    linhas = todas(
+        lambda: supabase.table(tabela).select(f"id, slug, {campos}").order(ordem).order("id")
+    )
     usados = {l["slug"] for l in linhas if l["slug"]}
     sem = [l for l in linhas if not l["slug"]]
     if prioridade:

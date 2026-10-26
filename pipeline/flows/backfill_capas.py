@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
-from load.supabase import supabase
+from load.supabase import supabase, todas
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -221,16 +221,16 @@ def main():
     args = parser.parse_args()
 
     try:
-        resp = supabase.table("livros").select(
+        livros = todas(lambda: supabase.table("livros").select(
             "id, titulo, autor, capa_url, episode_livros(episode_id)"
-        ).eq("tipo", "livro").order("titulo").execute()
+        ).eq("tipo", "livro").order("titulo").order("id"))
     except Exception:
         print("A coluna `capa_url` não existe no banco.")
         print("Rode supabase/migrations/003_livros_capa.sql antes.")
         return
 
     # Só livros que aparecem no site — não gastar requisição com órfão.
-    livros = [l for l in resp.data if (l.get("episode_livros") or [])]
+    livros = [l for l in livros if (l.get("episode_livros") or [])]
     manuais = capas_manuais()
     if manuais and not args.simular:
         for livro in livros:

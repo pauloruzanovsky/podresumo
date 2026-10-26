@@ -16,6 +16,24 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+PAGINA = 1000
+
+
+def todas(consulta) -> list[dict]:
+    """
+    Todas as linhas de uma consulta. O Supabase devolve no máximo 1000 por
+    vez e corta o resto em silêncio. `consulta` é uma função que monta a
+    consulta do zero, com `.order()` pra paginação ser estável:
+        todas(lambda: supabase.table("livros").select("id").order("id"))
+    """
+    linhas, i = [], 0
+    while True:
+        lote = consulta().range(i, i + PAGINA - 1).execute().data
+        linhas += lote
+        if len(lote) < PAGINA:
+            return linhas
+        i += PAGINA
+
 
 def campos_extras(ai_data: dict) -> dict:
     """Capítulos, frases e apresentação dos convidados, prontos pro banco

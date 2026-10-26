@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
-from load.supabase import supabase
+from load.supabase import supabase, todas
 
 # Títulos e nomes têm acento; o console do Windows não é utf-8 por padrão.
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -80,6 +80,15 @@ NAO_LIVRO_TITULOS = {
 TITLE_FIXES = {
     "Tractus Logico-Philosophicus": "Tractatus Logico-Philosophicus",
     "Almanaque de Navios": "Almanaque de Naval Ravikant",
+    # Sem o subtítulo, a chave seria "oppenheimer" e o livro se fundiria com
+    # o filme do Nolan (tipo `outro`).
+    "Oppenheimer: O Prometeu Americano": "O Prometeu Americano",
+    # A chave corta no ":", então as grafias sem dois-pontos ficavam num grupo
+    # separado das com.
+    "Bitcoin a moeda na era digital": "Bitcoin: a moeda na era digital",
+    "Bitcoin, a moeda na era digital": "Bitcoin: a moeda na era digital",
+    # título da edição brasileira; a entrada mantém o slug /livro/outliers
+    "Outliers": "Fora de Série: Outliers",
 }
 
 AUTHOR_FIXES = {
@@ -104,6 +113,12 @@ AUTHOR_FIXES = {
     "Divina Comédia": "Dante Alighieri",
     # o almanaque é sobre o Naval, mas quem escreveu foi o Jorgenson
     "Almanaque de Naval Ravikant": "Eric Jorgenson",
+    "O Prometeu Americano": "Kai Bird e Martin J. Sherwin",
+    "Organizações Exponenciais": "Salim Ismail",
+    "Trabalhe 4 Horas por Semana": "Tim Ferriss",
+    "Memórias do Subsolo": "Fiódor Dostoiévski",
+    "Por Que as Nações Fracassam": "Daron Acemoglu e James Robinson",
+    "Receita Previsível": "Aaron Ross",
 }
 
 # Uma entrada que na verdade são duas obras. O extrator às vezes junta dois
@@ -132,6 +147,8 @@ ALIASES = [
     # duas vezes por causa da inflação) no #254.
     ["Em Nome do Povo", "O Nome do Povo", "Inimigos do Povo"],
     ["Como Fazer Amigos e Influenciar Pessoas", "Como Fazer Amigos"],
+    ["4 Horas para o Corpo", "Quatro Horas para o Corpo"],
+    ["Fora de Série: Outliers", "Fora de Série (Outliers)"],
 ]
 
 # Títulos genéricos que são de fato obras diferentes de autores diferentes.
@@ -147,6 +164,13 @@ TITULOS_HOMONIMOS = {
     "1984",
     # a de Homero e "A Odisseia" do Nolan (filme, tipo `outro`)
     "Odisseia",
+    # livro e filme (tipo `outro`) com o mesmo nome: juntar promoveria o
+    # filme a livro
+    "O Senhor dos Anéis",
+    "Clube da Luta",
+    # discursos de Demóstenes contra Filipe II e, séculos depois, os de
+    # Cícero contra Marco Antônio, batizados em homenagem
+    "Filípicas",
 }
 
 # Entradas que precisam de decisão humana e que o script não tenta consertar.
@@ -534,18 +558,18 @@ def main():
     args = parser.parse_args()
 
     try:
-        resp = supabase.table("livros").select(
+        linhas = todas(lambda: supabase.table("livros").select(
             "id, titulo, autor, tipo, titulo_alt, episode_livros(episode_id)"
-        ).execute()
+        ).order("id"))
         migrado = True
     except Exception:
         # Sem a migração ainda: dá pra ver o plano, não dá pra aplicar.
-        resp = supabase.table("livros").select(
+        linhas = todas(lambda: supabase.table("livros").select(
             "id, titulo, autor, episode_livros(episode_id)"
-        ).execute()
+        ).order("id"))
         migrado = False
 
-    estado, splits, merges, incertos, updates = monta_plano(resp.data)
+    estado, splits, merges, incertos, updates = monta_plano(linhas)
     imprime_plano(estado, splits, merges, incertos, updates)
 
     if not migrado:

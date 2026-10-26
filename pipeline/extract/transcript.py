@@ -3,7 +3,31 @@ Extract: YouTube Transcript
 Busca a transcrição (legendas automáticas) de um vídeo.
 """
 
+import os
+
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
+
+
+def cria_api() -> YouTubeTranscriptApi:
+    """
+    Usa proxy residencial se configurado no .env; senão, conexão direta
+    (o YouTube bloqueia o IP depois de ~15 downloads).
+    - PROXY_URL: qualquer serviço, ex. http://usuario:senha@geo.iproyal.com:12321
+    - WEBSHARE_PROXY_USERNAME e WEBSHARE_PROXY_PASSWORD: Webshare
+    """
+    url = os.getenv("PROXY_URL")
+    if url:
+        return YouTubeTranscriptApi(
+            proxy_config=GenericProxyConfig(http_url=url, https_url=url)
+        )
+    usuario = os.getenv("WEBSHARE_PROXY_USERNAME")
+    senha = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    if usuario and senha:
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(proxy_username=usuario, proxy_password=senha)
+        )
+    return YouTubeTranscriptApi()
 
 
 def fetch_transcript(video_id: str) -> str:
@@ -17,7 +41,7 @@ def fetch_transcript(video_id: str) -> str:
     """
     print(f"📝 Buscando transcrição do vídeo {video_id}...")
 
-    ytt_api = YouTubeTranscriptApi()
+    ytt_api = cria_api()
 
     try:
         transcript = ytt_api.fetch(video_id, languages=["pt", "pt-BR"])
