@@ -57,12 +57,16 @@ export async function POST(req: Request) {
     const corpo = await resposta.text();
     console.error("buttondown", resposta.status, corpo.slice(0, 300));
     const jaSaiu = corpo.includes("subscriber_suppressed");
+    // o filtro anti-spam do Buttondown recusa domínio descartável ou falso
+    const bloqueado = corpo.includes("subscriber_blocked");
     return NextResponse.json(
       {
         ok: false,
         erro: jaSaiu
           ? "Esse e-mail se descadastrou antes. Fale com a gente pra voltar."
-          : "Não deu pra inscrever agora. Tente de novo em instantes.",
+          : bloqueado
+            ? "Esse endereço não foi aceito. Tente outro e-mail."
+            : "Não deu pra inscrever agora. Tente de novo em instantes.",
       },
       { status: 502 }
     );

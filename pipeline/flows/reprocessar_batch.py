@@ -128,6 +128,12 @@ def confere_schema():
         )
 
 
+# O id do último lote enviado, pra a rotina coletar sem precisar saber qual.
+ULTIMO_LOTE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "respostas", "ultimo_lote.txt"
+)
+
+
 def episodios(limite=None, podcast=None, pendentes=False, novos=False):
     """Episódios com transcrição salva, do mais recente pro mais antigo.
 
@@ -210,6 +216,8 @@ def estimar(eps):
         print(f"  com {saida:,} tokens de saída/ep: "
               f"US$ {usd:.2f}  (R$ {usd * USD_BRL:.2f})")
     print("\n(já com os 50% de desconto do lote)")
+    # pior caso (5 mil tokens de saída por episódio), em reais
+    return usd * USD_BRL
 
 
 # ──────────────────────────────────────────────────── envio ───
@@ -223,6 +231,8 @@ def enviar(eps):
     ]
 
     lote = client.messages.batches.create(requests=requests)
+    with open(ULTIMO_LOTE, "w", encoding="utf-8") as f:
+        f.write(lote.id)
     print(f"batch_id: {lote.id}")
     print(f"status:   {lote.processing_status}")
     print(f"\nGuarde o batch_id. Pra buscar o resultado depois:")
@@ -245,7 +255,15 @@ def aguardar(batch_id, intervalo=60):
         time.sleep(intervalo)
 
 
-def coletar(batch_id):
+def coletar(batch_id, esperar=True):
+    if not esperar:
+        # modo da rotina: se o lote ainda não terminou, não fica esperando
+        lote = client.messages.batches.retrieve(batch_id)
+        if lote.processing_status != "ended":
+            c = lote.request_counts
+            print(f"Lote {batch_id} ainda processando ({c.processing} pendentes, "
+                  f"{c.succeeded} prontos). Nada gravado; tente na próxima.")
+            sys.exit(3)
     aguardar(batch_id)
 
     titulos = {e["id"]: e["titulo"] for e in episodios()}
@@ -351,7 +369,12 @@ def main():
                    help="com --sincrono, grava no banco (padrão: só mostra)")
     p.add_argument("--estimar", action="store_true", help="só calcula o custo")
     p.add_argument("--enviar", action="store_true", help="cria o lote")
-    p.add_argument("--coletar", metavar="BATCH_ID", help="aguarda e grava o resultado")
+    p.add_argument("--coletar", metavar="BATCH_ID",
+                   help="aguarda e grava o resultado; 'ultimo' = o último enviado")
+    p.add_argument("--sem-esperar", action="store_true",
+                   help="com --coletar: se o lote não terminou, sai sem esperar")
+    p.add_argument("--teto-brl", type=float, metavar="R$",
+                   help="com --enviar: mede antes e só envia se o pior caso couber no teto")
     p.add_argument("--limite", type=int, help="processa só os N mais recentes")
     p.add_argument("--podcast", help='só este podcast (trecho do nome, ex.: "socios")')
     p.add_argument("--pendentes", action="store_true",
@@ -376,9 +399,31 @@ def main():
     elif args.sincrono:
         sincrono(alvo(), gravar=args.gravar)
     elif args.coletar:
-        coletar(args.coletar)
+        batch_id = args.coletar
+        if batch_id == "ultimo":
+            if not os.path.exists(ULTIMO_LOTE):
+                sys.exit("Nenhum lote enviado ainda.")
+            batch_id = open(ULTIMO_LOTE, encoding="utf-8").read().strip()
+        coletar(batch_id, esperar=not args.sem_esperar)
+        # coletado: some o marcador, pra não coletar o mesmo lote de novo
+        if args.coletar == "ultimo":
+            os.remove(ULTIMO_LOTE)
     elif args.enviar:
-        enviar(alvo())
+        eps = alvo()
+        if not eps:
+            print("Nada pra enviar.")
+            return
+        if args.teto_brl is not None:
+            # Gasto autorizado pelo Paulo sem aprovação caso a caso, desde que
+            # caiba no teto. Mede com count_tokens (grátis) e compara o PIOR
+            # caso; se passar, não envia e diz quanto seria.
+            pior = estimar(eps)
+            if pior > args.teto_brl:
+                print(f"\nNÃO ENVIADO: pior caso R$ {pior:.2f} passa do teto de "
+                      f"R$ {args.teto_brl:.2f}. Precisa do ok do Paulo.")
+                sys.exit(2)
+            print(f"\nDentro do teto (pior caso R$ {pior:.2f} ≤ R$ {args.teto_brl:.2f}).\n")
+        enviar(eps)
     else:
         estimar(alvo())
 
