@@ -262,8 +262,11 @@ export default async function PodcastPage({
       <FiltroProvider>
         <CalendarioEpisodios episodios={episodios} livros={livros} />
 
-        <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
-          <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
+        {/* no celular o índice vai pro fim: a estante é o que importa aqui */}
+        <div className="flex flex-col lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
+          <div className="order-last lg:order-none">
+            <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
+          </div>
           <div className="min-w-0">
             {/* O filtro da URL (?q=, ?pessoa=) é lido no navegador, pra página
                 poder ficar em cache. A estante sem filtro é o que vai no HTML

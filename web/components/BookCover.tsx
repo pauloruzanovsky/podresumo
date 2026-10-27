@@ -48,6 +48,7 @@ export default function BookCover({
   capaUrl,
   size = "sm",
   className = "",
+  carregar = "lazy",
 }: {
   titulo: string;
   autor?: string | null;
@@ -58,6 +59,9 @@ export default function BookCover({
    *  mancha); "lg" na página do livro, onde há espaço pro título inteiro. */
   size?: "sm" | "lg";
   className?: string;
+  /** "eager" onde o lazy não percebe a capa entrando na tela (mural que
+   *  corre sozinho) ou ela já está na primeira tela. */
+  carregar?: "lazy" | "eager";
 }) {
   const cor = PALETA[hash(titulo) % PALETA.length];
 
@@ -82,7 +86,7 @@ export default function BookCover({
         <img
           src={capaUrl}
           alt=""
-          loading="lazy"
+          loading={carregar}
           className="absolute inset-0 w-full h-full object-contain"
         />
       </div>

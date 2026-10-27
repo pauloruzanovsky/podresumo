@@ -7,6 +7,8 @@ import HomeSearch from "@/components/HomeSearch";
 import { slugify } from "@/lib/slug";
 import { hrefLivro } from "@/lib/links";
 import Newsletter from "@/components/Newsletter";
+import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
+import CitacaoDestaque, { type Destaque } from "@/components/CitacaoDestaque";
 
 export const revalidate = 60;
 
@@ -21,7 +23,7 @@ interface LivroCard {
 }
 
 export default async function Home() {
-  const [livrosRes, podcastsRes, episodesRes] = await Promise.all([
+  const [livrosRes, podcastsRes, episodesRes, falasRes] = await Promise.all([
     todas((de, ate) =>
       supabase
         .from("livros")
@@ -34,6 +36,21 @@ export default async function Home() {
     ),
     supabase.from("podcasts").select("id, nome", { count: "exact" }),
     supabase.from("episodes").select("podcast_id").eq("status", "done"),
+    // candidatas à citação do dia: recomendação com a fala literal e o minuto
+    todas((de, ate) =>
+      supabase
+        .from("episode_livros")
+        .select(
+          "citacao_literal, quem_citou, timestamp_seg, livros!inner(id, slug, titulo, autor, capa_url, tipo), episodes!inner(id, slug, ep_number, titulo, link_youtube, podcast_id)"
+        )
+        .eq("natureza", "recomenda")
+        .eq("livros.tipo", "livro")
+        .not("citacao_literal", "is", null)
+        .not("timestamp_seg", "is", null)
+        .order("episode_id")
+        .order("livro_id")
+        .range(de, ate)
+    ),
   ]);
 
   // Podcast oculto (lib/podcasts) some de tudo: estantes, contagens e das
@@ -84,6 +101,59 @@ export default async function Home() {
     .filter((l) => l.citacoes > 0);
 
   const totalLivros = livros.length;
+
+  // Mural: as capas reais dos livros mais citados.
+  const mural: CapaMural[] = ((livrosRes.data ?? []) as any[])
+    .filter((l) => l.capa_url && !livroDaCasa(l.autor))
+    .map((l) => ({
+      id: l.id as string,
+      slug: (l.slug ?? null) as string | null,
+      titulo: l.titulo as string,
+      autor: l.autor as string | null,
+      capaUrl: l.capa_url as string,
+      n: ((l.episode_livros ?? []) as any[]).filter((r) => idsVisiveis.has(r.episodes?.podcast_id)).length,
+    }))
+    .filter((l) => l.n > 0)
+    .sort((a, b) => b.n - a.n || a.titulo.localeCompare(b.titulo))
+    .slice(0, 40);
+
+  // Citação do dia: entre as falas que cabem bonitas no cartão (nem
+  // telegráficas nem um parágrafo), com capa e fora do livro da casa. A
+  // escolha muda à meia-noite e é a mesma pra todo mundo no dia.
+  const falas = ((falasRes.data ?? []) as any[])
+    .filter(
+      (r) =>
+        idsVisiveis.has(r.episodes?.podcast_id) &&
+        r.livros?.capa_url &&
+        !livroDaCasa(r.livros?.autor) &&
+        r.citacao_literal.length >= 70 &&
+        r.citacao_literal.length <= 200
+    )
+    .sort((a, b) =>
+      `${a.episodes.id}${a.livros.id}`.localeCompare(`${b.episodes.id}${b.livros.id}`)
+    );
+  const fala = falas.length ? falas[Math.floor(Date.now() / 86_400_000) % falas.length] : null;
+  const destaque: Destaque | null = fala && {
+    citacao: fala.citacao_literal.trim().replace(/^["“]|["”]$/g, ""),
+    quem: fala.quem_citou ?? null,
+    segundo: fala.timestamp_seg,
+    linkYoutube: fala.episodes.link_youtube,
+    livro: {
+      id: fala.livros.id,
+      slug: fala.livros.slug ?? null,
+      titulo: fala.livros.titulo,
+      autor: fala.livros.autor,
+      capaUrl: fala.livros.capa_url,
+    },
+    episodio: {
+      id: fala.episodes.id,
+      slug: fala.episodes.slug ?? null,
+      numero: fala.episodes.ep_number ?? null,
+      titulo: fala.episodes.ep_number
+        ? (fala.episodes.titulo as string).replace(/\s*\|[^|]*$/, "")
+        : fala.episodes.titulo,
+    },
+  };
   // As capas da faixa da newsletter: os livros citados mais recentemente,
   // capa real primeiro — é a amostra do que chega no e-mail.
   const recentes = [...livros]
@@ -160,16 +230,13 @@ export default async function Home() {
     .sort((a, b) => b.total - a.total);
 
   return (
-    <div>
-      {/* Hero + Busca — compacto no celular pelo mesmo motivo da biblioteca:
-          os cards precisam começar dentro da primeira tela. */}
-      <div className="text-center mb-8 sm:mb-16">
-        <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border mb-5">
-          <span className="w-1.5 h-1.5 rounded-full bg-muted/50" />
-          <span className="text-xs font-medium text-muted">
-            {totalLivros} livros descobertos em podcasts
-          </span>
-        </div>
+    <div className="-mt-6 sm:-mt-4">
+      <MuralCapas capas={mural} />
+
+      {/* Hero + Busca — compacto no celular: a newsletter precisa caber na
+          primeira tela. O selo "N livros descobertos" saiu: repetia os
+          números que já vêm logo abaixo. */}
+      <div className="text-center mb-10 sm:mb-16">
         <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-3 sm:mb-5 leading-tight sm:leading-[1.08]">
           O que ler em seguida,{" "}
           <span className="italic text-muted sm:block">
@@ -209,6 +276,8 @@ export default async function Home() {
           <Stat value={totalPodcasts} label={totalPodcasts === 1 ? "podcast" : "podcasts"} />
         </div>
       </div>
+
+      {destaque && <CitacaoDestaque d={destaque} />}
 
       {/* Estantes — a porta de entrada: é por elas que se chega às páginas
           /podcast, que são o que cada programa tem motivo pra divulgar. */}

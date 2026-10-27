@@ -104,6 +104,41 @@ body {
   border-radius: 3px;
 }
 
+/* Player do trecho sobe do pé da tela */
+@keyframes player-entra {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+.player-entra {
+  animation: player-entra 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Mural de capas da home: duas fileiras correndo devagar, em sentidos
+   opostos. A lista vem duplicada, então -50% emenda sem salto. */
+@keyframes mural-corre {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.mural-fileira {
+  animation: mural-corre var(--mural-duracao, 90s) linear infinite;
+}
+.mural-fileira[data-sentido="volta"] {
+  animation-direction: reverse;
+}
+.mural:hover .mural-fileira {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-entra,
+  .mural-fileira {
+    animation: none;
+  }
+}
+
 /* Tag scroll container */
 .tags-scroll {
   scrollbar-width: none;

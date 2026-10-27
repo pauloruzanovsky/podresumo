@@ -248,6 +248,20 @@ export default async function LivroPage({
         Number(b.natureza === "recomenda") - Number(a.natureza === "recomenda")
     )[0];
 
+  // Prova social do topo: de quando a quando, e quem citou (mais vezes primeiro).
+  const anos = citacoes.map((c) => Number(c.data.slice(0, 4)));
+  const anoInicial = Math.min(...anos);
+  const anoFinal = Math.max(...anos);
+  const porAno: [number, number][] = Array.from({ length: anoFinal - anoInicial + 1 }, (_, i) => {
+    const ano = anoInicial + i;
+    return [ano, anos.filter((a) => a === ano).length];
+  });
+  const maxAno = Math.max(...porAno.map(([, n]) => n));
+  const contaQuem = new Map<string, number>();
+  for (const c of citacoes)
+    if (c.quem_citou) contaQuem.set(c.quem_citou, (contaQuem.get(c.quem_citou) ?? 0) + 1);
+  const quemCitou = [...contaQuem.entries()].sort((a, b) => b[1] - a[1]).map(([q]) => q);
+
   // Livros citados nos mesmos episódios. É a única recomendação que este
   // acervo pode fazer com honestidade: não é "quem leu isso leu aquilo", é
   // "saiu na mesma conversa".
@@ -312,55 +326,106 @@ export default async function LivroPage({
         Estante
       </Link>
 
-      {/* Header */}
-      <div className="mb-10 flex flex-col sm:flex-row gap-6 sm:gap-8">
-        {/* self-start: sem isso o flex estica a capa até a altura da coluna de
-            texto e sobra gradiente aparecendo embaixo da imagem. */}
-        <BookCover
-          titulo={livro.titulo}
-          autor={livro.autor}
-          capaUrl={livro.capa_url}
-          size="lg"
-          className="w-32 sm:w-40 shrink-0 self-start shadow-md"
-        />
+      {/* Topo: a capa desfocada tinge o cartão; a capa nítida em cima, com
+          sombra de livro de verdade. Comprar é o botão cheio — é o que paga
+          o site — e ouvir a fala vem do lado. */}
+      <header className="relative overflow-hidden mb-12 rounded-3xl border border-border bg-card px-6 py-8 sm:p-10">
+        {livro.capa_url && (
+          <div
+            className="pointer-events-none absolute inset-0 scale-125 opacity-30 blur-3xl"
+            style={{ backgroundImage: `url(${livro.capa_url})`, backgroundSize: "cover", backgroundPosition: "center" }}
+            aria-hidden="true"
+          />
+        )}
 
-        <div className="min-w-0">
-        <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight mb-2">
-          {livro.titulo}
-        </h1>
-        <p className="text-muted text-lg">
-          {livro.autor ?? (
-            <span className="italic text-muted/60">autor não citado no episódio</span>
-          )}
-        </p>
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-10 text-center sm:text-left">
+          {/* self-start no computador: sem isso o flex estica a capa até a
+              altura da coluna de texto */}
+          <BookCover
+            titulo={livro.titulo}
+            autor={livro.autor}
+            capaUrl={livro.capa_url}
+            size="lg"
+            carregar="eager"
+            className="w-36 sm:w-44 shrink-0 sm:self-start shadow-[0_24px_50px_-18px_rgba(43,37,33,0.7)] -rotate-1"
+          />
 
-        {/* Os temas saíram daqui de propósito. `livros.temas` é herdado das
-            tags dos EPISÓDIOS que citam o livro, então um livro citado em 4
-            episódios acumulava a união das 4 listas — "A Lógica do Cisne
-            Negro" aparecia marcado com Bitcoin, Educação e Produtividade.
-            Como eixo de navegação na biblioteca funciona; como afirmação
-            sobre o livro, é falso. Volta quando o tema for derivado do livro. */}
+          <div className="min-w-0">
+            <h1 className="font-serif text-3xl sm:text-5xl font-semibold tracking-tight leading-tight">
+              {livro.titulo}
+            </h1>
+            <p className="text-muted text-lg mt-2">
+              {livro.autor ?? (
+                <span className="italic text-muted/60">autor não citado no episódio</span>
+              )}
+            </p>
 
-        <div className="flex items-center gap-4 mt-6 flex-wrap">
-          <span className="text-sm text-muted">
-            Citado em{" "}
-            <span className="font-semibold text-foreground">
-              {citacoes.length}
-            </span>{" "}
-            {citacoes.length === 1 ? "episódio" : "episódios"}
-          </span>
+            {/* Os temas saíram daqui de propósito: `livros.temas` vem de texto
+                livre da extração e não é afirmação confiável sobre o livro.
+                A estante usa as categorias de lib/categorias pra filtrar. */}
 
-          <a
-            href={getAmazonLink(livro.titulo, livro.autor)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-full text-foreground text-sm font-medium hover:bg-card-hover transition-colors"
-          >
-            Buscar na Amazon
-          </a>
+            <p className="text-sm text-muted mt-5 leading-relaxed">
+              Citado em <span className="font-semibold text-foreground">{citacoes.length}</span>{" "}
+              {citacoes.length === 1 ? "episódio" : "episódios"}
+              {anoInicial !== anoFinal && (
+                <>
+                  , de {anoInicial} a {anoFinal}
+                </>
+              )}
+              {quemCitou.length > 0 && (
+                <>
+                  , por <span className="text-foreground">{quemCitou.slice(0, 2).join(" e ")}</span>
+                  {quemCitou.length > 2 && ` e mais ${quemCitou.length - 2}`}
+                </>
+              )}
+              .
+            </p>
+
+            {/* quantas vezes por ano: o livro que atravessa os anos aparece aqui */}
+            {porAno.length > 1 && (
+              <div className="mt-3 flex items-end justify-center sm:justify-start gap-1.5" aria-hidden="true">
+                {porAno.map(([ano, n]) => (
+                  <div key={ano} className="flex flex-col items-center gap-1">
+                    <span
+                      className="w-5 rounded-sm bg-chart"
+                      style={{ height: Math.max(3, (n / maxAno) * 28), opacity: n ? 1 : 0.25 }}
+                    />
+                    <span className="text-[9px] text-muted tabular-nums">{String(ano).slice(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-center sm:justify-start gap-3 mt-6 flex-wrap">
+              <a
+                href={getAmazonLink(livro.titulo, livro.autor)}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
+              >
+                Comprar na Amazon
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
+                </svg>
+              </a>
+              {linkMinuto(destaque) && (
+                <a
+                  href={linkMinuto(destaque)!}
+                  data-trecho={`${livro.titulo}${destaque.quem_citou ? ` — ${destaque.quem_citou}` : ""}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-border bg-background/60 hover:bg-card-hover text-sm font-medium rounded-full transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  Ouvir a citação
+                </a>
+              )}
+            </div>
+          </div>
         </div>
-        </div>
-      </div>
+      </header>
 
       {/* Citações. Até três, cada uma ganha o card inteiro. Acima disso
           (há livro com 20), só a melhor fica em destaque e o resto vira uma

@@ -6,6 +6,7 @@ import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
 import Newsletter from "@/components/Newsletter";
 import { IconePodlibris } from "@/components/Logo";
 import TrocaTema, { SCRIPT_TEMA } from "@/components/TrocaTema";
+import PlayerTrecho from "@/components/PlayerTrecho";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -115,6 +116,10 @@ export default function RootLayout({
             </nav>
           </div>
         </footer>
+
+        {/* "Ouvir o trecho" toca aqui, no minuto, sem sair do site */}
+        <PlayerTrecho />
+
       </body>
     </html>
   );

@@ -192,8 +192,11 @@ export default async function EpisodioPage({
   const titulo = tituloLimpo(ep.titulo, ep.ep_number);
 
   return (
-    <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
-    <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
+    // no celular o índice vai pro fim: antes ele empurrava o episódio pra baixo
+    <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
+    <div className="order-last lg:order-none">
+      <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
+    </div>
     <div className="min-w-0 max-w-4xl">
       <Link
         // volta pra estante do podcast deste episódio; a lista de episódios
@@ -207,90 +210,52 @@ export default async function EpisodioPage({
         Estante
       </Link>
 
-      {/* Hero */}
-      {ep.thumbnail && (
-        <div className="relative w-full h-56 sm:h-72 md:h-80 rounded-2xl overflow-hidden mb-8">
-          <Image
-            src={ep.thumbnail}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 860px"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-            <p className="text-sm text-white/80 mb-2">
-              {ep.ep_number && (
-                <span className="font-mono font-semibold text-white mr-2">
-                  #{ep.ep_number}
-                </span>
-              )}
-              {formatDate(ep.data)} · {ep.duracao}
-            </p>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white leading-snug">
-              {titulo}
-            </h1>
+      {/* Topo: a thumbnail limpa (ela já traz o título desenhado; escrever
+          por cima duplicava) e o título embaixo, em serifada. */}
+      {/* no computador a thumbnail fica ao lado do título, pequena: em
+          largura inteira ela empurrava os livros pra baixo da dobra */}
+      <header className="mb-10 md:flex md:items-center md:gap-8">
+        {ep.thumbnail && (
+          <div className="relative w-full md:w-80 shrink-0 aspect-video rounded-2xl overflow-hidden mb-6 md:mb-0 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.6)]">
+            <Image
+              src={ep.thumbnail}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 320px"
+              priority
+            />
           </div>
-        </div>
-      )}
-
-      {!ep.thumbnail && (
-        <div className="mb-8">
-          <p className="text-sm text-muted mb-2">
-            {ep.ep_number && (
-              <span className="font-mono font-semibold text-foreground mr-2">
-                #{ep.ep_number}
-              </span>
-            )}
-            {formatDate(ep.data)} · {ep.duracao}
+        )}
+        <div className="min-w-0">
+        <p className="text-sm text-muted mb-2 tabular-nums">
+          {ep.ep_number && (
+            <span className="font-mono font-semibold text-foreground mr-2">#{ep.ep_number}</span>
+          )}
+          {formatDate(ep.data)}
+          {ep.duracao && ` · ${ep.duracao}`}
+        </p>
+        <h1 className="font-serif text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
+          {titulo}
+        </h1>
+        {convidados.length > 0 && (
+          <p className="mt-2 text-muted">
+            com <span className="text-foreground">{convidados.join(", ")}</span>
           </p>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{titulo}</h1>
-        </div>
-      )}
-
-      {/* Convidados: com apresentação quando a extração trouxe; senão só os nomes */}
-      {apresentacoes.length > 0 ? (
-        <div className="mb-6 flex flex-col gap-3">
-          {apresentacoes.map((c) => (
-            <p key={c.nome} className="leading-relaxed">
-              <span className="font-semibold">{c.nome}</span>
-              {c.descricao && (
-                <span className="text-muted"> — {c.descricao}</span>
-              )}
-            </p>
-          ))}
-        </div>
-      ) : (
-        convidados.length > 0 && (
-          <p className="mb-6">
-            <span className="text-muted">Com </span>
-            <span className="font-semibold">{convidados.join(", ")}</span>
-          </p>
-        )
-      )}
-
-      <div className="flex items-center gap-2 flex-wrap mb-10">
+        )}
         {ep.link_youtube && (
           <a
             href={ep.link_youtube}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors mr-2"
+            className="inline-flex items-center gap-2 mt-5 px-4 py-2 border border-border hover:bg-card-hover text-sm font-medium rounded-full transition-colors"
           >
             <IconePlay />
-            Assistir no YouTube
+            Episódio completo no YouTube
           </a>
         )}
-        {(ep.tags ?? []).slice(0, 5).map((tag: string) => (
-          <span
-            key={tag}
-            className="px-3 py-1.5 rounded-full border border-border text-xs text-muted"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
+        </div>
+      </header>
 
       {/* Os livros vêm antes de tudo que é texto: é o que o site tem de
           próprio, e no fim da página ninguém chegava neles. */}
@@ -320,6 +285,21 @@ export default async function EpisodioPage({
           },
         ]}
       />
+
+      {/* Quem são os convidados, quando a extração trouxe a apresentação */}
+      {apresentacoes.length > 0 && (
+        <section className="mb-10">
+          <Rotulo>Quem está na conversa</Rotulo>
+          <div className="flex flex-col gap-3">
+            {apresentacoes.map((c) => (
+              <p key={c.nome} className="leading-relaxed">
+                <span className="font-semibold">{c.nome}</span>
+                {c.descricao && <span className="text-muted"> — {c.descricao}</span>}
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Insight + Ação */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">

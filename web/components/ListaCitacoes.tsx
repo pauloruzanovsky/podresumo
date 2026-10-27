@@ -118,6 +118,7 @@ function Linha({ c }: { c: CitacaoLinha }) {
           {minuto ? (
             <a
               href={minuto}
+              data-trecho={`${c.quem_citou ? `${c.quem_citou} · ` : ""}${tituloLimpo(c.titulo, c.ep_number)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-sm font-semibold text-accent-light hover:text-accent"

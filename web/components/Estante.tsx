@@ -78,6 +78,7 @@ export default function Estante({ prateleiras }: { prateleiras: Prateleira[] }) 
                   {l.minuto && (
                     <a
                       href={l.minuto.href}
+                      data-trecho={l.titulo}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 mt-1 font-mono text-[11px] font-semibold text-accent-light hover:text-accent"
