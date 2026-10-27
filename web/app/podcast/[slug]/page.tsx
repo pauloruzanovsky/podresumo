@@ -9,6 +9,7 @@ import EstanteDaUrl from "@/components/EstanteDaUrl";
 import Newsletter from "@/components/Newsletter";
 import Rankings, { type AutorPlacar, type PessoaPlacar } from "@/components/Rankings";
 import { carregarIndice } from "@/lib/indice";
+import { categoriasDe } from "@/lib/categorias";
 import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 
 export const revalidate = 60;
@@ -73,7 +74,8 @@ async function carregar(slug: string) {
           capa_url: l.capa_url ?? null,
           episodios_count: 0,
           ultima_data: null,
-          temas: (l.temas ?? []) as string[],
+          // tema solto da extração → categoria fixa da estante (lib/categorias)
+          temas: categoriasDe((l.temas ?? []) as string[]),
           pessoas: [],
           pessoasSet: new Set<string>(),
           daCasa: livroDaCasa(l.autor),

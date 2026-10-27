@@ -31,7 +31,8 @@ export interface LivroEstante {
 type Ordem = "citacoes" | "recente" | "az";
 
 const POR_PAGINA = 36;
-const MAX_TEMAS = 8;
+// As categorias são poucas e fixas (lib/categorias): cabem todas.
+const MAX_TEMAS = 14;
 
 export default function EstanteFiltravel({
   livros,
