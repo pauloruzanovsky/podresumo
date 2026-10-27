@@ -10,6 +10,8 @@ import Newsletter from "@/components/Newsletter";
 import Rankings, { type AutorPlacar, type PessoaPlacar } from "@/components/Rankings";
 import { carregarIndice } from "@/lib/indice";
 import { categoriasDe } from "@/lib/categorias";
+import CalendarioEpisodios, { type EpisodioLinha } from "@/components/CalendarioEpisodios";
+import { FiltroProvider } from "@/lib/filtroEstante";
 import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 
 export const revalidate = 60;
@@ -41,7 +43,7 @@ async function carregar(slug: string) {
     supabase
       .from("episode_livros")
       .select(
-        "livro_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, slug, titulo, autor, capa_url, temas, tipo)"
+        "livro_id, episode_id, quem_citou, episodes!inner(data, podcast_id), livros!inner(id, slug, titulo, autor, capa_url, temas, tipo)"
       )
       .eq("episodes.podcast_id", podcast.id)
       .eq("livros.tipo", "livro")
@@ -134,9 +136,39 @@ async function carregar(slug: string) {
     .sort((a, b) => b.citacoes - a.citacoes || a.nome.localeCompare(b.nome))
     .slice(0, NO_PLACAR);
 
+  // ── linha do tempo: um grão por episódio, com as citações dele ──
+  const { data: eps } = await todas((de, ate) =>
+    supabase
+      .from("episodes")
+      .select("id, slug, ep_number, titulo, data, convidados")
+      .eq("podcast_id", podcast.id)
+      .eq("status", "done")
+      .order("data")
+      .order("id")
+      .range(de, ate)
+  );
+  const citacoesPorEp = new Map<string, EpisodioLinha["citacoes"]>();
+  for (const r of citacoes) {
+    const lista = citacoesPorEp.get(r.episode_id) ?? [];
+    lista.push({ livroId: r.livro_id, quem: r.quem_citou ?? null });
+    citacoesPorEp.set(r.episode_id, lista);
+  }
+  const episodios: EpisodioLinha[] = (eps as any[])
+    .filter((e) => e.data)
+    .map((e) => ({
+      id: e.id,
+      slug: e.slug ?? null,
+      numero: e.ep_number ?? null,
+      titulo: e.ep_number ? (e.titulo as string).replace(/\s*\|[^|]*$/, "") : e.titulo,
+      data: e.data,
+      convidados: Array.isArray(e.convidados) ? e.convidados : [],
+      citacoes: citacoesPorEp.get(e.id) ?? [],
+    }));
+
   return {
     podcast,
     livros,
+    episodios,
     totalCitacoes: citacoes.length,
     totalEpisodios: totalEpisodios ?? 0,
     pessoas,
@@ -187,7 +219,7 @@ export default async function PodcastPage({
   const dados = await carregar(slug);
   if (!dados) return notFound();
 
-  const { podcast, livros, totalCitacoes, totalEpisodios, pessoas, autores } = dados;
+  const { podcast, livros, episodios, totalCitacoes, totalEpisodios, pessoas, autores } = dados;
   const indice = await carregarIndice(podcast.id);
   const canal = podcast.youtube_channel_id?.startsWith("@")
     ? podcast.youtube_channel_id
@@ -225,21 +257,27 @@ export default async function PodcastPage({
         )}
       </div>
 
-      <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
-        <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
-        <div className="min-w-0">
-          {/* O filtro da URL (?q=, ?pessoa=) é lido no navegador, pra página
-              poder ficar em cache. A estante sem filtro é o que vai no HTML
-              (e o que o Google vê); o filtro entra logo depois. */}
-          <Suspense
-            fallback={<EstanteFiltravel livros={livros} totalCitacoes={totalCitacoes} />}
-          >
-            <EstanteDaUrl livros={livros} totalCitacoes={totalCitacoes} />
-          </Suspense>
-          <Rankings pessoas={pessoas} autores={autores} apresentadores={APRESENTADORES} />
-          <Newsletter />
+      {/* O calendário fica em largura inteira, fora da estante, mas lê o
+          filtro dela pelo FiltroProvider. */}
+      <FiltroProvider>
+        <CalendarioEpisodios episodios={episodios} livros={livros} />
+
+        <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
+          <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
+          <div className="min-w-0">
+            {/* O filtro da URL (?q=, ?pessoa=) é lido no navegador, pra página
+                poder ficar em cache. A estante sem filtro é o que vai no HTML
+                (e o que o Google vê); o filtro entra logo depois. */}
+            <Suspense
+              fallback={<EstanteFiltravel livros={livros} totalCitacoes={totalCitacoes} />}
+            >
+              <EstanteDaUrl livros={livros} totalCitacoes={totalCitacoes} />
+            </Suspense>
+            <Rankings pessoas={pessoas} autores={autores} apresentadores={APRESENTADORES} />
+            <Newsletter />
+          </div>
         </div>
-      </div>
+      </FiltroProvider>
     </div>
   );
 }

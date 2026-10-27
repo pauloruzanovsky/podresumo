@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import { hrefLivro } from "@/lib/links";
+import { livroBate, useFiltro } from "@/lib/filtroEstante";
 
 /**
  * A estante inteira do podcast, filtrável: busca, quem citou, tema e ordem em
@@ -66,15 +67,13 @@ export default function EstanteFiltravel({
       .slice(0, MAX_TEMAS);
   }, [livros]);
 
+  // a linha do tempo, acima da estante, acende os episódios deste filtro
+  const { publicar } = useFiltro();
+  useEffect(() => publicar({ busca, pessoa, tema }), [busca, pessoa, tema, publicar]);
+
   const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
     const r = livros.filter(
-      (l) =>
-        (!q ||
-          l.titulo.toLowerCase().includes(q) ||
-          (l.autor?.toLowerCase().includes(q) ?? false)) &&
-        (!pessoa || l.pessoas.includes(pessoa)) &&
-        (!tema || l.temas.includes(tema))
+      (l) => livroBate(l, { busca, tema }) && (!pessoa || l.pessoas.includes(pessoa))
     );
     r.sort((a, b) => {
       // o livro da casa abre a estante em qualquer ordem
