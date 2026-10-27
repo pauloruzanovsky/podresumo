@@ -6,8 +6,8 @@ import { hrefEpisodio } from "@/lib/links";
 import type { ItemIndice } from "@/lib/indice";
 
 /**
- * Índice lateral do podcast: todos os episódios, com os já mapeados
- * clicáveis e os demais apagados como "em breve".
+ * Índice lateral do podcast: os episódios com página, cada um com quantos
+ * livros cita.
  *
  * No computador fica fixo ao lado do conteúdo. No celular não há lateral,
  * então vira uma barra que abre a lista.
@@ -23,12 +23,8 @@ export default function EpisodeIndex({
   podcastNome: string;
 }) {
   const [aberto, setAberto] = useState(false);
-  const [soMapeados, setSoMapeados] = useState(false);
   const lista = useRef<HTMLOListElement>(null);
   const atual = useRef<HTMLLIElement>(null);
-
-  const mapeados = itens.filter((i) => i.mapeado).length;
-  const visiveis = soMapeados ? itens.filter((i) => i.mapeado) : itens;
 
   // Rola só a lista (não a página) até o episódio aberto.
   useEffect(() => {
@@ -39,14 +35,14 @@ export default function EpisodeIndex({
         lista.current.clientHeight / 2 +
         atual.current.clientHeight / 2;
     }
-  }, [atualId, aberto, soMapeados]);
+  }, [atualId, aberto]);
 
   return (
     <aside
       aria-label={`Episódios de ${podcastNome}`}
       className="mb-8 lg:mb-0 lg:sticky lg:top-20 flex flex-col bg-card border border-border rounded-2xl lg:max-h-[calc(100vh-6.5rem)]"
     >
-      <div className="p-4 pb-3">
+      <div className="p-4">
         <button
           type="button"
           onClick={() => setAberto((a) => !a)}
@@ -64,67 +60,20 @@ export default function EpisodeIndex({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-
-        <p className="text-xs text-muted mt-1">
-          <span className="font-semibold text-foreground">{mapeados}</span> de{" "}
-          {itens.length} com os livros mapeados
-        </p>
-        <div
-          className="h-1.5 mt-2 rounded-full bg-border overflow-hidden"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={itens.length}
-          aria-valuenow={mapeados}
-          aria-label="Episódios mapeados"
-        >
-          <div
-            className="h-full rounded-full bg-accent"
-            style={{ width: `${(mapeados / Math.max(itens.length, 1)) * 100}%` }}
-          />
-        </div>
       </div>
 
       <div className={`${aberto ? "flex" : "hidden"} lg:flex flex-col min-h-0`}>
-        <label className="flex items-center gap-2 px-4 pb-3 text-xs text-muted cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={soMapeados}
-            onChange={(e) => setSoMapeados(e.target.checked)}
-            className="accent-[var(--color-accent)]"
-          />
-          Só os mapeados
-        </label>
-
         <ol
           ref={lista}
           className="relative overflow-y-auto max-h-96 lg:max-h-none border-t border-border divide-y divide-border"
         >
-          {visiveis.map((item) => {
+          {itens.map((item) => {
             const ehAtual = item.id === atualId;
             const numero = (
               <span className="font-mono text-[11px] w-9 shrink-0 pt-px">
                 {item.numero ? `#${item.numero}` : "—"}
               </span>
             );
-
-            if (!item.mapeado) {
-              return (
-                <li
-                  key={item.id}
-                  className="flex gap-2 px-4 py-2.5 text-muted/60"
-                >
-                  {numero}
-                  <span className="min-w-0">
-                    <span className="block text-xs leading-snug line-clamp-2">
-                      {item.titulo}
-                    </span>
-                    <span className="block text-[10px] uppercase tracking-wider mt-0.5">
-                      em breve
-                    </span>
-                  </span>
-                </li>
-              );
-            }
 
             return (
               <li key={item.id} ref={ehAtual ? atual : undefined}>

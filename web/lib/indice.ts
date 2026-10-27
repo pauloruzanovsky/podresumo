@@ -1,21 +1,18 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/supabase";
 
 /**
- * Índice de um podcast: todos os episódios, do mais novo pro mais antigo,
- * com a marca de quais já têm os livros mapeados.
+ * Índice de um podcast: os episódios que têm página no site, do mais novo
+ * pro mais antigo.
  *
- * Inclui os `listed` e `pending` (catalogados, ainda sem extração), que o
- * resto do site ignora — é o que deixa a lista mostrar o acervo inteiro e não
- * só o que já foi processado.
+ * Os que ficaram de fora (sem legenda no YouTube) não aparecem: com o acervo
+ * praticamente todo mapeado, "em breve" seria promessa que não se cumpre.
  */
 export interface ItemIndice {
   id: string;
   slug: string | null;
   numero: string | null;
   titulo: string;
-  /** Tem página no site. */
-  mapeado: boolean;
-  /** Livros citados (só conta quando mapeado). */
+  /** Livros citados. */
   livros: number;
 }
 
@@ -25,18 +22,22 @@ function semSufixo(titulo: string) {
 }
 
 export async function carregarIndice(podcastId: string): Promise<ItemIndice[]> {
-  const { data } = await supabase
-    .from("episodes")
-    .select("id, slug, ep_number, titulo, status, episode_livros(livros(tipo))")
-    .eq("podcast_id", podcastId)
-    .order("data", { ascending: false });
+  const { data } = await todas((de, ate) =>
+    supabase
+      .from("episodes")
+      .select("id, slug, ep_number, titulo, episode_livros(livros(tipo))")
+      .eq("podcast_id", podcastId)
+      .eq("status", "done")
+      .order("data", { ascending: false })
+      .order("id")
+      .range(de, ate)
+  );
 
-  return ((data ?? []) as any[]).map((e) => ({
+  return (data as any[]).map((e) => ({
     id: e.id,
     slug: e.slug ?? null,
     numero: e.ep_number ?? null,
     titulo: e.ep_number ? semSufixo(e.titulo) : e.titulo,
-    mapeado: e.status === "done",
     livros: ((e.episode_livros ?? []) as any[]).filter(
       (r) => r.livros?.tipo === "livro"
     ).length,
