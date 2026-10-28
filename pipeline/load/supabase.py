@@ -9,6 +9,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client
 
+from transform.minuto import confere_minuto
+
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -161,6 +163,7 @@ def upsert_livros(
     livros: list[dict],
     substituir: bool = False,
     temas_renovados: set | None = None,
+    transcricao: str | None = None,
 ) -> int:
     """
     Grava as obras citadas num episódio, com tudo que a extração devolve:
@@ -184,10 +187,16 @@ def upsert_livros(
             antigos (herdados das tags do EPISÓDIO) são descartados; nas
             seguintes, faz união. Sem isso os temas velhos ocupavam o teto e
             os do livro não entravam.
+        transcricao: pra conferir o minuto de cada fala (transform/minuto).
+            Sem ela, é lida do banco — uma consulta por episódio.
 
     Returns:
         Quantidade de obras gravadas
     """
+    if transcricao is None:
+        r = supabase.table("episodes").select("transcricao").eq("id", video_id).execute().data
+        transcricao = (r[0].get("transcricao") if r else None) or ""
+
     if substituir:
         supabase.table("episode_livros").delete().eq("episode_id", video_id).execute()
 
@@ -245,6 +254,11 @@ def upsert_livros(
         segundos = para_segundos(livro.get("timestamp"))
         if segundos is None:
             segundos = livro.get("timestamp_seg")
+        # o modelo às vezes erra a hora ao copiar o minuto; a fala manda
+        conferido = confere_minuto(livro.get("citacao_literal"), segundos, transcricao)
+        if conferido != segundos:
+            print(f"   🕐 minuto corrigido pela fala: {titulo} {segundos} → {conferido}s")
+            segundos = conferido
 
         natureza = livro.get("natureza")
         supabase.table("episode_livros").upsert(
@@ -272,7 +286,7 @@ def save_episode(video_id: str, podcast_id: str, metadata: dict, ai_data: dict, 
     Combina upsert_episode + upsert_livros.
     """
     upsert_episode(video_id, podcast_id, metadata, ai_data, transcript, extrator)
-    upsert_livros(video_id, ai_data.get("livros", []))
+    upsert_livros(video_id, ai_data.get("livros", []), transcricao=transcript)
     print(f"🎉 Episódio {video_id} salvo com sucesso no banco!")
 
 
