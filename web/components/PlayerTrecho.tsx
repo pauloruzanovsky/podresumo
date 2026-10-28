@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatTimestamp } from "@/lib/tempo";
 
 /**
  * O trecho toca aqui mesmo. Todo link do site pro YouTube com minuto
@@ -42,12 +43,6 @@ function lerTrecho(a: HTMLAnchorElement): Trecho | null {
   return { video, inicio, titulo, url: a.href };
 }
 
-function minuto(seg: number) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
-}
 
 export default function PlayerTrecho() {
   const [trecho, setTrecho] = useState<Trecho | null>(null);
@@ -89,7 +84,7 @@ export default function PlayerTrecho() {
           <span className="relative inline-flex h-2 w-2 rounded-full bg-chart" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-muted tabular-nums">Tocando a partir de {minuto(trecho.inicio)}</p>
+          <p className="text-[11px] text-muted tabular-nums">Tocando a partir de {formatTimestamp(trecho.inicio)}</p>
           <p className="text-sm font-medium leading-snug line-clamp-2">{trecho.titulo.replace(/^“|”$/g, "")}</p>
         </div>
         <a
@@ -113,7 +108,7 @@ export default function PlayerTrecho() {
           </svg>
         </button>
       </div>
-      <div className="relative aspect-video bg-black">
+      <div className="relative aspect-video bg-card-hover">
         <iframe
           key={`${trecho.video}-${trecho.inicio}`}
           src={src}

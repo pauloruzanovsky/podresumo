@@ -8,6 +8,7 @@ import { resolverLivro } from "@/lib/resolver";
 import BookCover from "@/components/BookCover";
 import ListaCitacoes from "@/components/ListaCitacoes";
 import Newsletter from "@/components/Newsletter";
+import { formatTimestamp } from "@/lib/tempo";
 
 export const revalidate = 60;
 // Liga o cache por livro sem pré-montar os ~470 no build: cada um entra no
@@ -71,13 +72,6 @@ export async function generateMetadata({
   };
 }
 
-function formatTimestamp(seg: number) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + "T12:00:00");
@@ -249,14 +243,19 @@ export default async function LivroPage({
     )[0];
 
   // Prova social do topo: de quando a quando, e quem citou (mais vezes primeiro).
-  const anos = citacoes.map((c) => Number(c.data.slice(0, 4)));
-  const anoInicial = Math.min(...anos);
-  const anoFinal = Math.max(...anos);
-  const porAno: [number, number][] = Array.from({ length: anoFinal - anoInicial + 1 }, (_, i) => {
-    const ano = anoInicial + i;
-    return [ano, anos.filter((a) => a === ano).length];
-  });
-  const maxAno = Math.max(...porAno.map(([, n]) => n));
+  // episódio sem data não entra na conta (e não derruba a página)
+  const anos = citacoes
+    .map((c) => Number(c.data?.slice(0, 4)))
+    .filter((a) => Number.isFinite(a) && a > 0);
+  const anoInicial = anos.length ? Math.min(...anos) : 0;
+  const anoFinal = anos.length ? Math.max(...anos) : 0;
+  const porAno: [number, number][] = anos.length
+    ? Array.from({ length: anoFinal - anoInicial + 1 }, (_, i) => {
+        const ano = anoInicial + i;
+        return [ano, anos.filter((a) => a === ano).length];
+      })
+    : [];
+  const maxAno = Math.max(1, ...porAno.map(([, n]) => n));
   const contaQuem = new Map<string, number>();
   for (const c of citacoes)
     if (c.quem_citou) contaQuem.set(c.quem_citou, (contaQuem.get(c.quem_citou) ?? 0) + 1);
@@ -333,7 +332,8 @@ export default async function LivroPage({
         {livro.capa_url && (
           <div
             className="pointer-events-none absolute inset-0 scale-125 opacity-30 blur-3xl"
-            style={{ backgroundImage: `url(${livro.capa_url})`, backgroundSize: "cover", backgroundPosition: "center" }}
+            // entre aspas: URL com parêntese ou espaço quebrava o url()
+            style={{ backgroundImage: `url(${JSON.stringify(livro.capa_url)})`, backgroundSize: "cover", backgroundPosition: "center" }}
             aria-hidden="true"
           />
         )}
@@ -367,14 +367,18 @@ export default async function LivroPage({
             <p className="text-sm text-muted mt-5 leading-relaxed">
               Citado em <span className="font-semibold text-foreground">{citacoes.length}</span>{" "}
               {citacoes.length === 1 ? "episódio" : "episódios"}
-              {anoInicial !== anoFinal && (
+              {anos.length > 0 && anoInicial !== anoFinal && (
                 <>
                   , de {anoInicial} a {anoFinal}
                 </>
               )}
               {quemCitou.length > 0 && (
                 <>
-                  , por <span className="text-foreground">{quemCitou.slice(0, 2).join(" e ")}</span>
+                  , por{" "}
+                  <span className="text-foreground">
+                    {/* "A", "A e B", "A, B e mais 9" */}
+                    {quemCitou.length > 2 ? quemCitou.slice(0, 2).join(", ") : quemCitou.join(" e ")}
+                  </span>
                   {quemCitou.length > 2 && ` e mais ${quemCitou.length - 2}`}
                 </>
               )}

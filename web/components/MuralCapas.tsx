@@ -22,11 +22,15 @@ function Fileira({
   capas,
   sentido,
   duracao,
+  carregar,
   className = "",
 }: {
   capas: CapaMural[];
   sentido: "ida" | "volta";
   duracao: string;
+  /** "eager" na fileira que aparece em toda tela; "lazy" na que o celular
+   *  esconde — escondida com lazy, a imagem nem é baixada. */
+  carregar: "eager" | "lazy";
   className?: string;
 }) {
   return (
@@ -48,7 +52,7 @@ function Fileira({
                 titulo={l.titulo}
                 autor={l.autor}
                 capaUrl={l.capaUrl}
-                carregar="eager"
+                carregar={carregar}
                 className="w-full shadow-[0_8px_18px_-8px_rgba(43,37,33,0.55)]"
               />
             </Link>
@@ -67,10 +71,10 @@ export default function MuralCapas({ capas }: { capas: CapaMural[] }) {
       className="mural relative -mx-8 lg:-mx-12 mb-8 sm:mb-12 flex flex-col gap-3 sm:gap-4 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
       aria-label="Livros citados"
     >
-      <Fileira capas={capas.slice(0, meio)} sentido="ida" duracao="110s" />
+      <Fileira capas={capas.slice(0, meio)} sentido="ida" duracao="110s" carregar="eager" />
       {/* a segunda fileira só no computador: no celular a newsletter
           precisa caber na primeira tela */}
-      <Fileira capas={capas.slice(meio)} sentido="volta" duracao="130s" className="hidden sm:block" />
+      <Fileira capas={capas.slice(meio)} sentido="volta" duracao="130s" carregar="lazy" className="hidden sm:block" />
     </div>
   );
 }

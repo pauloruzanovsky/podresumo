@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
@@ -95,13 +95,15 @@ export default function CalendarioEpisodios({
   const { anos, semanas } = useMemo(() => {
     const semanas = new Map<string, Semana>();
     for (const e of episodios) {
-      const d = utc(e.data);
-      const ano = d.getUTCFullYear();
-      const indice = semanaDoAno(d);
+      // A semana é a da segunda-feira: a que atravessa o réveillon fica
+      // inteira na linha do ano em que começou, em vez de virar duas metades.
+      const inicio = segundaDe(utc(e.data));
+      const ano = inicio.getUTCFullYear();
+      const indice = semanaDoAno(inicio);
       const chave = `${ano}-${indice}`;
       const s =
         semanas.get(chave) ??
-        semanas.set(chave, { chave, ano, indice, inicio: segundaDe(d), eps: [], livros: 0 }).get(chave)!;
+        semanas.set(chave, { chave, ano, indice, inicio, eps: [], livros: 0 }).get(chave)!;
       s.eps.push(e);
       s.livros += new Set(e.citacoes.map((c) => c.livroId)).size;
     }
@@ -211,10 +213,10 @@ export default function CalendarioEpisodios({
           );
         })}
         {anos.map((ano) => (
-          <Linha key={ano}>
+          <Fragment key={ano}>
             <span className="pr-3 text-xs text-muted tabular-nums">{ano}</span>
             {Array.from({ length: COLUNAS }, (_, i) => celula(ano, i))}
-          </Linha>
+          </Fragment>
         ))}
       </div>
 
@@ -232,10 +234,10 @@ export default function CalendarioEpisodios({
         ))}
         {anos.map((ano) =>
           [0, 1].map((metade) => (
-            <Linha key={`${ano}-${metade}`}>
+            <Fragment key={`${ano}-${metade}`}>
               <span className={`pr-2 text-[10px] text-muted tabular-nums ${metade ? "opacity-0" : ""}`}>{ano}</span>
               {Array.from({ length: METADE }, (_, j) => celula(ano, metade * METADE + j))}
-            </Linha>
+            </Fragment>
           ))
         )}
       </div>
@@ -260,11 +262,6 @@ export default function CalendarioEpisodios({
       )}
     </section>
   );
-}
-
-/** Um ano: o rótulo e as 53 células entram direto no grid do pai. */
-function Linha({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
 }
 
 function DiasDaSemana({

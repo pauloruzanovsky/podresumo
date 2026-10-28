@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BookCover from "./BookCover";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { formatTimestamp } from "@/lib/tempo";
 
 /**
  * A citação do dia na home: uma fala literal de recomendação, com o livro, quem
@@ -16,12 +17,6 @@ export interface Destaque {
   episodio: { id: string; slug: string | null; numero: string | null; titulo: string };
 }
 
-function minuto(seg: number) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
-}
 
 export default function CitacaoDestaque({ d }: { d: Destaque }) {
   return (
@@ -67,7 +62,7 @@ export default function CitacaoDestaque({ d }: { d: Destaque }) {
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Ouvir o trecho
-                <span className="font-mono font-normal opacity-90">{minuto(d.segundo)}</span>
+                <span className="font-mono font-normal opacity-90">{formatTimestamp(d.segundo)}</span>
               </a>
               <Link href={hrefEpisodio(d.episodio)} className="text-xs text-muted hover:text-foreground leading-snug">
                 {d.episodio.numero && <span className="font-mono mr-1.5">#{d.episodio.numero}</span>}

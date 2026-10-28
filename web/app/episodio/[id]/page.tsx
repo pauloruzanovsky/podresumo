@@ -11,6 +11,7 @@ import { slugify } from "@/lib/slug";
 import { notFound, permanentRedirect } from "next/navigation";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import { resolverEpisodio } from "@/lib/resolver";
+import { formatTimestamp } from "@/lib/tempo";
 
 // Em cache e atualizada a cada minuto. Sem isto a página era montada do zero
 // a cada visita (~1 a 5 s na Vercel). A lista vazia em generateStaticParams
@@ -76,13 +77,6 @@ function formatDate(dateStr: string) {
   });
 }
 
-function formatTimestamp(seg: number) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const sec = seg % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  return `${m}:${String(sec).padStart(2, "0")}`;
-}
 
 /** "TÍTULO | Os Sócios 296" -> "TÍTULO": o número já aparece no selo. */
 function tituloLimpo(titulo: string, epNumber: string | null) {
@@ -194,7 +188,7 @@ export default async function EpisodioPage({
   return (
     // no celular o índice vai pro fim: antes ele empurrava o episódio pra baixo
     <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
-    <div className="order-last lg:order-none">
+    <div className="order-last lg:order-none lg:contents">
       <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
     </div>
     <div className="min-w-0 max-w-4xl">

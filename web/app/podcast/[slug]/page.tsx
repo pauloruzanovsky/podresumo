@@ -8,7 +8,7 @@ import EstanteFiltravel, { type LivroEstante } from "@/components/EstanteFiltrav
 import EstanteDaUrl from "@/components/EstanteDaUrl";
 import Newsletter from "@/components/Newsletter";
 import Rankings, { type AutorPlacar, type PessoaPlacar } from "@/components/Rankings";
-import { carregarIndice } from "@/lib/indice";
+import type { ItemIndice } from "@/lib/indice";
 import { categoriasDe } from "@/lib/categorias";
 import CalendarioEpisodios, { type EpisodioLinha } from "@/components/CalendarioEpisodios";
 import { FiltroProvider } from "@/lib/filtroEstante";
@@ -220,7 +220,15 @@ export default async function PodcastPage({
   if (!dados) return notFound();
 
   const { podcast, livros, episodios, totalCitacoes, totalEpisodios, pessoas, autores } = dados;
-  const indice = await carregarIndice(podcast.id);
+  // O índice sai dos mesmos episódios do calendário: mais novo primeiro, e
+  // livros = obras distintas (as citações já vêm só de tipo livro).
+  const indice: ItemIndice[] = [...episodios].reverse().map((e) => ({
+    id: e.id,
+    slug: e.slug,
+    numero: e.numero,
+    titulo: e.titulo,
+    livros: new Set(e.citacoes.map((c) => c.livroId)).size,
+  }));
   const canal = podcast.youtube_channel_id?.startsWith("@")
     ? podcast.youtube_channel_id
     : null;
@@ -264,7 +272,7 @@ export default async function PodcastPage({
 
         {/* no celular o índice vai pro fim: a estante é o que importa aqui */}
         <div className="flex flex-col lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
-          <div className="order-last lg:order-none">
+          <div className="order-last lg:order-none lg:contents">
             <EpisodeIndex itens={indice} podcastNome={podcast.nome} />
           </div>
           <div className="min-w-0">

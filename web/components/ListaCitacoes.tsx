@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { hrefEpisodio } from "@/lib/links";
+import { formatTimestamp } from "@/lib/tempo";
 
 /**
  * Lista enxuta das citações de um livro: uma linha por episódio, com quem
@@ -25,13 +26,6 @@ export interface CitacaoLinha {
 
 const COLUNAS = "md:grid-cols-[minmax(0,1fr)_10rem_4.5rem]";
 
-function formatTimestamp(seg: number) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 /** "TÍTULO | Os Sócios 296" -> "TÍTULO": o número já aparece ao lado. */
 function tituloLimpo(titulo: string, epNumber: string | null) {
