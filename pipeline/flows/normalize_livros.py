@@ -89,6 +89,10 @@ TITLE_FIXES = {
     "Bitcoin, a moeda na era digital": "Bitcoin: a moeda na era digital",
     # título da edição brasileira; a entrada mantém o slug /livro/outliers
     "Outliers": "Fora de Série: Outliers",
+    # Modern Wisdom: livro com edição brasileira fica com o título dela
+    "Four Thousand Weeks": "Quatro Mil Semanas",
+    "Start with Why": "Comece pelo Porquê",
+    "Leaders Eat Last": "Líderes se Servem por Último",
 }
 
 AUTHOR_FIXES = {
@@ -119,6 +123,13 @@ AUTHOR_FIXES = {
     "Memórias do Subsolo": "Fiódor Dostoiévski",
     "Por Que as Nações Fracassam": "Daron Acemoglu e James Robinson",
     "Receita Previsível": "Aaron Ross",
+    # grafias que a transcrição em inglês variou (sem isto o merge junta os
+    # dois nomes com "/")
+    "Hardwiring Happiness": "Rick Hanson",
+    "Limbic Capitalism": "David Courtwright",
+    "Jaws": "Sandra Kahn e Paul Ehrlich",
+    # a de Homero, citada no Modern Wisdom sem autor
+    "Odisseia": "Homero",
 }
 
 # Uma entrada que na verdade são duas obras. O extrator às vezes junta dois
@@ -149,6 +160,12 @@ ALIASES = [
     ["Como Fazer Amigos e Influenciar Pessoas", "Como Fazer Amigos"],
     ["4 Horas para o Corpo", "Quatro Horas para o Corpo"],
     ["Fora de Série: Outliers", "Fora de Série (Outliers)"],
+    # Modern Wisdom: título em inglês do livro que o Os Sócios cita em português
+    ["Hábitos Atômicos", "Atomic Habits"],
+    ["Morra sem Nada", "Die with Zero"],
+    ["O Mesmo de Sempre", "Same as Ever"],
+    ["Alice no País das Maravilhas", "Alice in Wonderland"],
+    ["Quatro Mil Semanas", "4,000 Weeks"],
 ]
 
 # Títulos genéricos que são de fato obras diferentes de autores diferentes.
@@ -252,8 +269,10 @@ def monta_plano(livros):
             or bool(NAO_LIVRO.search(l["titulo"] or ""))
         )
         autor = None if eh_outro else limpa_autor(l.get("autor"))
+        # só livro: filme não tem autor, e a chave sem artigo junta "A Odisseia"
+        # (o filme) com "Odisseia" (Homero)
         correcao = autor_por_slug.get(slug_titulo(titulo))
-        if correcao:
+        if correcao and not eh_outro:
             autor = correcao
 
         estado[l["id"]] = {
@@ -305,7 +324,8 @@ def monta_plano(livros):
         slug = slug_titulo(e["titulo"])
         chave = alias_de.get(slug, slug)
         if slug in homonimos:
-            chave = f"{chave}|{chave_autor(e['autor']) if e['autor'] else ''}"
+            # livro e filme homônimos nunca se juntam, nem com autor vazio
+            chave = f"{chave}|{e['tipo']}|{chave_autor(e['autor']) if e['autor'] else ''}"
         grupos[chave].append(e)
 
     merges, incertos = [], []

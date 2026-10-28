@@ -5,10 +5,10 @@ import { supabase } from "@/lib/supabase";
  *
  * Esconder em vez de apagar: os episódios e as citações continuam lá, e
  * religar é tirar o nome desta lista — sem baixar nem extrair nada de novo.
- * O Modern Wisdom saiu enquanto o foco é o Os Sócios; os 30 episódios dele
- * ainda estão com a extração antiga.
+ * O Modern Wisdom ficou oculto até ser reextraído com o prompt atual (fala,
+ * minuto e quem citou), em out/2026.
  */
-export const PODCASTS_OCULTOS = ["Modern Wisdom"];
+export const PODCASTS_OCULTOS: string[] = [];
 
 /**
  * Pra onde vão os links genéricos de "livros" (menu, busca da home, volta da
@@ -26,7 +26,7 @@ export const TODOS_OS_LIVROS = `${ESTANTE_PRINCIPAL}#todos-os-livros`;
  * dezenas de episódios, quase sempre divulgando — no ranking geral ele
  * passava na frente de tudo sem ser indicação de leitura.
  */
-export const APRESENTADORES = ["Bruno Perini", "Malu Perini"];
+export const APRESENTADORES = ["Bruno Perini", "Malu Perini", "Chris Williamson"];
 
 export function livroDaCasa(autor?: string | null): boolean {
   return Boolean(autor) && APRESENTADORES.includes(autor as string);
