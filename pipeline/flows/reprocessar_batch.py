@@ -34,15 +34,16 @@ from anthropic import Anthropic
 from extract.youtube import fetch_descricoes
 from load.supabase import grava_campos_ia, supabase, upsert_livros
 from transform.claude import (
-    MODELO_PADRAO, VERSAO_PROMPT, extrai_json, extrator, monta_params,
+    MODELO_PADRAO, VERSAO_PROMPT, confere_modelo, extrai_json, extrator,
+    monta_params, preco,
 )
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-# Opus 5: US$5/M entrada, US$25/M saída. Em lote, metade dos dois.
-USD_IN, USD_OUT = 5 / 1_000_000, 25 / 1_000_000
+# Preço do modelo em uso (tabela em transform/claude.py). Em lote, metade.
+USD_IN, USD_OUT = preco()
 DESCONTO_LOTE = 0.5
 USD_BRL = 5.5
 
@@ -393,6 +394,9 @@ def main():
     # Antes de qualquer coisa, inclusive da estimativa: a seleção dos
     # episódios já lê a coluna de tracking.
     confere_schema()
+    # e antes de gastar: modelo mais novo da mesma família no ar = para
+    if not args.do_cache and not args.coletar:
+        confere_modelo()
 
     if args.do_cache:
         grava_do_cache(args.limite)

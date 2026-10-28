@@ -55,6 +55,11 @@ comitar chave.
   automático até **R$ 10**. Backfill de episódios antigos ou outro podcast
   precisam de ok. Reportar o custo real depois. Cancelar lote não garante
   custo zero.
+- **Sempre o modelo mais novo:** o modelo e o preço ficam em
+  `MODELO_PADRAO` e `PRECOS` (`transform/claude.py`). `confere_modelo()` para
+  qualquer gasto se houver modelo mais novo da mesma família na API de modelos
+  (o lote de out/2026 rodou no Opus 5 com o 5.5 no ar, mais barato: ~R$ 75 a
+  mais). Antes de propor gasto, conferir a lista de modelos e os preços.
 - **Resposta paga vai pro disco antes do banco:** `pipeline/respostas/<id>.json`
   (gitignored), e `--do-cache` regrava a partir dele. Nunca pagar duas vezes.
 - **Nunca rodar `backfill_temas`.**

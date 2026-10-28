@@ -164,7 +164,53 @@ OUTPUT_SCHEMA = {
 }
 
 
-MODELO_PADRAO = "claude-opus-5"
+MODELO_PADRAO = "claude-opus-5-5"
+
+# US$ por milhão de tokens (entrada, saída), preço cheio; o lote paga metade.
+# Modelo fora desta tabela não roda: sem preço, a estimativa e o teto do lote
+# semanal não valem nada.
+PRECOS = {
+    "claude-opus-5-5": (4, 20),
+    "claude-sonnet-5-5": (2, 10),
+    "claude-opus-5": (5, 25),
+}
+
+
+def preco(model: str = MODELO_PADRAO) -> tuple[float, float]:
+    """(US$ por token de entrada, US$ por token de saída)."""
+    if model not in PRECOS:
+        raise SystemExit(f"Sem preço cadastrado pra {model} em transform/claude.py (PRECOS).")
+    entrada, saida = PRECOS[model]
+    return entrada / 1_000_000, saida / 1_000_000
+
+
+def familia(model: str) -> str:
+    """'claude-opus-5-5' -> 'opus'."""
+    return model.split("-")[1]
+
+
+def confere_modelo(model: str = MODELO_PADRAO):
+    """Trava antes de qualquer gasto: se a Anthropic lançou um modelo mais novo
+    da mesma família (um Opus mais novo que o nosso Opus), para com aviso.
+    Foi assim que o lote de outubro rodou no Opus 5 com o 5.5 já no ar, mais
+    barato. A lista vem da API de modelos, que é grátis.
+
+    Pra seguir com o modelo antigo de propósito: PERMITIR_MODELO_ANTIGO=1."""
+    modelos = list(client.models.list(limit=100))
+    atual = next((m for m in modelos if m.id == model), None)
+    if atual is None:
+        raise SystemExit(f"PARADO: {model} não aparece mais na API de modelos (aposentado?).")
+    novos = [
+        m for m in modelos
+        if familia(m.id) == familia(model) and m.created_at > atual.created_at
+    ]
+    if novos and os.getenv("PERMITIR_MODELO_ANTIGO") != "1":
+        nomes = ", ".join(f"{m.id} ({m.created_at:%d/%m/%Y})" for m in novos)
+        raise SystemExit(
+            f"PARADO: o pipeline usa {model}, mas já existe {nomes}.\n"
+            f"Atualize MODELO_PADRAO e PRECOS em transform/claude.py (confira o preço "
+            f"novo) e avise o Paulo. Nada foi enviado."
+        )
 
 # Suba a cada mudança de prompt ou schema que altere o que é extraído. É o que
 # vai gravado em `episodes.extrator` e permite listar os episódios que ficaram
@@ -181,7 +227,7 @@ def extrator(model: str = MODELO_PADRAO) -> str:
     """Identificador gravado junto do episódio: "<modelo>/<versão do prompt>"."""
     return f"{model}/{VERSAO_PROMPT}"
 
-# Opus 5 tem janela de 1M tokens; o corte aqui é só trava de segurança contra
+# O Opus tem janela de 1M tokens; o corte aqui é só trava de segurança contra
 # transcrição corrompida. O limite antigo (150k) cortava episódios longos no
 # meio, e os livros citados na última hora sumiam.
 MAX_CHARS = 600_000
@@ -238,7 +284,7 @@ def extrai_json(message) -> dict:
         print("❌ Resposta truncada em max_tokens — aumente o limite e reprocesse")
         return {}
 
-    # Com thinking ligado (padrão do Opus 5) o primeiro bloco é de pensamento,
+    # Com thinking ligado (padrão do Opus) o primeiro bloco é de pensamento,
     # não de texto — pegar content[0].text quebraria aqui.
     texto = next((b.text for b in message.content if b.type == "text"), "")
     if not texto:
@@ -264,6 +310,7 @@ def process_transcript(
     Returns:
         Dict com: resumo, main_insight, main_action, topicos, convidados, tags, livros
     """
+    confere_modelo(model)
     print(f"🤖 Processando com Claude: {titulo[:60]}...")
     if len(transcript) > MAX_CHARS:
         print(f"   ⚠️ Transcrição truncada para {MAX_CHARS} caracteres")
