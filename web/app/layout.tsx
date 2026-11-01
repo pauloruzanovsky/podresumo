@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { ESTANTES } from "@/lib/podcasts";
+import MenuEstantes from "@/components/MenuEstantes";
 import Newsletter from "@/components/Newsletter";
 import { IconePodlibris } from "@/components/Logo";
 import TrocaTema, { SCRIPT_TEMA } from "@/components/TrocaTema";
@@ -73,18 +74,13 @@ export default function RootLayout({
             {/* "Descobrir" apontava pro mesmo lugar que o logo. Episódios só
                 existia no rodapé. */}
             <nav className="flex items-center gap-1">
-              {[
-                { href: ESTANTES, rotulo: "Estantes" },
-                { href: "/episodios", rotulo: "Episódios" },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground transition-colors"
-                >
-                  {item.rotulo}
-                </Link>
-              ))}
+              <MenuEstantes />
+              <Link
+                href="/episodios"
+                className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground transition-colors"
+              >
+                Episódios
+              </Link>
               <TrocaTema />
             </nav>
           </div>

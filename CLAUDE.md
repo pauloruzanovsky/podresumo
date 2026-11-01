@@ -48,6 +48,8 @@ comitar chave.
    uma vez só; slug nunca é reescrito.
 7. `newsletter` — monta o e-mail da semana e deixa como **rascunho** no
    Buttondown. Nunca envia sozinho: o Paulo revisa e envia.
+8. `capas_podcasts` — arte de cada podcast, da busca da Apple Podcasts. Rodar
+   uma vez ao cadastrar podcast novo.
 
 ## Regras que o Paulo pediu
 

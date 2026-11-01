@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import { slugify } from "@/lib/slug";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -61,15 +63,35 @@ export function podcastVisivel(nome?: string | null): boolean {
   return Boolean(nome) && !PODCASTS_OCULTOS.includes(nome as string);
 }
 
-export interface Podcast {
-  id: string;
+export interface EstanteDoMenu {
   nome: string;
-  youtube_channel_id: string | null;
+  slug: string;
+  capa: string | null;
+  episodios: number;
 }
 
-export async function podcastsVisiveis(): Promise<Podcast[]> {
-  const { data } = await supabase
-    .from("podcasts")
-    .select("id, nome, youtube_channel_id");
-  return ((data ?? []) as Podcast[]).filter((p) => podcastVisivel(p.nome));
-}
+/**
+ * As estantes do menu, do maior acervo pro menor. Roda em toda página, por
+ * isso o cache: podcast novo não entra todo dia.
+ */
+export const estantesDoMenu = unstable_cache(
+  async (): Promise<EstanteDoMenu[]> => {
+    const { data, error } = await supabase
+      .from("podcasts")
+      .select("nome, thumbnail, episodes(count)")
+      .eq("episodes.status", "done");
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as any[])
+      .filter((p) => podcastVisivel(p.nome))
+      .map((p) => ({
+        nome: p.nome as string,
+        slug: slugify(p.nome),
+        capa: (p.thumbnail ?? null) as string | null,
+        episodios: (p.episodes?.[0]?.count ?? 0) as number,
+      }))
+      .filter((p) => p.episodios > 0)
+      .sort((a, b) => b.episodios - a.episodios);
+  },
+  ["estantes-do-menu"],
+  { revalidate: 3600 }
+);

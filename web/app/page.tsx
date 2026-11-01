@@ -3,6 +3,7 @@ import { APRESENTADORES, PODCASTS_EM_INGLES, livroDaCasa, podcastVisivel } from 
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
+import CapaPodcast from "@/components/CapaPodcast";
 import HomeSearch from "@/components/HomeSearch";
 import { slugify } from "@/lib/slug";
 import { hrefLivro } from "@/lib/links";
@@ -34,7 +35,7 @@ export default async function Home() {
         .order("id")
         .range(de, ate)
     ),
-    supabase.from("podcasts").select("id, nome", { count: "exact" }),
+    supabase.from("podcasts").select("id, nome, thumbnail", { count: "exact" }),
     supabase.from("episodes").select("podcast_id").eq("status", "done"),
     // candidatas à citação do dia: recomendação com a fala literal e o minuto
     todas((de, ate) =>
@@ -224,6 +225,7 @@ export default async function Home() {
       return {
         nome: p.nome as string,
         slug: slugify(p.nome),
+        capa: (p.thumbnail ?? null) as string | null,
         total: daqui.length,
         // prateleira larga (estante única) comporta mais livros
         capas: daqui.slice(0, 12),
@@ -320,14 +322,17 @@ export default async function Home() {
                   </div>
                   <div className="h-2 rounded-sm bg-shelf shadow-[0_3px_6px_-2px_rgba(43,37,33,0.35)]" />
 
-                  <div className="mt-5 flex items-end justify-between gap-4">
-                    <div className="min-w-0">
-                      <span className="block text-[10px] uppercase tracking-widest text-muted">
-                        A estante de
-                      </span>
-                      <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
-                        {e.nome}
-                      </span>
+                  <div className="mt-5 flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex items-center gap-3 sm:gap-4">
+                      <CapaPodcast capa={e.capa} className="w-14 sm:w-16 shrink-0 rounded-xl shadow-md" />
+                      <div className="min-w-0">
+                        <span className="block text-[10px] uppercase tracking-widest text-muted">
+                          A estante de
+                        </span>
+                        <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
+                          {e.nome}
+                        </span>
+                      </div>
                     </div>
                     <span className="text-sm text-muted whitespace-nowrap">
                       {e.total} livros →

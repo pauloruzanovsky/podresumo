@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { supabase, todas } from "@/lib/supabase";
 import { acharPorSlug, slugify } from "@/lib/slug";
+import CapaPodcast from "@/components/CapaPodcast";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import EstanteFiltravel, { type LivroEstante } from "@/components/EstanteFiltravel";
 import EstanteDaUrl from "@/components/EstanteDaUrl";
@@ -32,7 +33,7 @@ const NO_PLACAR = 10;
 async function carregar(slug: string) {
   const { data: podcasts } = await supabase
     .from("podcasts")
-    .select("id, nome, youtube_channel_id");
+    .select("id, nome, youtube_channel_id, thumbnail");
 
   const podcast = acharPorSlug(podcasts ?? [], slug);
   if (!podcast || !podcastVisivel(podcast.nome)) return null;
@@ -236,6 +237,10 @@ export default async function PodcastPage({
   return (
     <div>
       <div className="text-center mb-10 sm:mb-14">
+        <CapaPodcast
+          capa={podcast.thumbnail ?? null}
+          className="mx-auto mb-5 w-24 sm:w-32 rounded-2xl shadow-[0_18px_40px_-16px_rgba(43,37,33,0.6)]"
+        />
         <p className="text-xs uppercase tracking-widest text-muted mb-3">
           A estante de
         </p>
