@@ -16,7 +16,7 @@ export default function SeloEstante({
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs text-muted ${className}`}>
       <span
-        className={`w-1.5 h-1.5 rounded-full shrink-0 ${estante.acompanhada ? "bg-accent-light" : "bg-muted/40"}`}
+        className={`w-1.5 h-1.5 rounded-full shrink-0 ${estante.acompanhada ? "bg-selo" : "bg-muted/40"}`}
         aria-hidden="true"
       />
       {estante.selo}

@@ -50,6 +50,8 @@ comitar chave.
    Buttondown. Nunca envia sozinho: o Paulo revisa e envia.
 8. `capas_podcasts` — arte de cada podcast, da busca da Apple Podcasts. Rodar
    uma vez ao cadastrar podcast novo.
+9. `normalize_pessoas` — unifica grafias de convidado, autor e quem citou. A
+   lista é à mão (`ALIASES`) e roda sozinha na coleta do lote.
 
 ## Regras que o Paulo pediu
 

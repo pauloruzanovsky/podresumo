@@ -310,6 +310,9 @@ def coletar(batch_id, esperar=True):
     # episódio e livro novos ganham endereço legível (/livro/titulo)
     from flows.preencher_slugs import main as preencher_slugs
     preencher_slugs()
+    # grafia já conhecida não volta a dividir a pessoa no site
+    from flows.normalize_pessoas import main as normalize_pessoas
+    normalize_pessoas()
 
     print("\nAgora rode, nesta ordem:")
     print("  python -m flows.normalize_livros          # confira o plano")

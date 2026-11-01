@@ -34,6 +34,9 @@
   --tema-carta-1: #fffcf6;
   --tema-carta-2: #f3e3c6;
   --tema-carta-3: #e1e8da;
+  /* Ponto de "em dia" das estantes: verde também no escuro, onde a cor de
+     destaque é ouro e parecia aviso. */
+  --tema-selo: #2e8b57;
   /* Faz os controles nativos (select, scrollbar, autofill) seguirem o tema */
   color-scheme: light;
 }
@@ -59,6 +62,7 @@
   --tema-carta-1: #143a2e;
   --tema-carta-2: #2c4a33;
   --tema-carta-3: #1a4a42;
+  --tema-selo: #5fd38d;
   color-scheme: dark;
 }
 
@@ -79,6 +83,7 @@
   /* Madeira da prateleira: a mesma nos dois temas. */
   --color-shelf: #c9b28e;
   --color-chart: var(--tema-grafico);
+  --color-selo: var(--tema-selo);
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-source-serif);
   --font-mono: var(--font-geist-mono);

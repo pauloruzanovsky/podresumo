@@ -38,6 +38,14 @@ export const ESTANTES = "/#estantes";
  */
 const AUTORES_DA_CASA = ["Bruno Perini", "Malu Perini", "Chris Williamson"];
 
+/** Quem apresenta cada programa: a busca leva o nome do host ao podcast. */
+export const HOSTS: Record<string, string[]> = {
+  "Os Sócios Podcast": ["Bruno Perini", "Malu Perini"],
+  "Modern Wisdom": ["Chris Williamson"],
+  "The Tim Ferriss Show": ["Tim Ferriss"],
+  "Huberman Lab": ["Andrew Huberman"],
+};
+
 /**
  * Autor que só é "da casa" na própria estante. Os livros do Tim Ferriss são
  * divulgação no programa dele, mas no Os Sócios são recomendação de verdade:
