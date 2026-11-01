@@ -3,9 +3,10 @@ import { supabase } from "@/lib/supabase";
 import { ESTANTE_PRINCIPAL, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { hrefEpisodio, hrefFala, hrefLivro, linkAmazon } from "@/lib/links";
 import { resolverLivro } from "@/lib/resolver";
 import BookCover from "@/components/BookCover";
+import Compartilhar from "@/components/Compartilhar";
 import ListaCitacoes from "@/components/ListaCitacoes";
 import Newsletter from "@/components/Newsletter";
 import { formatTimestamp } from "@/lib/tempo";
@@ -82,22 +83,6 @@ function formatDate(dateStr: string) {
   });
 }
 
-/**
- * Sem ISBN/ASIN no acervo não dá pra linkar a página do produto, mas dá pra
- * fazer a busca cair certo: título + autor, restrita à categoria de livros
- * (`i=stripbooks`). Só o título trazia resultado errado em títulos genéricos
- * como "Cartas" ou "Rebecca".
- */
-function getAmazonLink(titulo: string, autor?: string | null) {
-  const termo = autor ? `${titulo} ${autor}` : titulo;
-  // Com a identificação de afiliado (NEXT_PUBLIC_AMAZON_TAG, ex.: podlibris-20)
-  // a compra vinda daqui gera comissão; sem ela, o link é a busca comum.
-  const tag = process.env.NEXT_PUBLIC_AMAZON_TAG;
-  return `https://www.amazon.com.br/s?k=${encodeURIComponent(termo)}&i=stripbooks${
-    tag ? `&tag=${encodeURIComponent(tag)}` : ""
-  }`;
-}
-
 interface Citacao {
   contexto: string | null;
   timestamp_seg: number | null;
@@ -125,7 +110,7 @@ function linkMinuto(c: Citacao) {
 }
 
 /** Citação completa: fala em destaque, quem disse, contexto e o botão pro minuto. */
-function CardCitacao({ c }: { c: Citacao }) {
+function CardCitacao({ c, livro }: { c: Citacao; livro: { id: string; slug: string | null; titulo: string } }) {
   const minuto = linkMinuto(c);
   return (
     <article className="p-6 sm:p-7 bg-card border border-border rounded-2xl">
@@ -166,22 +151,31 @@ function CardCitacao({ c }: { c: Citacao }) {
 
         {/* O único botão cheio da página: o minuto exato é o que este site
             tem e os outros não. */}
-        {minuto && (
-          <a
-            href={minuto}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors shrink-0"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            Ouvir o trecho
-            <span className="font-mono font-normal opacity-90">
-              {formatTimestamp(c.timestamp_seg!)}
-            </span>
-          </a>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {minuto && (
+            <a
+              href={minuto}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Ouvir o trecho
+              <span className="font-mono font-normal opacity-90">
+                {formatTimestamp(c.timestamp_seg!)}
+              </span>
+            </a>
+          )}
+          {c.citacao_literal && (
+            <Compartilhar
+              caminho={hrefFala({ id: c.episode_id, slug: c.episode_slug }, livro)}
+              titulo={`${c.quem_citou ? `${c.quem_citou} sobre` : "Sobre"} ${livro.titulo}`}
+              rotulo="Compartilhar esta fala"
+            />
+          )}
+        </div>
       </div>
     </article>
   );
@@ -402,7 +396,7 @@ export default async function LivroPage({
 
             <div className="flex items-center justify-center sm:justify-start gap-3 mt-6 flex-wrap">
               <a
-                href={getAmazonLink(livro.titulo, livro.autor)}
+                href={linkAmazon(livro.titulo, livro.autor)}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
@@ -426,6 +420,12 @@ export default async function LivroPage({
                   Ouvir a citação
                 </a>
               )}
+              <Compartilhar
+                caminho={hrefLivro(ref)}
+                titulo={livro.autor ? `${livro.titulo}, de ${livro.autor}` : livro.titulo}
+                rotulo="Compartilhar este livro"
+                texto="Compartilhar"
+              />
             </div>
           </div>
         </div>
@@ -442,14 +442,14 @@ export default async function LivroPage({
       {citacoes.length <= LIMITE_CARDS ? (
         <div className="flex flex-col gap-5">
           {citacoes.map((c) => (
-            <CardCitacao key={c.episode_id} c={c} />
+            <CardCitacao key={c.episode_id} c={c} livro={{ ...ref, titulo: livro.titulo }} />
           ))}
         </div>
       ) : (
         <>
-          <CardCitacao c={destaque} />
+          <CardCitacao c={destaque} livro={{ ...ref, titulo: livro.titulo }} />
 
-          <ListaCitacoes citacoes={citacoes} />
+          <ListaCitacoes citacoes={citacoes} livro={{ ...ref, titulo: livro.titulo }} />
         </>
       )}
 

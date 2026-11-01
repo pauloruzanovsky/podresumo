@@ -4,8 +4,8 @@ import { COR_CREME, COR_OURO, COR_VERDE, LIVRO_D, ONDAS } from "@/components/Log
 
 /**
  * Cartão de compartilhamento (Open Graph), 1200×630 — o que aparece quando o
- * link é colado no WhatsApp. Um layout só pras três páginas que viajam: home,
- * estante do podcast e livro.
+ * link é colado no WhatsApp. `cartaoOg` serve home, estante do podcast e
+ * livro; `cartaoComCapas`, a fala e o episódio.
  *
  * Limites do renderizador (satori): só flexbox, todo <div> com mais de um
  * filho precisa de `display: flex`, e as cores vão escritas aqui porque as
@@ -34,6 +34,127 @@ export function iconeOg(largura: number, ondas: string = COR_VERDE) {
 /** Título longo quebra o cartão: corta com reticências. */
 function encurta(texto: string, max: number) {
   return texto.length > max ? texto.slice(0, max - 1).trimEnd() + "…" : texto;
+}
+
+/**
+ * Baixa a capa e devolve como data URL. O satori derruba o cartão inteiro se a
+ * imagem falhar ou vier em formato que ele não lê (webp), e a capa que falta
+ * no Open Library volta como gif de 1px: nesses casos o cartão sai sem ela.
+ */
+export async function capaOg(url: string): Promise<string | null> {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const tipo = r.headers.get("content-type") ?? "";
+    if (!r.ok || !/image\/(jpe?g|png)/.test(tipo)) return null;
+    const bytes = Buffer.from(await r.arrayBuffer());
+    return `data:${tipo};base64,${bytes.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Cartão da fala e do episódio: o texto é o destaque, com capas à direita. */
+export function cartaoComCapas({
+  rotulo,
+  texto,
+  linha,
+  capas,
+  rodape,
+}: {
+  rotulo: string;
+  texto: string;
+  /** Linha menor abaixo do texto ("sobre O Investidor de Bom Senso"). */
+  linha?: string;
+  /** Data URLs de capaOg; a primeira fica na frente. */
+  capas: string[];
+  rodape?: string;
+}) {
+  const tamanhoTexto = texto.length > 150 ? 42 : texto.length > 90 ? 50 : 60;
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          background: FUNDO,
+          color: TEXTO,
+          padding: "56px 64px",
+          borderLeft: `20px solid ${VERDE}`,
+        }}
+      >
+        <div style={{ display: "flex", gap: 48, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 26,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                color: APAGADO,
+                marginBottom: 22,
+              }}
+            >
+              {encurta(rotulo, 40)}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: tamanhoTexto,
+                fontWeight: 700,
+                lineHeight: 1.18,
+                letterSpacing: -1,
+              }}
+            >
+              {encurta(texto, 230)}
+            </div>
+            {linha && (
+              <div style={{ display: "flex", fontSize: 30, color: APAGADO, marginTop: 22 }}>
+                {encurta(linha, 60)}
+              </div>
+            )}
+          </div>
+
+          {capas.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "row-reverse", flexShrink: 0 }}>
+              {[...capas].reverse().map((capa, i) => (
+                <img
+                  key={i}
+                  src={capa}
+                  width={230}
+                  height={345}
+                  style={{
+                    objectFit: "contain",
+                    marginRight: i === 0 ? 0 : -150,
+                    boxShadow: "0 18px 36px rgba(43,37,33,0.35)",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: 28,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, fontWeight: 700, color: VERDE }}>
+            {iconeOg(56)}
+            <span>{SITE_NAME}</span>
+          </div>
+          {rodape && <div style={{ display: "flex", color: APAGADO }}>{rodape}</div>}
+        </div>
+      </div>
+    ),
+    OG_SIZE
+  );
 }
 
 export function cartaoOg({

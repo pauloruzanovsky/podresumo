@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
+import Compartilhar from "@/components/Compartilhar";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import Estante from "@/components/Estante";
 import { carregarIndice } from "@/lib/indice";
@@ -35,7 +36,7 @@ export async function generateMetadata({
 
   const { data: ep } = await supabase
     .from("episodes")
-    .select("titulo, resumo, thumbnail, episode_livros(livro_id)")
+    .select("titulo, resumo, episode_livros(livro_id)")
     .eq("id", id)
     .single();
 
@@ -58,7 +59,7 @@ export async function generateMetadata({
       title: ep.titulo,
       description: descricao,
       url: endereco,
-      images: ep.thumbnail ? [{ url: ep.thumbnail }] : undefined,
+      // A imagem vem de opengraph-image.tsx (os livros citados e as capas).
     },
     twitter: {
       card: "summary_large_image",
@@ -237,17 +238,25 @@ export default async function EpisodioPage({
             com <span className="text-foreground">{convidados.join(", ")}</span>
           </p>
         )}
-        {ep.link_youtube && (
-          <a
-            href={ep.link_youtube}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-5 px-4 py-2 border border-border hover:bg-card-hover text-sm font-medium rounded-full transition-colors"
-          >
-            <IconePlay />
-            Episódio completo no YouTube
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2 mt-5">
+          {ep.link_youtube && (
+            <a
+              href={ep.link_youtube}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-border hover:bg-card-hover text-sm font-medium rounded-full transition-colors"
+            >
+              <IconePlay />
+              Episódio completo no YouTube
+            </a>
+          )}
+          <Compartilhar
+            caminho={hrefEpisodio(ref)}
+            titulo={`${livros.length} ${livros.length === 1 ? "livro citado" : "livros citados"} em: ${titulo}`}
+            rotulo="Compartilhar este episódio"
+            texto="Compartilhar"
+          />
+        </div>
         </div>
       </header>
 

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { hrefEpisodio } from "@/lib/links";
+import Compartilhar from "./Compartilhar";
+import { hrefEpisodio, hrefFala } from "@/lib/links";
 import { formatTimestamp } from "@/lib/tempo";
 
 /**
@@ -32,7 +33,19 @@ function tituloLimpo(titulo: string, epNumber: string | null) {
   return epNumber ? titulo.replace(/\s*\|[^|]*$/, "") : titulo;
 }
 
-export default function ListaCitacoes({ citacoes }: { citacoes: CitacaoLinha[] }) {
+interface LivroDaLista {
+  id: string;
+  slug: string | null;
+  titulo: string;
+}
+
+export default function ListaCitacoes({
+  citacoes,
+  livro,
+}: {
+  citacoes: CitacaoLinha[];
+  livro: LivroDaLista;
+}) {
   const [pessoa, setPessoa] = useState<string | null>(null);
 
   // Quem citou e quantas vezes, do que mais citou pro que menos.
@@ -87,7 +100,7 @@ export default function ListaCitacoes({ citacoes }: { citacoes: CitacaoLinha[] }
         </div>
         <ol className="divide-y divide-border">
           {visiveis.map((c) => (
-            <Linha key={c.episode_id} c={c} />
+            <Linha key={c.episode_id} c={c} livro={livro} />
           ))}
         </ol>
       </div>
@@ -95,7 +108,7 @@ export default function ListaCitacoes({ citacoes }: { citacoes: CitacaoLinha[] }
   );
 }
 
-function Linha({ c }: { c: CitacaoLinha }) {
+function Linha({ c, livro }: { c: CitacaoLinha; livro: LivroDaLista }) {
   const minuto =
     c.timestamp_seg != null ? `${c.link_youtube}&t=${c.timestamp_seg}s` : null;
   const fala = c.citacao_literal ?? c.contexto;
@@ -143,6 +156,16 @@ function Linha({ c }: { c: CitacaoLinha }) {
           </blockquote>
           {c.citacao_literal && c.contexto && (
             <p className="text-xs text-muted leading-relaxed mt-2 pl-3">{c.contexto}</p>
+          )}
+          {c.citacao_literal && (
+            <div className="mt-2 pl-3">
+              <Compartilhar
+                caminho={hrefFala({ id: c.episode_id, slug: c.episode_slug }, livro)}
+                titulo={`${c.quem_citou ? `${c.quem_citou} sobre` : "Sobre"} ${livro.titulo}`}
+                rotulo="Compartilhar esta fala"
+                texto="Compartilhar"
+              />
+            </div>
           )}
         </details>
       )}

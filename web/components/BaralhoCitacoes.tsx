@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import BookCover from "./BookCover";
-import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import Compartilhar from "./Compartilhar";
+import { hrefEpisodio, hrefFala, hrefLivro } from "@/lib/links";
 import { formatTimestamp } from "@/lib/tempo";
 
 /**
@@ -222,13 +223,13 @@ export default function BaralhoCitacoes({ falas }: { falas: Destaque[] }) {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-3 mt-5">
+                <div className="flex items-center gap-2 mt-5">
                   <a
                     href={`${d.linkYoutube}&t=${d.segundo}s`}
                     data-trecho={`${d.livro.titulo} — ${d.quem ?? "trecho"}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
+                    className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 whitespace-nowrap bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M8 5v14l11-7z" />
@@ -236,14 +237,19 @@ export default function BaralhoCitacoes({ falas }: { falas: Destaque[] }) {
                     Ouvir o trecho
                     <span className="font-mono font-normal opacity-90">{formatTimestamp(d.segundo)}</span>
                   </a>
-                  <Link
-                    href={hrefEpisodio(d.episodio)}
-                    className="min-w-0 flex-1 basis-40 text-xs text-muted hover:text-foreground leading-snug line-clamp-2"
-                  >
-                    {d.episodio.numero && <span className="font-mono mr-1.5">#{d.episodio.numero}</span>}
-                    {d.episodio.titulo}
-                  </Link>
+                  <Compartilhar
+                    caminho={hrefFala(d.episodio, d.livro)}
+                    titulo={`${d.quem ? `${d.quem} sobre` : "Sobre"} ${d.livro.titulo}`}
+                    rotulo="Compartilhar esta fala"
+                  />
                 </div>
+                <Link
+                  href={hrefEpisodio(d.episodio)}
+                  className="block mt-3 text-xs text-muted hover:text-foreground leading-snug line-clamp-2"
+                >
+                  {d.episodio.numero && <span className="font-mono mr-1.5">#{d.episodio.numero}</span>}
+                  {d.episodio.titulo}
+                </Link>
               </div>
             </article>
           );
