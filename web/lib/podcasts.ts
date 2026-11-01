@@ -11,6 +11,12 @@ import { supabase } from "@/lib/supabase";
 export const PODCASTS_OCULTOS: string[] = [];
 
 /**
+ * Podcasts em outra língua: têm estante própria, mas a fala literal deles não
+ * entra no baralho da home, que é a primeira coisa lida em português.
+ */
+export const PODCASTS_EM_INGLES = ["Modern Wisdom"];
+
+/**
  * Pra onde vão os links genéricos de "livros" (menu, busca da home, volta da
  * página do livro). Com um podcast só no site, a estante dele É o acervo — a
  * antiga /biblioteca era a mesma lista sem o contexto do programa. Quando

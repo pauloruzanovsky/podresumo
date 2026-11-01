@@ -1,5 +1,5 @@
 import { supabase, todas } from "@/lib/supabase";
-import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import { APRESENTADORES, PODCASTS_EM_INGLES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
@@ -8,7 +8,7 @@ import { slugify } from "@/lib/slug";
 import { hrefLivro } from "@/lib/links";
 import Newsletter from "@/components/Newsletter";
 import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
-import CitacaoDestaque, { type Destaque } from "@/components/CitacaoDestaque";
+import BaralhoCitacoes, { type Destaque } from "@/components/BaralhoCitacoes";
 
 export const revalidate = 60;
 
@@ -117,23 +117,29 @@ export default async function Home() {
     .sort((a, b) => b.n - a.n || a.titulo.localeCompare(b.titulo))
     .slice(0, 40);
 
-  // Citação do dia: entre as falas que cabem bonitas no cartão (nem
-  // telegráficas nem um parágrafo), com capa e fora do livro da casa. A
-  // escolha muda à meia-noite e é a mesma pra todo mundo no dia.
+  // Baralho de citações: entre as falas que cabem bonitas na carta (nem
+  // telegráficas nem um parágrafo), com capa e fora do livro da casa. A ordem
+  // é um sorteio com o dia como semente: muda à meia-noite e é a mesma pra
+  // todo mundo no dia. A primeira é a citação do dia; uma fala por livro.
+  const dia = Math.floor(Date.now() / 86_400_000);
+  const sorteio = (r: any) => hashTexto(`${dia}${r.episodes.id}${r.livros.id}`);
+  const vistos = new Set<string>();
+  const idsEmPortugues = new Set(
+    visiveis.filter((p) => !PODCASTS_EM_INGLES.includes(p.nome)).map((p) => p.id)
+  );
   const falas = ((falasRes.data ?? []) as any[])
     .filter(
       (r) =>
-        idsVisiveis.has(r.episodes?.podcast_id) &&
+        idsEmPortugues.has(r.episodes?.podcast_id) &&
         r.livros?.capa_url &&
         !livroDaCasa(r.livros?.autor) &&
         r.citacao_literal.length >= 70 &&
         r.citacao_literal.length <= 200
     )
-    .sort((a, b) =>
-      `${a.episodes.id}${a.livros.id}`.localeCompare(`${b.episodes.id}${b.livros.id}`)
-    );
-  const fala = falas.length ? falas[Math.floor(Date.now() / 86_400_000) % falas.length] : null;
-  const destaque: Destaque | null = fala && {
+    .sort((a, b) => sorteio(a) - sorteio(b))
+    .filter((r) => !vistos.has(r.livros.id) && vistos.add(r.livros.id))
+    .slice(0, 20);
+  const destaques: Destaque[] = falas.map((fala) => ({
     citacao: fala.citacao_literal.trim().replace(/^["“]|["”]$/g, ""),
     quem: fala.quem_citou ?? null,
     segundo: fala.timestamp_seg,
@@ -153,7 +159,7 @@ export default async function Home() {
         ? (fala.episodes.titulo as string).replace(/\s*\|[^|]*$/, "")
         : fala.episodes.titulo,
     },
-  };
+  }));
   // As capas da faixa da newsletter: os livros citados mais recentemente,
   // capa real primeiro — é a amostra do que chega no e-mail.
   const recentes = [...livros]
@@ -277,7 +283,7 @@ export default async function Home() {
         </div>
       </div>
 
-      {destaque && <CitacaoDestaque d={destaque} />}
+      {destaques.length > 0 && <BaralhoCitacoes falas={destaques} />}
 
       {/* Estantes — a porta de entrada: é por elas que se chega às páginas
           /podcast, que são o que cada programa tem motivo pra divulgar. */}
@@ -399,6 +405,15 @@ export default async function Home() {
       )}
     </div>
   );
+}
+
+/** FNV-1a: espalha textos parecidos, pro sorteio do dia não seguir a ordem. */
+function hashTexto(texto: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) {
+    h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193);
+  }
+  return h >>> 0;
 }
 
 function Stat({ value, label }: { value: number; label: string }) {

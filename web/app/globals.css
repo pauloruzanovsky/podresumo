@@ -30,6 +30,10 @@
   /* Marca dos gráficos. Passou no validador de paleta (luminosidade, croma e
      contraste 3:1 sobre o card) — não trocar no olho. */
   --tema-grafico: #b8693d;
+  /* Cartas do baralho de citações: papel, ouro do livro e sálvia */
+  --tema-carta-1: #fffcf6;
+  --tema-carta-2: #f3e3c6;
+  --tema-carta-3: #e1e8da;
   /* Faz os controles nativos (select, scrollbar, autofill) seguirem o tema */
   color-scheme: light;
 }
@@ -52,6 +56,9 @@
   --tema-erro: #f2a093;
   /* o terracota claro fica abaixo de 3:1 no card verde; este passa */
   --tema-grafico: #d98a5c;
+  --tema-carta-1: #143a2e;
+  --tema-carta-2: #2c4a33;
+  --tema-carta-3: #1a4a42;
   color-scheme: dark;
 }
 
@@ -132,10 +139,120 @@ body {
   animation-play-state: paused;
 }
 
+/* Baralho de citações da home. Todas as cartas ocupam a mesma célula da
+   grade: a altura da mesa é a da fala mais longa, e trocar de carta não
+   empurra a página. A de cima fica em 0; só 1 e 2 aparecem atrás dela. */
+.baralho {
+  display: grid;
+  padding: 22px 18px 30px 14px;
+  touch-action: pan-y;
+}
+.carta {
+  --pose: translate(0, 14px) rotate(-1deg) scale(0.94);
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  min-width: 0;
+  padding: 26px 24px 24px;
+  border-radius: 24px;
+  background: var(--tema-carta-1);
+  box-shadow:
+    0 0 0 0.5px rgba(43, 37, 33, 0.08),
+    0 6px 14px -8px rgba(43, 37, 33, 0.16),
+    0 30px 60px -30px rgba(43, 37, 33, 0.4);
+  transform: var(--pose);
+  opacity: 0;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.35s ease;
+}
+.carta[data-tom="1"] {
+  background: var(--tema-carta-2);
+}
+.carta[data-tom="2"] {
+  background: var(--tema-carta-3);
+}
+.carta > * {
+  transition: opacity 0.3s ease;
+}
+.carta:not([data-profundidade="0"]) > * {
+  opacity: 0;
+}
+.carta.voando > * {
+  opacity: 1;
+}
+.carta[data-profundidade="0"] {
+  --pose: rotate(-1.5deg);
+  z-index: 3;
+  opacity: 1;
+  cursor: grab;
+  user-select: none;
+}
+.carta[data-profundidade="1"] {
+  --pose: translate(12px, -10px) rotate(3deg);
+  z-index: 2;
+  opacity: 1;
+}
+.carta[data-profundidade="2"] {
+  --pose: translate(-10px, 12px) rotate(-4deg);
+  z-index: 1;
+  opacity: 1;
+}
+.baralho.arrastando .carta {
+  cursor: grabbing;
+}
+.carta blockquote {
+  font-size: 1.375rem;
+  line-height: 1.3;
+}
+.carta[data-tamanho="media"] blockquote {
+  font-size: 1.5rem;
+}
+.carta[data-tamanho="curta"] blockquote {
+  font-size: 1.75rem;
+  line-height: 1.22;
+}
+@media (min-width: 640px) {
+  .baralho {
+    padding: 30px 40px 40px 32px;
+  }
+  .carta {
+    gap: 36px;
+    padding: 40px;
+    border-radius: 28px;
+  }
+  .carta[data-profundidade="1"] {
+    --pose: translate(24px, -14px) rotate(3.5deg);
+  }
+  .carta[data-profundidade="2"] {
+    --pose: translate(-20px, 16px) rotate(-5deg);
+  }
+  .baralho:hover .carta[data-profundidade="1"] {
+    --pose: translate(32px, -18px) rotate(5deg);
+  }
+  .baralho:hover .carta[data-profundidade="2"] {
+    --pose: translate(-28px, 20px) rotate(-7deg);
+  }
+  .carta blockquote {
+    font-size: 1.625rem;
+  }
+  .carta[data-tamanho="media"] blockquote {
+    font-size: 1.875rem;
+  }
+  .carta[data-tamanho="curta"] blockquote {
+    font-size: 2.125rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .player-entra,
   .mural-fileira {
     animation: none;
+  }
+  .carta {
+    transition: opacity 0.2s ease;
   }
 }
 
