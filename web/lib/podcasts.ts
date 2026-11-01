@@ -14,7 +14,7 @@ export const PODCASTS_OCULTOS: string[] = [];
  * Podcasts em outra língua: têm estante própria, mas a fala literal deles não
  * entra no baralho da home, que é a primeira coisa lida em português.
  */
-export const PODCASTS_EM_INGLES = ["Modern Wisdom"];
+export const PODCASTS_EM_INGLES = ["Modern Wisdom", "The Tim Ferriss Show", "Huberman Lab"];
 
 /**
  * Pra onde vão os links genéricos de "livros" (menu, busca da home, volta da
@@ -25,6 +25,8 @@ export const PODCASTS_EM_INGLES = ["Modern Wisdom"];
  */
 export const ESTANTE_PRINCIPAL = "/podcast/os-socios";
 export const TODOS_OS_LIVROS = `${ESTANTE_PRINCIPAL}#todos-os-livros`;
+/** A lista de estantes, na home: é pra onde vai o "Estante" do menu. */
+export const ESTANTES = "/#estantes";
 
 /**
  * Quem apresenta o programa. Livro escrito por um deles sai das prateleiras
@@ -32,10 +34,27 @@ export const TODOS_OS_LIVROS = `${ESTANTE_PRINCIPAL}#todos-os-livros`;
  * dezenas de episódios, quase sempre divulgando — no ranking geral ele
  * passava na frente de tudo sem ser indicação de leitura.
  */
-export const APRESENTADORES = ["Bruno Perini", "Malu Perini", "Chris Williamson"];
+const AUTORES_DA_CASA = ["Bruno Perini", "Malu Perini", "Chris Williamson"];
 
-export function livroDaCasa(autor?: string | null): boolean {
-  return Boolean(autor) && APRESENTADORES.includes(autor as string);
+/**
+ * Autor que só é "da casa" na própria estante. Os livros do Tim Ferriss são
+ * divulgação no programa dele, mas no Os Sócios são recomendação de verdade:
+ * tirá-los do site inteiro apagaria o Bruno falando de Trabalhe 4 Horas.
+ */
+const DA_CASA_SO_NO_PROPRIO_PODCAST: Record<string, string[]> = {
+  "The Tim Ferriss Show": ["Tim Ferriss"],
+};
+
+/** Quem apresenta fica de fora dos placares de quem mais cita. */
+export const APRESENTADORES = [...AUTORES_DA_CASA, "Tim Ferriss", "Andrew Huberman"];
+
+/** `podcast`: a estante em questão; sem ele, a regra do site inteiro. */
+export function livroDaCasa(autor?: string | null, podcast?: string | null): boolean {
+  if (!autor) return false;
+  return (
+    AUTORES_DA_CASA.includes(autor) ||
+    Boolean(podcast && DA_CASA_SO_NO_PROPRIO_PODCAST[podcast]?.includes(autor))
+  );
 }
 
 export function podcastVisivel(nome?: string | null): boolean {

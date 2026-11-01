@@ -118,6 +118,18 @@ def fetch_episodes(playlist_id: str, max_results: int = 10) -> list[dict]:
     return episodes
 
 
+def idioma_original(video_id: str) -> str | None:
+    """Idioma do áudio original do vídeo ("pt-BR", "en"…), quando o canal
+    informa. Custa 1 unidade de cota."""
+    itens = get_youtube_client().videos().list(
+        part="snippet", id=video_id
+    ).execute()["items"]
+    if not itens:
+        return None
+    snippet = itens[0]["snippet"]
+    return snippet.get("defaultAudioLanguage") or snippet.get("defaultLanguage")
+
+
 def fetch_descricoes(video_ids: list[str]) -> dict[str, str]:
     """Descrição de cada vídeo, por id. Usado pra reprocessar episódios que já
     estão no banco, onde a descrição não foi guardada. Custa 1 unidade de

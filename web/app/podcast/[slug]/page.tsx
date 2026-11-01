@@ -80,7 +80,7 @@ async function carregar(slug: string) {
           temas: categoriasDe((l.temas ?? []) as string[]),
           pessoas: [],
           pessoasSet: new Set<string>(),
-          daCasa: livroDaCasa(l.autor),
+          daCasa: livroDaCasa(l.autor, podcast.nome),
         })
         .get(l.id)!;
     atual.episodios_count += 1;
@@ -114,7 +114,7 @@ async function carregar(slug: string) {
   >();
   for (const r of citacoes) {
     const l = r.livros;
-    if (!l.autor || livroDaCasa(l.autor)) continue;
+    if (!l.autor || livroDaCasa(l.autor, podcast.nome)) continue;
     const a = porAutor.get(l.autor) ?? { citacoes: 0, livros: new Map() };
     a.citacoes += 1;
     const livro = a.livros.get(l.id) ?? { id: l.id, titulo: l.titulo, capa_url: l.capa_url ?? null, n: 0 };

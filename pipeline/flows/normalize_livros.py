@@ -158,7 +158,7 @@ ALIASES = [
     # duas vezes por causa da inflação) no #254.
     ["Em Nome do Povo", "O Nome do Povo", "Inimigos do Povo"],
     ["Como Fazer Amigos e Influenciar Pessoas", "Como Fazer Amigos"],
-    ["4 Horas para o Corpo", "Quatro Horas para o Corpo"],
+    ["4 Horas para o Corpo", "Quatro Horas para o Corpo", "The 4-Hour Body"],
     ["Fora de Série: Outliers", "Fora de Série (Outliers)"],
     # Modern Wisdom: título em inglês do livro que o Os Sócios cita em português
     ["Hábitos Atômicos", "Atomic Habits"],
@@ -166,6 +166,12 @@ ALIASES = [
     ["O Mesmo de Sempre", "Same as Ever"],
     ["Alice no País das Maravilhas", "Alice in Wonderland"],
     ["Quatro Mil Semanas", "4,000 Weeks"],
+    # Tim Ferriss e Huberman: idem
+    ["Trabalhe 4 Horas por Semana", "The 4-Hour Workweek"],
+    ["Ferramentas dos Titãs", "Tools of Titans"],
+    ["Por que nós dormimos", "Why We Sleep"],
+    ["Armas, Germes e Aço", "Guns, Germs, and Steel"],
+    ["Nação Dopamina", "Dopamine Nation"],
 ]
 
 # Títulos genéricos que são de fato obras diferentes de autores diferentes.

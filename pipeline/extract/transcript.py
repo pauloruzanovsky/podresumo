@@ -8,6 +8,10 @@ import os
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 
+from extract.youtube import idioma_original
+
+SEM_IDIOMA = ["pt", "pt-BR"]
+
 
 def cria_api() -> YouTubeTranscriptApi:
     """
@@ -30,6 +34,24 @@ def cria_api() -> YouTubeTranscriptApi:
     return YouTubeTranscriptApi()
 
 
+def idiomas_da_faixa(video_id: str) -> list[str]:
+    """Faixas a pedir, da preferida pra última.
+
+    O idioma original vem primeiro: em canal estrangeiro com dublagem, a faixa
+    "pt" é tradução de máquina, e a fala gravada como literal não seria a que
+    o convidado disse. Sem essa informação, mantém o português.
+    """
+    try:
+        original = idioma_original(video_id)
+    except Exception as e:
+        print(f"⚠️ Idioma do vídeo indisponível: {e}")
+        original = None
+    if not original:
+        return SEM_IDIOMA
+    base = original.split("-")[0]
+    return list(dict.fromkeys([original, base]))
+
+
 def fetch_transcript(video_id: str) -> str:
     """
     Busca a transcrição de um vídeo do YouTube.
@@ -42,10 +64,15 @@ def fetch_transcript(video_id: str) -> str:
     print(f"📝 Buscando transcrição do vídeo {video_id}...")
 
     ytt_api = cria_api()
+    idiomas = idiomas_da_faixa(video_id)
 
     try:
-        transcript = ytt_api.fetch(video_id, languages=["pt", "pt-BR"])
-    except Exception:
+        transcript = ytt_api.fetch(video_id, languages=idiomas)
+    except Exception as e:
+        # Idioma conhecido e sem faixa: as outras são dublagem, melhor nada.
+        if idiomas != SEM_IDIOMA:
+            print(f"❌ Sem faixa no idioma original {idiomas}: {e}")
+            return ""
         try:
             # Fallback: lista transcrições disponíveis e pega a primeira
             transcript_list = ytt_api.list(video_id)

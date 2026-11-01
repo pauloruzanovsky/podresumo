@@ -1,9 +1,10 @@
 # Podlibris
 
 Site com os livros citados nos podcasts, com a fala de quem citou e o minuto
-exato no YouTube: **podlibris.com**. Hoje só o **Os Sócios Podcast** (Bruno e
-Malu Perini). A pasta e o repositório ainda se chamam `podresumo`, o nome
-antigo; não renomear (rotinas e caminhos dependem dele).
+exato no YouTube: **podlibris.com**. O carro-chefe é o **Os Sócios Podcast**
+(Bruno e Malu Perini), com estantes menores de Modern Wisdom, The Tim Ferriss
+Show e Huberman Lab. A pasta e o repositório ainda se chamam `podresumo`, o
+nome antigo; não renomear (rotinas e caminhos dependem dele).
 
 **Objetivo:** chamar a atenção do Bruno Perini e ganhar algum dinheiro com
 afiliado da Amazon. A pergunta de produto é "o Perini abriria esse link no
@@ -91,8 +92,11 @@ comitar chave.
 - Ícone: `components/Logo.tsx` (mesmas medidas de `brand/gera_marca.py`).
   Favicon em `app/icon.svg`, ícone de celular em `app/apple-icon.tsx`, cartões
   de compartilhamento em `lib/og.tsx`.
-- Podcasts escondidos e apresentadores (ficam fora dos rankings):
-  `lib/podcasts.ts`. Modern Wisdom está escondido, não apagado.
+- Podcasts escondidos, em inglês (fora do baralho da home) e apresentadores
+  (fora dos rankings): `lib/podcasts.ts`.
+- Podcast estrangeiro: `extract/transcript.py` pede o idioma original, porque a
+  faixa "pt" do YouTube é tradução de máquina e a fala não seria literal.
+  `reprocessar_batch` grava direto: podcast novo aparece no site na hora.
 - Páginas usam ISR (`revalidate = 60`). Endereço antigo por id redireciona
   pro slug.
 - Afiliado Amazon: `NEXT_PUBLIC_AMAZON_TAG` na Vercel (`AMAZON_TAG` no

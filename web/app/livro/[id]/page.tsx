@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { ESTANTE_PRINCIPAL, podcastVisivel } from "@/lib/podcasts";
+import { ESTANTES, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { hrefEpisodio, hrefFala, hrefLivro, linkAmazon } from "@/lib/links";
@@ -300,7 +300,7 @@ export default async function LivroPage({
   return (
     <div className="max-w-3xl mx-auto">
       <Link
-        href={ESTANTE_PRINCIPAL}
+        href={ESTANTES}
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
       >
         <svg
@@ -316,7 +316,7 @@ export default async function LivroPage({
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Estante
+        Estantes
       </Link>
 
       {/* Topo: a capa desfocada tinge o cartão; a capa nítida em cima, com

@@ -209,7 +209,7 @@ export default async function Home() {
           .map(([nome, vezes]) => ({ nome, vezes }));
       };
       const podioLivros = [...daqui]
-        .filter((l) => !livroDaCasa(l.autor))
+        .filter((l) => !livroDaCasa(l.autor, p.nome))
         .sort((x, y) => y.vezes - x.vezes || x.titulo.localeCompare(y.titulo))
         .slice(0, 3);
       const podioPessoas = conta(
@@ -218,7 +218,7 @@ export default async function Home() {
       const podioAutores = conta(
         citacoesDaqui
           .map((c) => c.livro.autor as string | null)
-          .filter((a): a is string => Boolean(a) && !livroDaCasa(a))
+          .filter((a): a is string => Boolean(a) && !livroDaCasa(a, p.nome))
       );
 
       return {
@@ -289,6 +289,7 @@ export default async function Home() {
           /podcast, que são o que cada programa tem motivo pra divulgar. */}
       {estantes.length > 0 && (
         <Section
+          id="estantes"
           title="Estantes"
           subtitle="Os livros de cada podcast, na prateleira dele."
         >
@@ -426,16 +427,19 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 function Section({
+  id,
   title,
   subtitle,
   children,
 }: {
+  id: string;
   title: string;
   subtitle: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-14">
+    // scroll-mt: o menu fixo não pode cobrir o título ao vir pelo "Estante"
+    <section id={id} className="mb-14 scroll-mt-20">
       <div className="mb-6">
         <h2 className="font-serif text-2xl font-semibold tracking-tight mb-1">{title}</h2>
         <p className="text-sm text-muted">{subtitle}</p>

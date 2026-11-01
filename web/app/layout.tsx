@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
-import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
+import { ESTANTES } from "@/lib/podcasts";
 import Newsletter from "@/components/Newsletter";
 import { IconePodlibris } from "@/components/Logo";
 import TrocaTema, { SCRIPT_TEMA } from "@/components/TrocaTema";
@@ -74,7 +74,7 @@ export default function RootLayout({
                 existia no rodapé. */}
             <nav className="flex items-center gap-1">
               {[
-                { href: ESTANTE_PRINCIPAL, rotulo: "Estante" },
+                { href: ESTANTES, rotulo: "Estantes" },
                 { href: "/episodios", rotulo: "Episódios" },
               ].map((item) => (
                 <Link
@@ -107,8 +107,8 @@ export default function RootLayout({
           </div>
           <div className="max-w-300 mx-auto px-8 lg:px-12 pb-8">
             <nav className="flex items-center gap-5 text-xs text-muted">
-              <Link href={ESTANTE_PRINCIPAL} className="hover:text-foreground transition-colors">
-                Estante
+              <Link href={ESTANTES} className="hover:text-foreground transition-colors">
+                Estantes
               </Link>
               <Link href="/episodios" className="hover:text-foreground transition-colors">
                 Episódios
