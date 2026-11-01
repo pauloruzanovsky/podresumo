@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ESTANTE_PRINCIPAL } from "@/lib/podcasts";
+import { ESTANTES } from "@/lib/podcasts";
 
-export default function HomeSearch() {
-  const [q, setQ] = useState("");
+export default function HomeSearch({ inicial = "" }: { inicial?: string }) {
+  const [q, setQ] = useState(inicial);
   const router = useRouter();
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const query = q.trim();
-    // a lista completa da estante tem o campo de busca; cai direto nela
-    const busca = query ? `?q=${encodeURIComponent(query)}` : "";
-    router.push(`${ESTANTE_PRINCIPAL}${busca}#todos-os-livros`);
+    // a busca cobre todas as estantes (lib/busca)
+    router.push(query ? `/busca?q=${encodeURIComponent(query)}` : ESTANTES);
   }
 
   return (
@@ -32,7 +31,9 @@ export default function HomeSearch() {
         />
       </svg>
       <input
-        type="text"
+        type="search"
+        enterKeyHint="search"
+        aria-label="Buscar livro ou autor"
         placeholder="Buscar livro ou autor..."
         value={q}
         onChange={(e) => setQ(e.target.value)}

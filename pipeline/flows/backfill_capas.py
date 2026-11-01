@@ -222,7 +222,7 @@ def main():
 
     try:
         livros = todas(lambda: supabase.table("livros").select(
-            "id, titulo, autor, capa_url, episode_livros(episode_id)"
+            "id, titulo, autor, capa_url, titulo_alt, episode_livros(episode_id)"
         ).eq("tipo", "livro").order("titulo").order("id"))
     except Exception:
         print("A coluna `capa_url` não existe no banco.")
@@ -251,20 +251,26 @@ def main():
     achou = do_google = 0
     google_ativo = True
     for i, livro in enumerate(alvos, 1):
-        cover = procura_capa(livro["titulo"], livro.get("autor"))
-        url = CAPA.format(cover) if cover else None
+        url = None
         fonte = "OL "
-        if not url and google_ativo:
-            try:
-                url = procura_capa_google(livro["titulo"], livro.get("autor"))
-            except urllib.error.HTTPError as err:
-                motivo = ("Books API não está ativada no projeto da chave"
-                          if err.code == 403 else "cota estourada")
-                print(f"      Google Books: {motivo} — sigo só com o Open Library")
-                google_ativo = False
+        # Título do site primeiro; depois os absorvidos em fusões, que trazem
+        # a edição em outro idioma quando a brasileira não tem capa nas fontes.
+        for titulo in [livro["titulo"], *(livro.get("titulo_alt") or [])]:
+            cover = procura_capa(titulo, livro.get("autor"))
+            url = CAPA.format(cover) if cover else None
+            if not url and google_ativo:
+                try:
+                    url = procura_capa_google(titulo, livro.get("autor"))
+                except urllib.error.HTTPError as err:
+                    motivo = ("Books API não está ativada no projeto da chave"
+                              if err.code == 403 else "cota estourada")
+                    print(f"      Google Books: {motivo} — sigo só com o Open Library")
+                    google_ativo = False
+                if url:
+                    do_google += 1
+                    fonte = "GB "
             if url:
-                do_google += 1
-                fonte = "GB "
+                break
         if url:
             achou += 1
         # Não apaga capa que já existia quando a busca de agora não achou nada.
