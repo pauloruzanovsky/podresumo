@@ -63,11 +63,38 @@ export function podcastVisivel(nome?: string | null): boolean {
   return Boolean(nome) && !PODCASTS_OCULTOS.includes(nome as string);
 }
 
+/**
+ * Podcasts que a rotina semanal acompanha: entram na lista quando a rotina
+ * passa a baixá-los. Os demais são uma seleção de episódios, e o selo diz isso.
+ */
+const ACOMPANHADOS = ["Os Sócios Podcast"];
+
 export interface EstanteDoMenu {
   nome: string;
   slug: string;
   capa: string | null;
   episodios: number;
+  acompanhada: boolean;
+  /** "Atualizada até o #322" ou "Seleção de 5 episódios". */
+  selo: string;
+}
+
+/** Vem do último episódio no banco: o selo não fica dizendo que está em dia
+ *  se a rotina parar de rodar. */
+async function seloAcompanhada(podcastId: string) {
+  const { data } = await supabase
+    .from("episodes")
+    .select("ep_number, data")
+    .eq("podcast_id", podcastId)
+    .eq("status", "done")
+    .order("data", { ascending: false })
+    .limit(1);
+  const ultimo = data?.[0];
+  if (ultimo?.ep_number) return `Atualizada até o #${ultimo.ep_number}`;
+  const dia = ultimo?.data
+    ? new Date(`${ultimo.data}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+    : null;
+  return dia ? `Atualizada até ${dia}` : "Atualizada";
 }
 
 /**
@@ -78,19 +105,28 @@ export const estantesDoMenu = unstable_cache(
   async (): Promise<EstanteDoMenu[]> => {
     const { data, error } = await supabase
       .from("podcasts")
-      .select("nome, thumbnail, episodes(count)")
+      .select("id, nome, thumbnail, episodes(count)")
       .eq("episodes.status", "done");
     if (error) throw new Error(error.message);
-    return ((data ?? []) as any[])
-      .filter((p) => podcastVisivel(p.nome))
-      .map((p) => ({
-        nome: p.nome as string,
-        slug: slugify(p.nome),
-        capa: (p.thumbnail ?? null) as string | null,
-        episodios: (p.episodes?.[0]?.count ?? 0) as number,
-      }))
-      .filter((p) => p.episodios > 0)
-      .sort((a, b) => b.episodios - a.episodios);
+    const estantes = await Promise.all(
+      ((data ?? []) as any[])
+        .filter((p) => podcastVisivel(p.nome) && p.episodes?.[0]?.count > 0)
+        .map(async (p) => {
+          const episodios = p.episodes[0].count as number;
+          const acompanhada = ACOMPANHADOS.includes(p.nome);
+          return {
+            nome: p.nome as string,
+            slug: slugify(p.nome),
+            capa: (p.thumbnail ?? null) as string | null,
+            episodios,
+            acompanhada,
+            selo: acompanhada
+              ? await seloAcompanhada(p.id)
+              : `Seleção de ${episodios} ${episodios === 1 ? "episódio" : "episódios"}`,
+          };
+        })
+    );
+    return estantes.sort((a, b) => b.episodios - a.episodios);
   },
   ["estantes-do-menu"],
   { revalidate: 3600 }

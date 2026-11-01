@@ -13,7 +13,8 @@ import type { ItemIndice } from "@/lib/indice";
 import { categoriasDe } from "@/lib/categorias";
 import CalendarioEpisodios, { type EpisodioLinha } from "@/components/CalendarioEpisodios";
 import { FiltroProvider } from "@/lib/filtroEstante";
-import { APRESENTADORES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import SeloEstante from "@/components/SeloEstante";
+import { APRESENTADORES, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 
 export const revalidate = 60;
 
@@ -221,6 +222,7 @@ export default async function PodcastPage({
   if (!dados) return notFound();
 
   const { podcast, livros, episodios, totalCitacoes, totalEpisodios, pessoas, autores } = dados;
+  const selo = (await estantesDoMenu().catch(() => [])).find((e) => e.slug === slug);
   // O índice sai dos mesmos episódios do calendário: mais novo primeiro, e
   // livros = obras distintas (as citações já vêm só de tipo livro).
   const indice: ItemIndice[] = [...episodios].reverse().map((e) => ({
@@ -254,6 +256,7 @@ export default async function PodcastPage({
           <span className="font-semibold text-foreground">{totalEpisodios}</span>{" "}
           episódios — com o trecho da conversa e o minuto de cada citação.
         </p>
+        <SeloEstante estante={selo} className="mt-3" />
 
         {canal && (
           <a

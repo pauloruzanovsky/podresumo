@@ -1,9 +1,10 @@
 import { supabase, todas } from "@/lib/supabase";
-import { APRESENTADORES, PODCASTS_EM_INGLES, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import { APRESENTADORES, PODCASTS_EM_INGLES, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import CapaPodcast from "@/components/CapaPodcast";
+import SeloEstante from "@/components/SeloEstante";
 import HomeSearch from "@/components/HomeSearch";
 import { slugify } from "@/lib/slug";
 import { hrefLivro } from "@/lib/links";
@@ -24,7 +25,8 @@ interface LivroCard {
 }
 
 export default async function Home() {
-  const [livrosRes, podcastsRes, episodesRes, falasRes] = await Promise.all([
+  const [selos, livrosRes, podcastsRes, episodesRes, falasRes] = await Promise.all([
+    estantesDoMenu().catch(() => []),
     todas((de, ate) =>
       supabase
         .from("livros")
@@ -332,6 +334,7 @@ export default async function Home() {
                         <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
                           {e.nome}
                         </span>
+                        <SeloEstante estante={selos.find((s) => s.slug === e.slug)} className="mt-1" />
                       </div>
                     </div>
                     <span className="text-sm text-muted whitespace-nowrap">

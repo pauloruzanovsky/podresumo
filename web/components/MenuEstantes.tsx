@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CapaPodcast from "./CapaPodcast";
+import SeloEstante from "./SeloEstante";
 import { ESTANTES, estantesDoMenu, type EstanteDoMenu } from "@/lib/podcasts";
 
 const VISIVEL = "group-hover:visible group-hover:opacity-100 group-hover:translate-y-0";
@@ -52,9 +53,7 @@ export default async function MenuEstantes() {
                   <CapaPodcast capa={e.capa} className="w-11 rounded-lg shadow-sm" />
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-foreground truncate">{e.nome}</span>
-                    <span className="block text-xs text-muted">
-                      {e.episodios} {e.episodios === 1 ? "episódio" : "episódios"}
-                    </span>
+                    <SeloEstante estante={e} className="mt-0.5" />
                   </span>
                 </Link>
               </li>
