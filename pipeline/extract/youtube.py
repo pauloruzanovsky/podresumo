@@ -88,7 +88,14 @@ def fetch_episodes(playlist_id: str, max_results: int = 10) -> list[dict]:
         if not pagina:
             break
 
-    # 2. Buscar detalhes de cada vídeo (duração), também de 50 em 50
+    return fetch_videos(video_ids)
+
+
+def fetch_videos(video_ids: list[str]) -> list[dict]:
+    """Detalhes de uma lista de vídeos, por id. Mesmo formato de fetch_episodes."""
+    youtube = get_youtube_client()
+
+    # Detalhes de cada vídeo (duração), de 50 em 50
     print(f"📊 Buscando detalhes de {len(video_ids)} vídeos...")
     videos = []
     for i in range(0, len(video_ids), 50):
@@ -97,7 +104,7 @@ def fetch_episodes(playlist_id: str, max_results: int = 10) -> list[dict]:
             id=",".join(video_ids[i:i + 50]),
         ).execute()["items"]
 
-    # 3. Montar a lista final
+    # Montar a lista final
     episodes = []
     for video in videos:
         titulo = video["snippet"]["title"]

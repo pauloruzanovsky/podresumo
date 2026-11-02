@@ -13,6 +13,12 @@ IP de datacenter (por isso a sync no GitHub Actions está desligada).
 Uso:
     python -m flows.baixar_transcricoes --playlist-id PL... --podcast socios --listar
     python -m flows.baixar_transcricoes --playlist-id PL... --podcast socios [--max 50]
+    python -m flows.baixar_transcricoes --ids-arquivo lista.txt --podcast huberman
+
+`--ids-arquivo` é pra seleção feita à mão (um id de vídeo por linha), quando os
+episódios escolhidos não são os mais recentes da playlist. `--reaproveitar`
+aponta uma pasta com transcrições já baixadas (<id>.txt), que não gastam uma
+tentativa no YouTube.
 
 Depois:
     python -m flows.reprocessar_batch --estimar --podcast socios --pendentes
@@ -26,7 +32,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from extract.transcript import fetch_transcript
-from extract.youtube import fetch_episodes
+from extract.youtube import fetch_episodes, fetch_videos
 from flows.reprocessar_batch import acha_podcast
 from load.supabase import supabase
 
@@ -48,8 +54,7 @@ SEM_LEGENDA = {
 MAX_FALHAS_SEGUIDAS = 2
 
 
-def faltantes(playlist_id: str, maximo: int) -> list[dict]:
-    eps = fetch_episodes(playlist_id, maximo)
+def faltantes(eps: list[dict]) -> list[dict]:
     # `listed` é só catálogo (catalogar_episodios): ainda falta a transcrição.
     com_transcricao = {
         e["id"] for e in supabase.table("episodes").select("id, status").execute().data
@@ -63,7 +68,11 @@ def faltantes(playlist_id: str, maximo: int) -> list[dict]:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--playlist-id", required=True)
+    origem = p.add_mutually_exclusive_group(required=True)
+    origem.add_argument("--playlist-id")
+    origem.add_argument("--ids-arquivo", help="arquivo com um id de vídeo por linha")
+    p.add_argument("--reaproveitar", metavar="PASTA",
+                   help="pasta com transcrições já baixadas (<id>.txt)")
     p.add_argument("--podcast", required=True, help='trecho do nome, ex.: "socios"')
     p.add_argument("--max", type=int, default=50,
                    help="quantos vídeos da playlist olhar, do mais recente pro mais antigo")
@@ -74,7 +83,18 @@ def main():
     args = p.parse_args()
 
     podcast = acha_podcast(args.podcast)
-    novos = faltantes(args.playlist_id, args.max)
+    if args.ids_arquivo:
+        with open(args.ids_arquivo, encoding="utf-8") as f:
+            eps = fetch_videos(f.read().split())
+    else:
+        eps = fetch_episodes(args.playlist_id, args.max)
+    novos = faltantes(eps)
+
+    def salva_antes(e):
+        return args.reaproveitar and os.path.exists(os.path.join(args.reaproveitar, f"{e['video_id']}.txt"))
+
+    # os já baixados vêm primeiro: não contam pra pausa nem pro bloqueio
+    novos.sort(key=lambda e: not salva_antes(e))
     if args.limite and not args.listar:
         novos = novos[:args.limite]
     print(f"\n{len(novos)} episódio(s) sem transcrição no banco:")
@@ -87,9 +107,13 @@ def main():
     salvos, sem_transcricao, seguidas = 0, [], 0
     inicio = time.time()
     for i, e in enumerate(novos):
-        if i:
-            time.sleep(args.pausa)
-        transcricao = fetch_transcript(e["video_id"])
+        if salva_antes(e):
+            with open(os.path.join(args.reaproveitar, f"{e['video_id']}.txt"), encoding="utf-8") as f:
+                transcricao = f.read()
+        else:
+            if i:
+                time.sleep(args.pausa)
+            transcricao = fetch_transcript(e["video_id"])
         if not transcricao:
             sem_transcricao.append(e)
             seguidas += 1

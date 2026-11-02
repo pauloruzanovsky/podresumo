@@ -46,8 +46,9 @@ comitar chave.
    `capas_manuais.json` sobrepõe.
 6. `preencher_slugs` — gera os endereços `/livro/<slug>` e `/episodio/<slug>`
    uma vez só; slug nunca é reescrito.
-7. `newsletter` — monta o e-mail da semana e deixa como **rascunho** no
-   Buttondown. Nunca envia sozinho: o Paulo revisa e envia.
+7. `newsletter` — monta o e-mail da semana e deixa como **rascunho** no Resend
+   (broadcast). Nunca envia sozinho: o Paulo revisa e envia em
+   resend.com/broadcasts. `--teste <email>` manda só pra um endereço.
 8. `capas_podcasts` — arte de cada podcast, da busca da Apple Podcasts. Rodar
    uma vez ao cadastrar podcast novo.
 9. `normalize_pessoas` — unifica grafias de convidado, autor e quem citou. A
@@ -106,6 +107,10 @@ comitar chave.
   `reprocessar_batch` grava direto: podcast novo aparece no site na hora.
 - Páginas usam ISR (`revalidate = 60`). Endereço antigo por id redireciona
   pro slug.
+- Newsletter: inscrição em `/api/inscrever` manda o link assinado
+  (`lib/confirmacao.ts`); o contato só entra no segmento do Resend pelo botão de
+  `/confirmar`. Precisa de `RESEND_API_KEY`, `RESEND_SEGMENT_ID` e
+  `NEWSLETTER_SEGREDO`.
 - Afiliado Amazon: `NEXT_PUBLIC_AMAZON_TAG` na Vercel (`AMAZON_TAG` no
   pipeline, pra newsletter).
 - O dev server às vezes serve CSS velho: parar, apagar `web/.next/dev` e subir
