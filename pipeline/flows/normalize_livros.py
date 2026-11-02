@@ -179,6 +179,8 @@ ALIASES = [
 # Pedro Calmon e Rocha Pombo escreveram cada um a sua "História do Brasil".
 # Com um destes títulos, só se mescla o que tem o mesmo autor.
 TITULOS_HOMONIMOS = {
+    # o livro de Sandra Kahn e Paul Ehrlich e o filme de 1975, citado sem autor
+    "Jaws",
     "História do Brasil",
     # biografias de Ashlee Vance (2015) e Walter Isaacson (2023)
     "Elon Musk",

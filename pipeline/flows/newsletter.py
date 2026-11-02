@@ -65,9 +65,9 @@ FALA_MIN, FALA_MAX = 40, 280
 
 # Cores fixas da marca (brand/): e-mail não tem os tokens de tema do site.
 TINTA, APAGADO, ACENTO, BORDA = "#2b2521", "#6b6155", "#1f5240", "#ddd3c1"
-BRANCO, VERDE = "#ffffff", "#0f2e24"
-# PNG servido pelo próprio site (app/apple-icon.tsx): Gmail não mostra SVG.
-ICONE = f"{SITE}/apple-icon"
+BRANCO = "#ffffff"
+# PNG servido pelo próprio site: Gmail não mostra SVG.
+TOPO = f"{SITE}/email/topo/verde"
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
          "agosto", "setembro", "outubro", "novembro", "dezembro"]
 SERIFA = "Georgia, 'Times New Roman', serif"
@@ -288,16 +288,12 @@ def divisor() -> str:
 
 
 def cabecalho(hoje: date) -> str:
+    """A figura da marca (web/app/email/topo) e a data da edição."""
     return (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-        'style="margin:0 0 26px;"><tr>'
-        f'<td width="46" valign="middle"><a href="{SITE}"><img src="{ICONE}" width="36" height="36" '
-        'alt="Podlibris" style="display:block;width:36px;height:36px;border-radius:8px;"></a></td>'
-        f'<td valign="middle" style="font-family:{SERIFA};font-size:21px;font-weight:bold;color:{VERDE};">'
-        'Podlibris</td>'
-        f'<td align="right" valign="middle" style="font-family:{SANS};font-size:12px;color:{APAGADO};">'
-        f'{hoje.day} de {MESES[hoje.month - 1]}</td>'
-        '</tr></table>'
+        f'<a href="{SITE}" style="display:block;"><img src="{TOPO}" width="552" alt="Podlibris" '
+        'style="display:block;width:100%;max-width:552px;height:auto;border:0;border-radius:12px;"></a>'
+        f'<p style="margin:14px 0 28px;font-family:{SANS};font-size:12px;letter-spacing:1px;'
+        f'text-transform:uppercase;text-align:center;color:{APAGADO};">{hoje.day} de {MESES[hoje.month - 1]}</p>'
     )
 
 
