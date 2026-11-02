@@ -43,7 +43,7 @@ export default async function BuscaPage({
   return (
     <div className="max-w-4xl mx-auto">
       {/* key: uma busca nova a partir daqui reinicia o campo */}
-      <HomeSearch key={busca} inicial={busca} />
+      <HomeSearch key={busca} inicial={busca} focar={!busca} />
 
       {busca && total === 0 && (
         <div className="text-sm text-muted mt-6">

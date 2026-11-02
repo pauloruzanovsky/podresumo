@@ -1,8 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { tituloEpisodio } from "@/lib/falas";
-import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { hrefEpisodio, hrefLivro, hrefPessoa } from "@/lib/links";
 import { HOSTS, estantesDoMenu, podcastVisivel } from "@/lib/podcasts";
-import { slugify } from "@/lib/slug";
 import { supabase, todas } from "@/lib/supabase";
 
 /**
@@ -80,26 +79,27 @@ interface FichaPessoa {
   citou: Map<string, number>;
   livrosEscritos: number;
   convidado: number;
+  convidadoEm: Set<string>;
 }
 
 function montarPessoas(fichas: Map<string, FichaPessoa>): PessoaBusca[] {
   const hostDe = new Map(Object.entries(HOSTS).flatMap(([p, nomes]) => nomes.map((n) => [n, p] as const)));
   return [...fichas.entries()].map(([nome, f]) => {
     const citou = [...f.citou.values()].reduce((a, b) => a + b, 0);
-    const maisCitou = [...f.citou.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
     const peso = citou + f.convidado + f.livrosEscritos;
     const host = hostDe.get(nome);
-    if (host) return { nome, papel: `Apresenta ${host}`, href: `/podcast/${slugify(host)}`, peso: peso + 1000 };
+    if (host) return { nome, papel: `Apresenta ${host}`, href: hrefPessoa(nome), peso: peso + 1000 };
+    // o nome do podcast em texto: buscar um convidado nem sempre traz o
+    // podcast junto, e a capa repetida em cada pessoa só pesaria a lista
+    const em = (podcasts: Iterable<string>) => ` em ${[...podcasts].join(" e ")}`;
     const partes = [
-      f.convidado ? `Convidado em ${vezes(f.convidado, "episódio", "episódios")}` : "",
+      f.convidado ? vezes(f.convidado, "participação", "participações") + em(f.convidadoEm) : "",
+      citou ? `Citou ${vezes(citou, "livro", "livros")}${f.convidado ? "" : em(f.citou.keys())}` : "",
       f.livrosEscritos ? `Autor de ${vezes(f.livrosEscritos, "livro", "livros")}` : "",
-      citou ? `Citou ${vezes(citou, "livro", "livros")}` : "",
     ].filter(Boolean);
-    // Sem página própria: quem citou abre a estante filtrada; o resto, a busca
-    // com o nome, que junta os livros e os episódios da pessoa.
-    const href = maisCitou
-      ? `/podcast/${slugify(maisCitou)}?pessoa=${encodeURIComponent(nome)}#todos-os-livros`
-      : `/busca?q=${encodeURIComponent(nome)}`;
+    // Quem participou ou citou tem página (lib/pessoas). Quem só escreveu
+    // livro citado não tem: a busca com o nome junta os livros dele.
+    const href = f.convidado || citou ? hrefPessoa(nome) : `/busca?q=${encodeURIComponent(nome)}`;
     return { nome, papel: partes.join(" · "), href, peso };
   });
 }
@@ -131,7 +131,7 @@ const carregar = unstable_cache(
 
     const fichas = new Map<string, FichaPessoa>();
     const ficha = (nome: string) => {
-      const atual = fichas.get(nome) ?? { citou: new Map(), livrosEscritos: 0, convidado: 0 };
+      const atual = fichas.get(nome) ?? { citou: new Map(), livrosEscritos: 0, convidado: 0, convidadoEm: new Set() };
       fichas.set(nome, atual);
       return atual;
     };
@@ -167,7 +167,11 @@ const carregar = unstable_cache(
       .filter((e) => podcastVisivel(e.podcasts?.nome))
       .map((e) => {
         const convidados = ((e.convidados ?? []) as string[]).map((c) => c.trim()).filter(Boolean);
-        for (const c of convidados) ficha(c).convidado += 1;
+        for (const c of convidados) {
+          const f = ficha(c);
+          f.convidado += 1;
+          f.convidadoEm.add(e.podcasts.nome);
+        }
         return {
           id: e.id,
           slug: e.slug ?? null,
@@ -180,7 +184,7 @@ const carregar = unstable_cache(
 
     return { livros, episodios, pessoas: montarPessoas(fichas) };
   },
-  ["busca-indice"],
+  ["busca-indice-v2"],
   { revalidate: 300 }
 );
 

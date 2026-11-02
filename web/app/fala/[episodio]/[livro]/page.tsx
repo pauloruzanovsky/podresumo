@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import BookCover from "@/components/BookCover";
 import Compartilhar from "@/components/Compartilhar";
+import ComprarAmazon from "@/components/ComprarAmazon";
 import Newsletter from "@/components/Newsletter";
 import { carregarFala } from "@/lib/falas";
-import { hrefEpisodio, hrefFala, hrefLivro, linkAmazon } from "@/lib/links";
+import { hrefEpisodio, hrefFala, hrefLivro, hrefPessoa, linkAmazon, linkAmazonEua } from "@/lib/links";
+import { PODCASTS_EM_INGLES } from "@/lib/podcasts";
 import { formatTimestamp } from "@/lib/tempo";
 
 export const revalidate = 60;
@@ -63,7 +65,13 @@ export default async function FalaPage({ params }: Props) {
         <blockquote className="font-serif text-2xl sm:text-4xl leading-snug tracking-tight">
           “{f.citacao}”
         </blockquote>
-        {f.quem && <p className="mt-5 font-semibold">{f.quem}</p>}
+        {f.quem && (
+          <p className="mt-5 font-semibold">
+            <Link href={hrefPessoa(f.quem)} className="hover:underline">
+              {f.quem}
+            </Link>
+          </p>
+        )}
 
         <div className="flex items-center gap-2 mt-7">
           {minuto && (
@@ -115,14 +123,11 @@ export default async function FalaPage({ params }: Props) {
           </Link>
           {f.livro.autor && <p className="text-sm text-muted mt-1">{f.livro.autor}</p>}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
-            <a
-              href={linkAmazon(f.livro.titulo, f.livro.autor)}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="text-sm font-semibold text-accent-light underline underline-offset-2 hover:text-accent"
-            >
-              Comprar na Amazon
-            </a>
+            <ComprarAmazon
+              br={linkAmazon(f.livro)}
+              eua={linkAmazonEua(f.livro, PODCASTS_EM_INGLES.includes(f.episodio.podcast))}
+              estilo="link"
+            />
             <Link href={hrefLivro(f.livro)} className="text-sm text-muted hover:text-foreground">
               Tudo que disseram →
             </Link>

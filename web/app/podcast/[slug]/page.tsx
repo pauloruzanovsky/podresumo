@@ -14,7 +14,9 @@ import { categoriasDe } from "@/lib/categorias";
 import CalendarioEpisodios, { type EpisodioLinha } from "@/components/CalendarioEpisodios";
 import { FiltroProvider } from "@/lib/filtroEstante";
 import SeloEstante from "@/components/SeloEstante";
-import { APRESENTADORES, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import { APRESENTADORES, HOSTS, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import { hrefPessoa } from "@/lib/links";
+import Link from "next/link";
 
 export const revalidate = 60;
 
@@ -257,6 +259,20 @@ export default async function PodcastPage({
           episódios — com o trecho da conversa e o minuto de cada citação.
         </p>
         <SeloEstante estante={selo} className="mt-3" />
+        {/* quem apresenta fica fora do placar: a entrada pra página deles é aqui */}
+        {(HOSTS[podcast.nome] ?? []).length > 0 && (
+          <p className="text-sm text-muted mt-3">
+            Com{" "}
+            {HOSTS[podcast.nome].map((h, i, todos) => (
+              <span key={h}>
+                {i > 0 && (i === todos.length - 1 ? " e " : ", ")}
+                <Link href={hrefPessoa(h)} className="text-foreground underline underline-offset-2 hover:text-accent-light">
+                  {h}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
 
         {canal && (
           <a

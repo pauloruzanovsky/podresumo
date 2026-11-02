@@ -8,6 +8,7 @@ import { ESTANTES } from "@/lib/podcasts";
 import MenuEstantes from "@/components/MenuEstantes";
 import Newsletter from "@/components/Newsletter";
 import { IconePodlibris } from "@/components/Logo";
+import LinkLogo from "@/components/LinkLogo";
 import TrocaTema, { SCRIPT_TEMA } from "@/components/TrocaTema";
 import PlayerTrecho from "@/components/PlayerTrecho";
 import "./globals.css";
@@ -69,19 +70,31 @@ export default function RootLayout({
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="max-w-[1200px] mx-auto px-8 lg:px-12 h-14 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 text-marca">
+            <LinkLogo className="flex items-center gap-2 text-marca">
               <IconePodlibris className="h-7 w-auto" ondas="currentColor" />
               <span className="font-serif text-xl font-bold tracking-tight">{SITE_NAME}</span>
-            </Link>
+            </LinkLogo>
             {/* "Descobrir" apontava pro mesmo lugar que o logo. Episódios só
                 existia no rodapé. */}
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center sm:gap-1">
               <MenuEstantes />
               <Link
                 href="/episodios"
-                className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground transition-colors"
+                className="px-2 sm:px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground transition-colors"
               >
                 Episódios
+              </Link>
+              {/* A busca só existia na home. Um campo inteiro aqui não cabe no
+                  celular: a lupa abre a página de busca, com o campo em foco. */}
+              <Link
+                href="/busca"
+                aria-label="Buscar"
+                title="Buscar"
+                className="grid place-items-center w-9 h-9 rounded-lg text-muted hover:text-foreground hover:bg-card-hover transition-colors"
+              >
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </Link>
               <TrocaTema />
             </nav>

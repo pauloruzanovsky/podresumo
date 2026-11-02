@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { ESTANTES, podcastVisivel } from "@/lib/podcasts";
+import ComprarAmazon from "@/components/ComprarAmazon";
+import { ESTANTES, PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { hrefEpisodio, hrefFala, hrefLivro, linkAmazon } from "@/lib/links";
+import { hrefEpisodio, hrefFala, hrefLivro, hrefPessoa, linkAmazon, linkAmazonEua } from "@/lib/links";
 import { resolverLivro } from "@/lib/resolver";
 import BookCover from "@/components/BookCover";
 import Compartilhar from "@/components/Compartilhar";
@@ -121,9 +122,12 @@ function CardCitacao({ c, livro }: { c: Citacao; livro: { id: string; slug: stri
           </blockquote>
           <div className="flex items-center gap-3 flex-wrap mt-4">
             {c.quem_citou && (
-              <span className="text-sm font-semibold text-foreground">
+              <Link
+                href={hrefPessoa(c.quem_citou)}
+                className="text-sm font-semibold text-foreground hover:underline"
+              >
                 — {c.quem_citou}
-              </span>
+              </Link>
             )}
           </div>
           {c.contexto && (
@@ -226,6 +230,10 @@ export default async function LivroPage({
 
   // Livro que só foi citado em podcast oculto não tem página.
   if (citacoes.length === 0) return notFound();
+
+  const citadoEmIngles = (livro.episode_livros ?? []).some((rel: any) =>
+    PODCASTS_EM_INGLES.includes(rel.episodes?.podcasts?.nome)
+  );
 
   // A citação do card de destaque: com fala literal, recomendação antes de
   // menção, e a mais recente entre as empatadas (a lista já vem por data).
@@ -395,17 +403,11 @@ export default async function LivroPage({
             )}
 
             <div className="flex items-center justify-center sm:justify-start gap-3 mt-6 flex-wrap">
-              <a
-                href={linkAmazon(livro.titulo, livro.autor)}
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
-              >
-                Comprar na Amazon
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
-                </svg>
-              </a>
+              <ComprarAmazon
+                br={linkAmazon(livro)}
+                eua={linkAmazonEua(livro, citadoEmIngles)}
+                estilo="botao"
+              />
               {linkMinuto(destaque) && (
                 <a
                   href={linkMinuto(destaque)!}

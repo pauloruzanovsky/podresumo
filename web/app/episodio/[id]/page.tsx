@@ -10,7 +10,7 @@ import { carregarIndice } from "@/lib/indice";
 import { podcastVisivel } from "@/lib/podcasts";
 import { slugify } from "@/lib/slug";
 import { notFound, permanentRedirect } from "next/navigation";
-import { hrefEpisodio, hrefLivro } from "@/lib/links";
+import { hrefEpisodio, hrefLivro, hrefPessoa } from "@/lib/links";
 import { resolverEpisodio } from "@/lib/resolver";
 import { formatTimestamp } from "@/lib/tempo";
 
@@ -235,7 +235,15 @@ export default async function EpisodioPage({
         </h1>
         {convidados.length > 0 && (
           <p className="mt-2 text-muted">
-            com <span className="text-foreground">{convidados.join(", ")}</span>
+            com{" "}
+            {convidados.map((c, i) => (
+              <span key={c}>
+                {i > 0 && ", "}
+                <Link href={hrefPessoa(c)} className="text-foreground hover:underline">
+                  {c}
+                </Link>
+              </span>
+            ))}
           </p>
         )}
         <div className="flex flex-wrap items-center gap-2 mt-5">
@@ -296,7 +304,9 @@ export default async function EpisodioPage({
           <div className="flex flex-col gap-3">
             {apresentacoes.map((c) => (
               <p key={c.nome} className="leading-relaxed">
-                <span className="font-semibold">{c.nome}</span>
+                <Link href={hrefPessoa(c.nome)} className="font-semibold hover:underline">
+                  {c.nome}
+                </Link>
                 {c.descricao && <span className="text-muted"> — {c.descricao}</span>}
               </p>
             ))}

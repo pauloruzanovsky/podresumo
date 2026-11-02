@@ -12,7 +12,8 @@ const ID_LISTA = "sugestoes-busca";
  * sem nada marcado abre a página de resultados, que mostra tudo; sem
  * JavaScript, o formulário faz o mesmo.
  */
-export default function HomeSearch({ inicial = "" }: { inicial?: string }) {
+/** `focar`: a busca vazia, aberta pela lupa do topo, já chega com o cursor no campo. */
+export default function HomeSearch({ inicial = "", focar = false }: { inicial?: string; focar?: boolean }) {
   const [q, setQ] = useState(inicial);
   const [sugestoes, setSugestoes] = useState<Sugestao[]>([]);
   const [aberta, setAberta] = useState(false);
@@ -117,6 +118,7 @@ export default function HomeSearch({ inicial = "" }: { inicial?: string }) {
         aria-autocomplete="list"
         aria-activedescendant={marcada >= 0 ? `${ID_LISTA}-${marcada}` : undefined}
         autoComplete="off"
+        autoFocus={focar}
         enterKeyHint="search"
         aria-label="Buscar livro, autor, convidado ou podcast"
         placeholder="Busque livro, autor, convidado, podcast..."

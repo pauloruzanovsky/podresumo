@@ -4,6 +4,7 @@ import { podcastVisivel } from "@/lib/podcasts";
 import { SITE_URL } from "@/lib/site";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import { slugify } from "@/lib/slug";
+import { pessoasIndexaveis } from "@/lib/pessoas";
 
 // Revalida junto com as páginas: o sitemap precisa acompanhar livro novo
 // entrando no acervo a cada sync.
@@ -71,5 +72,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
-  return [...fixas, ...podcasts, ...livros, ...episodios];
+  // só quem tem página com conteúdo (lib/pessoas: participações + citações)
+  const pessoas: MetadataRoute.Sitemap = (await pessoasIndexaveis().catch(() => [])).map((slug) => ({
+    url: `${SITE_URL}/pessoa/${slug}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  return [...fixas, ...podcasts, ...livros, ...pessoas, ...episodios];
 }

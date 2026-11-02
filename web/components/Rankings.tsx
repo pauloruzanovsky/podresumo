@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookCover from "./BookCover";
+import { hrefPessoa } from "@/lib/links";
 
 /**
  * Os dois placares da estante: quem mais cita livros e os autores que mais
@@ -112,13 +113,13 @@ export default function Rankings({
       {pessoas.length > 0 && (
         <Quadro
           titulo="Quem mais cita livros"
-          subtitulo={`Entre os convidados — ${apresentadores.join(" e ")} ficam fora da disputa. Clique pra ver os livros de cada um.`}
+          subtitulo={`Entre os convidados — ${apresentadores.join(" e ")} ficam fora da disputa. Clique pra ver as participações e os livros de cada um.`}
         >
           <ol className="flex flex-col gap-1">
             {pessoas.map((p, i) => (
               <li key={p.nome}>
                 <Link
-                  href={`?pessoa=${encodeURIComponent(p.nome)}#todos-os-livros`}
+                  href={hrefPessoa(p.nome)}
                   className="group flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 hover:bg-card-hover transition-colors"
                 >
                   <Posicao i={i} />

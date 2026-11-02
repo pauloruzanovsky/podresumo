@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Compartilhar from "./Compartilhar";
-import { hrefEpisodio, hrefFala } from "@/lib/links";
+import { hrefEpisodio, hrefFala, hrefPessoa } from "@/lib/links";
 import { formatTimestamp } from "@/lib/tempo";
 
 /**
@@ -120,7 +120,13 @@ function Linha({ c, livro }: { c: CitacaoLinha; livro: LivroDaLista }) {
           {c.ep_number && <span className="font-mono text-xs text-muted mr-2">#{c.ep_number}</span>}
           {tituloLimpo(c.titulo, c.ep_number)}
         </Link>
-        <span className="hidden md:block text-sm text-muted truncate">{c.quem_citou ?? "—"}</span>
+        {c.quem_citou ? (
+          <Link href={hrefPessoa(c.quem_citou)} className="hidden md:block text-sm text-muted truncate hover:text-foreground hover:underline">
+            {c.quem_citou}
+          </Link>
+        ) : (
+          <span className="hidden md:block text-sm text-muted">—</span>
+        )}
         <span className="text-right">
           {minuto ? (
             <a
@@ -143,7 +149,11 @@ function Linha({ c, livro }: { c: CitacaoLinha; livro: LivroDaLista }) {
       </div>
 
       {/* no celular quem citou vai embaixo do título */}
-      {c.quem_citou && <p className="md:hidden mt-1 text-xs text-muted">{c.quem_citou}</p>}
+      {c.quem_citou && (
+        <Link href={hrefPessoa(c.quem_citou)} className="md:hidden block mt-1 text-xs text-muted hover:underline">
+          {c.quem_citou}
+        </Link>
+      )}
 
       {fala && (
         <details className="group mt-1.5">

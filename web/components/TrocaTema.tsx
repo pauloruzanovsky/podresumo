@@ -28,7 +28,7 @@ export default function TrocaTema() {
     <button
       type="button"
       onClick={trocar}
-      className="ml-1 grid place-items-center w-9 h-9 rounded-lg text-muted hover:text-foreground hover:bg-card-hover transition-colors"
+      className="grid place-items-center w-9 h-9 rounded-lg text-muted hover:text-foreground hover:bg-card-hover transition-colors"
     >
       <span className="sr-only dark:hidden">Mudar para o tema escuro</span>
       <span className="sr-only hidden dark:inline">Mudar para o tema claro</span>

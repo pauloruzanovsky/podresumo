@@ -22,7 +22,7 @@ export default async function MenuEstantes() {
     <div className="group relative">
       <Link
         href={ESTANTES}
-        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground group-hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-[13px] font-medium text-muted hover:text-foreground group-hover:text-foreground transition-colors"
       >
         Estantes
         {estantes.length > 0 && (
