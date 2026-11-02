@@ -18,6 +18,9 @@ export default function HomeSearch({ inicial = "", focar = false }: { inicial?: 
   const [sugestoes, setSugestoes] = useState<Sugestao[]>([]);
   const [aberta, setAberta] = useState(false);
   const [marcada, setMarcada] = useState(-1);
+  // A primeira busca monta o índice e leva uns segundos: sem sinal, parecia travado.
+  const [buscando, setBuscando] = useState(false);
+  const [vazia, setVazia] = useState(false);
   const router = useRouter();
   const pedido = useRef<AbortController | null>(null);
   const formulario = useRef<HTMLFormElement>(null);
@@ -37,19 +40,27 @@ export default function HomeSearch({ inicial = "", focar = false }: { inicial?: 
     pedido.current?.abort();
     if (termo.length < 2) {
       setSugestoes([]);
+      setBuscando(false);
+      setVazia(false);
       return;
     }
     const controle = new AbortController();
     pedido.current = controle;
+    setBuscando(true);
+    setVazia(false);
     const relogio = setTimeout(async () => {
       try {
         const r = await fetch(`/api/busca?q=${encodeURIComponent(termo)}`, { signal: controle.signal });
         if (!r.ok) return;
         const dados = await r.json();
         setSugestoes(dados.sugestoes);
+        setVazia(dados.sugestoes.length === 0);
         setMarcada(-1);
       } catch {
         // pedido cancelado por uma letra nova, ou rede fora: fica só o Enter
+      } finally {
+        // a letra nova já ligou o sinal pro pedido dela
+        if (!controle.signal.aborted) setBuscando(false);
       }
     }, ESPERA_MS);
     return () => {
@@ -130,8 +141,24 @@ export default function HomeSearch({ inicial = "", focar = false }: { inicial?: 
         onFocus={() => setAberta(true)}
         onBlur={() => setAberta(false)}
         onKeyDown={onKeyDown}
-        className="w-full pl-11 pr-4 py-3.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted/40 outline-none focus:border-foreground/30 transition-all [&::-webkit-search-cancel-button]:appearance-none"
+        className="w-full pl-11 pr-11 py-3.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted/40 outline-none focus:border-foreground/30 transition-all [&::-webkit-search-cancel-button]:appearance-none"
       />
+
+      {buscando && (
+        <span
+          role="status"
+          aria-label="Buscando"
+          className="absolute right-4 top-[1.05rem] w-[18px] h-[18px] rounded-full border-2 border-muted/25 border-t-accent animate-spin"
+        />
+      )}
+
+      {/* lista vazia: diz que está procurando, ou que não achou, em vez de
+          não mostrar nada */}
+      {aberta && sugestoes.length === 0 && (buscando || vazia) && (
+        <p className="absolute z-40 left-0 right-0 top-full mt-2 px-4 py-3 bg-card border border-border rounded-2xl text-sm text-muted shadow-[0_20px_50px_-20px_rgba(43,37,33,0.45)]">
+          {buscando ? `Buscando “${q.trim()}”…` : `Nada encontrado para “${q.trim()}”.`}
+        </p>
+      )}
 
       {mostrar && (
         <ul
