@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { ESTANTES } from "@/lib/podcasts";
 import MenuEstantes from "@/components/MenuEstantes";
@@ -117,6 +118,7 @@ export default function RootLayout({
         {/* "Ouvir o trecho" toca aqui, no minuto, sem sair do site */}
         <PlayerTrecho />
 
+        <Analytics />
       </body>
     </html>
   );
