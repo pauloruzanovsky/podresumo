@@ -53,7 +53,10 @@ comitar chave.
    uma vez ao cadastrar podcast novo.
 9. `normalize_pessoas` — unifica grafias de convidado, autor e quem citou. A
    lista é à mão (`ALIASES`) e roda sozinha na coleta do lote.
-10. `pendencias` — relatório do que precisa de decisão humana. Só lê. A rotina
+10. `titulos_alt` — título PT e EN de cada livro em `titulo_alt` (pago, Batch;
+    a busca do site usa). `--duplicatas` lista pares PT/EN do mesmo autor, que
+    viram linhas de `ALIASES` em `normalize_livros`. Livro novo: `--enviar --novos`.
+11. `pendencias` — relatório do que precisa de decisão humana. Só lê. A rotina
     de segunda publica na página privada:
     https://claude.ai/artifact/5Rq8ymcDLy5a8gAk5FMyf1
 
@@ -82,9 +85,12 @@ comitar chave.
 ## Rotinas agendadas (app do Claude)
 
 - `podresumo-baixar-transcricoes` — 8h e 20h: mantém o Supabase ativo (o plano
-  grátis pausa por inatividade) e baixa uma leva de transcrições. Não gasta API.
-- `podlibris-lote-semanal` — domingo 21h: envia os episódios novos se o pior
-  caso couber em R$ 10.
+  grátis pausa por inatividade) e baixa uma leva de transcrições dos 4
+  podcasts. Dos em inglês, só episódio a partir de 02/11/2026, com 45 min ou
+  mais e sem "Essentials" (`--desde`, `--min-minutos`, `--excluir`). Não gasta API.
+- `podlibris-lote-semanal` — domingo 21h: envia os episódios novos dos 4
+  podcasts, os mais recentes que cabem em R$ 10 no pior caso (`--ate-caber`);
+  o resto espera a semana seguinte. Episódio longo ≈ R$ 1 no pior caso.
 - `podlibris-newsletter-semanal` — segunda 9h: coleta o lote (a coleta já
   preenche os slugs), busca capas e cria o rascunho da newsletter.
 - GitHub Actions `manter-banco-ativo.yml` — acesso diário ao Supabase, de

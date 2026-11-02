@@ -221,6 +221,26 @@ def estimar(eps):
     return usd * USD_BRL
 
 
+def cabem_no_teto(eps, teto_brl):
+    """Os mais recentes cujo pior caso, somado, cabe no teto. Com os quatro
+    podcasts no lote semanal, uma semana cheia passa dos R$ 10: em vez de não
+    enviar nada, vão os que cabem e o resto espera a semana seguinte."""
+    escolhidos, total = [], 0.0
+    for e, p in zip(eps, params(eps)):
+        entrada = client.messages.count_tokens(
+            model=p["model"], system=p["system"], messages=p["messages"],
+        ).input_tokens
+        pior = (entrada * USD_IN + 5_000 * USD_OUT) * DESCONTO_LOTE * USD_BRL
+        if total + pior > teto_brl:
+            break
+        escolhidos.append(e)
+        total += pior
+    if len(escolhidos) < len(eps):
+        print(f"Cabem {len(escolhidos)} de {len(eps)} no teto de R$ {teto_brl:.2f}; "
+              f"ficam pra próxima semana: {[e['titulo'][:40] for e in eps[len(escolhidos):]]}")
+    return escolhidos
+
+
 # ──────────────────────────────────────────────────── envio ───
 
 def enviar(eps):
@@ -379,6 +399,8 @@ def main():
                    help="com --coletar: se o lote não terminou, sai sem esperar")
     p.add_argument("--teto-brl", type=float, metavar="R$",
                    help="com --enviar: mede antes e só envia se o pior caso couber no teto")
+    p.add_argument("--ate-caber", action="store_true",
+                   help="com --teto-brl: envia os mais recentes que cabem, em vez de nada")
     p.add_argument("--limite", type=int, help="processa só os N mais recentes")
     p.add_argument("--podcast", help='só este podcast (trecho do nome, ex.: "socios")')
     p.add_argument("--pendentes", action="store_true",
@@ -420,6 +442,11 @@ def main():
         if not eps:
             print("Nada pra enviar.")
             return
+        if args.teto_brl is not None and args.ate_caber:
+            eps = cabem_no_teto(eps, args.teto_brl)
+            if not eps:
+                print("NÃO ENVIADO: nem o episódio mais recente cabe no teto. Precisa do ok do Paulo.")
+                sys.exit(2)
         if args.teto_brl is not None:
             # Gasto autorizado pelo Paulo sem aprovação caso a caso, desde que
             # caiba no teto. Mede com count_tokens (grátis) e compara o PIOR

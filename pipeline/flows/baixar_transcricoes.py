@@ -26,6 +26,7 @@ Depois:
 
 import argparse
 import os
+import re
 import sys
 import time
 
@@ -54,6 +55,22 @@ SEM_LEGENDA = {
 MAX_FALHAS_SEGUIDAS = 2
 
 
+def minutos(duracao: str | None) -> int:
+    """'2h18min' -> 138; '9min' -> 9 (formato de extract.youtube.parse_duration)."""
+    m = re.match(r"(?:(\d+)h)?(\d+)min", duracao or "")
+    return int(m.group(1) or 0) * 60 + int(m.group(2)) if m else 0
+
+
+def episodio_inteiro(e: dict, desde: str | None, min_minutos: int, excluir: list[str]) -> bool:
+    """Canal em inglês posta corte, short e "Essentials" no mesmo feed dos
+    episódios: só entra o episódio inteiro, publicado a partir de `desde`."""
+    return (
+        (not desde or (e["data"] or "") >= desde)
+        and minutos(e["duracao"]) >= min_minutos
+        and not any(x.lower() in e["titulo"].lower() for x in excluir)
+    )
+
+
 def faltantes(eps: list[dict]) -> list[dict]:
     # `listed` é só catálogo (catalogar_episodios): ainda falta a transcrição.
     com_transcricao = {
@@ -80,6 +97,11 @@ def main():
     p.add_argument("--pausa", type=int, default=PAUSA_SEG,
                    help="segundos entre um download e outro")
     p.add_argument("--listar", action="store_true", help="só mostra o que falta")
+    p.add_argument("--desde", metavar="AAAA-MM-DD", help="ignora vídeo publicado antes")
+    p.add_argument("--min-minutos", type=int, default=0,
+                   help="ignora vídeo mais curto (corte, short)")
+    p.add_argument("--excluir", nargs="+", default=[], metavar="TRECHO",
+                   help='ignora vídeo com este trecho no título, ex.: "Essentials"')
     args = p.parse_args()
 
     podcast = acha_podcast(args.podcast)
@@ -88,6 +110,7 @@ def main():
             eps = fetch_videos(f.read().split())
     else:
         eps = fetch_episodes(args.playlist_id, args.max)
+    eps = [e for e in eps if episodio_inteiro(e, args.desde, args.min_minutos, args.excluir)]
     novos = faltantes(eps)
 
     def salva_antes(e):

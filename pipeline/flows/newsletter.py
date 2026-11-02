@@ -7,8 +7,8 @@ Conteúdo, de propósito curto (uma fala e três livros, não uma lista de links
   1. abertura do Paulo (opcional, --abertura)
   2. a fala da semana: uma recomendação de verdade, com capa e minuto
   3. três livros, cada um com a fala de quem citou
-  4. episódios da semana, com quantos livros cada um rendeu
-  5. "lá de fora": um livro das estantes em inglês
+  4. episódios da semana dos quatro podcasts, com quantos livros cada um rendeu
+  5. "lá de fora": um livro do acervo em inglês, só em semana sem episódio novo em inglês
   6. fechamento com a conta da semana
   7. na primeira edição do mês, o placar de quem mais cita livros
 
@@ -32,6 +32,7 @@ import html
 import os
 import re
 import sys
+import unicodedata
 import urllib.parse
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
@@ -56,7 +57,8 @@ PODCAST = "Os Sócios Podcast"
 APRESENTADORES = {"Bruno Perini", "Malu Perini", "Chris Williamson", "Tim Ferriss", "Andrew Huberman"}
 PODCASTS_EM_INGLES = ["Modern Wisdom", "The Tim Ferriss Show", "Huberman Lab"]
 MAX_LIVROS = 3
-MAX_EPISODIOS = 4
+# quatro podcasts dão uns 7 episódios por semana
+MAX_EPISODIOS = 8
 # `processed_at` muda a cada reprocessamento: sem este corte, episódio de 2023
 # reextraído aparecia como novidade (388 livros numa semana). Com folga pro
 # episódio que espera o lote de domingo.
@@ -86,6 +88,14 @@ def link_amazon(titulo: str, autor: str | None) -> str:
     return f"{url}&tag={urllib.parse.quote(tag)}" if tag else url
 
 
+def slug_pessoa(nome: str) -> str:
+    """O mesmo slug de web/lib/slug.ts: /pessoa/<slug> é a página da pessoa."""
+    t = unicodedata.normalize("NFD", nome)
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn").lower()
+    t = re.sub(r"\bpodcast\b", "", t)
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+
+
 def titulo_limpo(titulo: str, numero: str | None) -> str:
     return titulo.rsplit("|", 1)[0].strip() if numero and "|" in titulo else titulo
 
@@ -110,14 +120,16 @@ def citacoes_de(ids: list[str]) -> list[dict]:
 def carregar(dias: int):
     podcasts = supabase.table("podcasts").select("id, nome").execute().data
     podcast = next(p for p in podcasts if p["nome"] == PODCAST)
+    nomes = {p["id"]: p["nome"] for p in podcasts}
     agora = datetime.now(timezone.utc)
     desde = (agora - timedelta(days=dias)).isoformat()
     recente = (agora - timedelta(days=EPISODIO_RECENTE_DIAS)).date().isoformat()
 
+    # Os quatro podcasts: desde nov/2026 o lote semanal extrai os episódios
+    # novos de todos, não só do Os Sócios.
     episodios = (
         supabase.table("episodes")
         .select("id, slug, titulo, ep_number, data, link_youtube, podcast_id")
-        .eq("podcast_id", podcast["id"])
         .eq("status", "done")
         .gte("processed_at", desde)
         .gte("data", recente)
@@ -125,6 +137,8 @@ def carregar(dias: int):
         .execute()
         .data
     )
+    for ep in episodios:
+        ep["podcast"] = nomes[ep["podcast_id"]]
     citacoes = citacoes_de([e["id"] for e in episodios])
 
     # placar de todos os tempos, como na estante
@@ -141,7 +155,9 @@ def carregar(dias: int):
         if c.get("quem_citou") and c["quem_citou"].strip() not in APRESENTADORES
     ).most_common(5)
 
-    fora = rodizio(agora, [p for p in podcasts if p["nome"] in PODCASTS_EM_INGLES])
+    # o "lá de fora" do acervo só entra em semana sem episódio novo em inglês
+    em_ingles = any(ep["podcast"] in PODCASTS_EM_INGLES for ep in episodios)
+    fora = None if em_ingles else rodizio(agora, [p for p in podcasts if p["nome"] in PODCASTS_EM_INGLES])
     # semana sem livro (só notícia, por exemplo): o e-mail abre com o acervo
     acervo = None if citacoes else rodizio(agora, [podcast])
     return episodios, citacoes, placar, fora, acervo
@@ -162,8 +178,8 @@ def boa_fala(c: dict) -> bool:
 
 def rodizio(agora: datetime, podcasts: list[dict]) -> dict | None:
     """Uma recomendação do acervo destes podcasts, que gira por semana sem
-    precisar guardar o que já saiu. É como as estantes em inglês entram no
-    e-mail: o lote semanal só traz o Os Sócios."""
+    precisar guardar o que já saiu. Mantém as estantes em inglês no e-mail na
+    semana em que elas não têm episódio novo."""
     if not podcasts:
         return None
     eps = (
@@ -189,10 +205,13 @@ def escolher(episodios, citacoes):
     por_livro: dict[str, list] = {}
     for c in citacoes:
         por_livro.setdefault(c["livros"]["slug"] or c["livros"]["titulo"], []).append(c)
+    podcast_de = {ep["id"]: ep.get("podcast") for ep in episodios}
 
     def nota(c):
         return (
             boa_fala(c),
+            # e-mail em português: a fala em português abre, quando há uma boa
+            podcast_de.get(c["episode_id"]) not in PODCASTS_EM_INGLES,
             c.get("quem_citou") not in APRESENTADORES,  # convidado antes do host
             bool(c["livros"].get("capa_url")),
             bool(c.get("citacao_literal")),
@@ -211,7 +230,9 @@ def assunto_de(fala: dict | None, episodios, n_livros: int) -> str:
     if not fala:
         return f"Podlibris: {len(episodios)} {'episódio novo' if len(episodios) == 1 else 'episódios novos'}"
     frase = re.split(r"(?<=[.!?])\s", fala.get("citacao_literal") or "")[0]
-    if boa_fala(fala) and len(frase) <= 70:
+    podcast = next((ep.get("podcast") for ep in episodios if ep["id"] == fala["episode_id"]), None)
+    # fala em inglês não vira assunto de e-mail em português
+    if boa_fala(fala) and len(frase) <= 70 and podcast not in PODCASTS_EM_INGLES:
         return f"“{frase}”"
     quem = fala.get("quem_citou")
     livro = fala["livros"]["titulo"]
@@ -236,7 +257,9 @@ def rotulo(texto: str) -> str:
 
 def de_quem(c: dict, ep: dict, podcast: str | None = None) -> str:
     quem = c.get("quem_citou")
-    if ep.get("ep_number"):
+    podcast = podcast or ep.get("podcast")
+    # "#313" só diz algo pra quem ouve o Os Sócios; os outros vão pelo nome
+    if ep.get("ep_number") and podcast in (None, PODCAST):
         onde = f"no #{ep['ep_number']}"
     else:
         onde = f"no {podcast}" if podcast else "no episódio"
@@ -302,7 +325,9 @@ def lista_episodios(episodios, citacoes) -> str:
     for ep in episodios[:MAX_EPISODIOS]:
         n = len({c["livros"]["slug"] for c in citacoes if c["episode_id"] == ep["id"]})
         qtd = "sem livro citado" if n == 0 else f"{n} {'livro' if n == 1 else 'livros'}"
-        numero = f"#{ep['ep_number']} " if ep.get("ep_number") else ""
+        if ep.get("podcast") and ep["podcast"] != PODCAST:
+            qtd = f"{ep['podcast']} · {qtd}"
+        numero = f"#{ep['ep_number']} " if ep.get("ep_number") and ep.get("podcast") in (None, PODCAST) else ""
         titulo = numero + titulo_limpo(ep["titulo"], ep["ep_number"])
         linhas.append(
             f'<p style="margin:0 0 8px;">{link(SITE + "/episodio/" + ep["slug"], titulo, TINTA)}'
@@ -350,7 +375,7 @@ def montar(episodios, citacoes, placar, fora, acervo=None, abertura=None, hoje=N
         partes.append(rotulo("Quem mais cita livros"))
         linhas = "".join(
             f'<p style="margin:0 0 4px;">{i}. '
-            + link(f"{SITE}/podcast/os-socios?pessoa={urllib.parse.quote(nome)}#todos-os-livros", nome)
+            + link(f"{SITE}/pessoa/{slug_pessoa(nome)}", nome)
             + f' <span style="color:{APAGADO};">{n} citações</span></p>'
             for i, (nome, n) in enumerate(placar, 1)
         )
@@ -364,7 +389,7 @@ def montar(episodios, citacoes, placar, fora, acervo=None, abertura=None, hoje=N
     partes.append(divisor())
     partes.append(
         f'<p style="margin:0;font-family:{SANS};font-size:14px;line-height:1.5;color:{APAGADO};">'
-        f'{e(conta)}Todos os livros estão na {link(SITE + "/podcast/os-socios", "estante do Os Sócios")}, '
+        f'{e(conta)}Todos os livros estão nas {link(SITE + "/#estantes", "estantes do Podlibris")}, '
         'com o minuto de cada citação.</p>'
     )
     partes.append(
