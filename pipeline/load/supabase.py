@@ -219,9 +219,17 @@ def upsert_livros(
         # Não dá pra usar upsert com on_conflict aqui: no Postgres dois NULL
         # não colidem, então um livro sem autor criaria uma linha nova a cada
         # episódio que o cita.
-        busca = supabase.table("livros").select("id, temas").eq("titulo", titulo)
-        busca = busca.is_("autor", "null") if autor is None else busca.eq("autor", autor)
-        existente = busca.execute()
+        def busca_por(coluna, valor):
+            q = supabase.table("livros").select("id, temas")
+            q = q.contains(coluna, valor) if coluna == "titulo_alt" else q.eq(coluna, valor)
+            return (q.is_("autor", "null") if autor is None else q.eq("autor", autor)).execute()
+
+        existente = busca_por("titulo", titulo)
+        if not existente.data:
+            # o livro pode estar com o título no outro idioma ("Como Mudar Sua
+            # Mente", citado como "How to Change Your Mind"): flows/titulos_alt
+            # guarda os dois em titulo_alt
+            existente = busca_por("titulo_alt", [titulo])
 
         if existente.data:
             livro_id = existente.data[0]["id"]

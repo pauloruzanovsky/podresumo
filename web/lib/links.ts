@@ -31,6 +31,7 @@ export function hrefPessoa(nome: string) {
 
 interface LivroAmazon {
   titulo: string;
+  titulo_original?: string | null;
   autor?: string | null;
 }
 
@@ -54,7 +55,9 @@ export function linkAmazon(livro: LivroAmazon, loja: "br" | "us" = "br") {
   // Com a identificação de afiliado (NEXT_PUBLIC_AMAZON_TAG, ex.: podlibris-20)
   // a compra vinda daqui gera comissão; sem ela, o link é a busca comum.
   const comTag = tag ? `&tag=${encodeURIComponent(tag)}` : "";
-  const { titulo, autor } = livro;
+  // na loja dos EUA, o título em inglês ("Como Mudar Sua Mente" não acha nada lá)
+  const titulo = loja === "us" ? livro.titulo_original || livro.titulo : livro.titulo;
+  const { autor } = livro;
   const termo = autor ? `${titulo} ${autor}` : titulo;
   return `${site}/s?k=${encodeURIComponent(termo)}&i=stripbooks${comTag}`;
 }

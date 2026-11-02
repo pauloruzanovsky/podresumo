@@ -356,6 +356,10 @@ export default async function LivroPage({
             <h1 className="font-serif text-3xl sm:text-5xl font-semibold tracking-tight leading-tight">
               {livro.titulo}
             </h1>
+            {/* o título de fora, pra quem conhece o livro pelo nome original */}
+            {livro.titulo_original && (
+              <p className="font-serif italic text-muted text-lg sm:text-xl mt-1">{livro.titulo_original}</p>
+            )}
             <p className="text-muted text-lg mt-2">
               {livro.autor ?? (
                 <span className="italic text-muted/60">autor não citado no episódio</span>

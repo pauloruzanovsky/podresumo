@@ -21,7 +21,14 @@ export interface Fala {
     linkYoutube: string | null;
     podcast: string;
   };
-  livro: { id: string; slug: string | null; titulo: string; autor: string | null; capaUrl: string | null };
+  livro: {
+    id: string;
+    slug: string | null;
+    titulo: string;
+    titulo_original: string | null;
+    autor: string | null;
+    capaUrl: string | null;
+  };
 }
 
 /** "TÍTULO | Os Sócios 296" -> "TÍTULO": o número já aparece no selo. */
@@ -39,7 +46,7 @@ export async function carregarFala(paramEpisodio: string, paramLivro: string): P
   const { data } = await supabase
     .from("episode_livros")
     .select(
-      "citacao_literal, contexto, quem_citou, timestamp_seg, episodes(titulo, ep_number, link_youtube, podcasts(nome)), livros(titulo, autor, capa_url)"
+      "citacao_literal, contexto, quem_citou, timestamp_seg, episodes(titulo, ep_number, link_youtube, podcasts(nome)), livros(titulo, titulo_original, autor, capa_url)"
     )
     .eq("episode_id", refEpisodio.id)
     .eq("livro_id", refLivro.id)
@@ -66,6 +73,7 @@ export async function carregarFala(paramEpisodio: string, paramLivro: string): P
       id: refLivro.id,
       slug: refLivro.slug,
       titulo: r.livros.titulo,
+      titulo_original: r.livros.titulo_original ?? null,
       autor: r.livros.autor ?? null,
       capaUrl: r.livros.capa_url ?? null,
     },

@@ -4,6 +4,10 @@ Título em português e em inglês pra cada livro, gravados em `titulo_alt`.
 A busca do site lê `titulo_alt`: com os dois títulos, "12 regras" e "12 rules"
 acham o mesmo livro. E o backfill de capas tenta cada título alternativo.
 
+O site é em português: livro registrado em inglês que tem edição brasileira
+passa a usar o título dela, e o inglês fica em `titulo_original`, mostrado
+pequeno embaixo (decisão do Paulo em 02/11/2026; ver `em_portugues`).
+
 Pago (API da Anthropic, Batch). Piloto de 60 livros em 02/11/2026: nenhum erro
 contra os pares já conhecidos, ~95 tokens de saída por livro.
 
@@ -53,7 +57,7 @@ Não invente: na dúvida, null. Responda só JSON: [{"i": <índice>, "pt": ..., 
 
 def carrega_livros():
     rows = todas(lambda: supabase.table("livros")
-                 .select("id, titulo, autor, titulo_alt, episode_livros(episode_id)")
+                 .select("id, titulo, autor, titulo_alt, titulo_original, episode_livros(episode_id)")
                  .eq("tipo", "livro").order("id"))
     return [r for r in rows if r["episode_livros"]]
 
@@ -90,6 +94,9 @@ def estimar(livros):
 
 
 def enviar(livros):
+    if not livros:
+        print("nenhum livro novo: nada a enviar")
+        return
     confere_modelo()
     pedidos = pedidos_de(livros)
     lote = client.messages.batches.create(requests=[
@@ -134,12 +141,43 @@ def respostas_do(resultado: dict) -> list[dict]:
     return json.loads(m.group(0)) if m else []
 
 
+# Livro escrito em português: a edição em inglês é tradução, e mostrar "The
+# Slum" embaixo de "O Cortiço" seria esquisito. Não ganha `titulo_original`.
+AUTORES_LUSOFONOS = {
+    "Machado de Assis", "Manuel Antônio de Almeida", "Clarice Lispector",
+    "Lima Barreto", "Aluísio Azevedo", "Luís de Camões", "Fernando Pessoa",
+    "Paulo Coelho", "Euclides da Cunha", "José Saramago", "Laurentino Gomes",
+    "Cristiane Correa", "Sidarta Ribeiro",
+}
+
+
+def em_portugues(livro: dict, pt: str | None, en: str | None, titulos_usados: set) -> dict:
+    """O site é em português: livro registrado pelo título em inglês que tem
+    edição brasileira passa a usar o título dela, e o inglês vai pra
+    `titulo_original` (aparece pequeno embaixo). Livro já em português só
+    ganha o `titulo_original`. O slug não muda, então o link não quebra."""
+    titulo = livro["titulo"]
+    campos = {}
+    if pt and en and titulo.lower() == en.lower() and pt.lower() != titulo.lower():
+        if (pt.lower(), livro["autor"]) in titulos_usados:
+            # já existe outro livro com o título em português: é duplicata,
+            # vira linha de ALIASES (normalize_livros), não troca aqui
+            print(f"  duplicata? {titulo!r} × {pt!r} ({livro['autor']})")
+        else:
+            campos["titulo"] = titulo = pt
+    if (en and en.lower() != titulo.lower() and not livro.get("titulo_original")
+            and livro["autor"] not in AUTORES_LUSOFONOS):
+        campos["titulo_original"] = en
+    return campos
+
+
 def gravar(lote_id: str, arq_resultado: str):
     registro = json.load(open(os.path.join(RESPOSTAS, f"titulos-{lote_id}.json"), encoding="utf-8"))
     resultados = json.load(open(arq_resultado, encoding="utf-8"))
     atuais = {l["id"]: l for l in carrega_livros()}
+    titulos_usados = {(l["titulo"].lower(), l["autor"]) for l in atuais.values()}
     pe, ps = preco()
-    usd, falhas, gravados, baixas = 0.0, [], 0, 0
+    usd, falhas, gravados, baixas, trocados = 0.0, [], 0, 0, 0
     for cid, livros in registro["pedidos"].items():
         r = resultados.get(cid)
         if not r or r["result"]["type"] != "succeeded":
@@ -154,16 +192,26 @@ def gravar(lote_id: str, arq_resultado: str):
             livro = atuais.get(livros[resp["i"]]["id"])
             if not livro:
                 continue  # fundido ou apagado depois do envio
+            pt, en = ((resp.get(k) or "").strip() or None for k in ("pt", "en"))
+            campos = em_portugues(livro, pt, en, titulos_usados)
+            titulo = campos.get("titulo", livro["titulo"])
             alt = list(livro["titulo_alt"] or [])
             # variação de maiúscula não entra; a de subtítulo entra ("Sapiens:
-            # Uma Breve História da Humanidade" também ajuda a busca)
-            conhecidos = {t.lower() for t in [livro["titulo"], *alt]}
-            novos = list({t.strip() for t in (resp.get("pt"), resp.get("en"))
-                          if t and t.strip() and t.strip().lower() not in conhecidos})
+            # Uma Breve História da Humanidade" também ajuda a busca). O título
+            # antigo, se trocou, fica aqui pra busca continuar achando.
+            conhecidos = {t.lower() for t in [titulo, *alt]}
+            novos = list({t for t in (pt, en, livro["titulo"]) if t and t.lower() not in conhecidos})
             if novos:
-                supabase.table("livros").update({"titulo_alt": sorted(set(alt + novos))}).eq("id", livro["id"]).execute()
+                campos["titulo_alt"] = sorted(set(alt + novos))
                 gravados += 1
-    print(f"{gravados} livros ganharam título alternativo; {baixas} respostas de confiança baixa ignoradas")
+            if campos:
+                supabase.table("livros").update(campos).eq("id", livro["id"]).execute()
+                livro.update(campos)  # o piloto e o lote cheio repetem livros
+            if "titulo" in campos:
+                trocados += 1
+                titulos_usados.add((titulo.lower(), livro["autor"]))
+    print(f"{gravados} livros ganharam título alternativo; {trocados} passaram pro título em português; "
+          f"{baixas} respostas de confiança baixa ignoradas")
     if falhas:
         print(f"pedidos sem resposta: {falhas} (rode --enviar --novos depois)")
     print(f"custo real do lote: US$ {usd:.2f} ≈ R$ {usd * 6:.2f} (câmbio 6)")
