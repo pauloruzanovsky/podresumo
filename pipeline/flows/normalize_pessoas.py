@@ -43,6 +43,12 @@ ALIASES = {
 
 CANONICO = {grafia: certo for certo, grafias in ALIASES.items() for grafia in grafias}
 
+# Pessoas diferentes de nome parecido: o relatório de pendências não as sugere.
+PESSOAS_DIFERENTES = [
+    {"Rodrigo Barbosa", "Rodrigo Barros"},
+    {"Neil Strauss", "Neil Howe e William Strauss"},
+]
+
 
 def citacoes(aplicar: bool) -> int:
     n = 0

@@ -52,6 +52,9 @@ comitar chave.
    uma vez ao cadastrar podcast novo.
 9. `normalize_pessoas` — unifica grafias de convidado, autor e quem citou. A
    lista é à mão (`ALIASES`) e roda sozinha na coleta do lote.
+10. `pendencias` — relatório do que precisa de decisão humana. Só lê. A rotina
+    de segunda publica na página privada:
+    https://claude.ai/artifact/5Rq8ymcDLy5a8gAk5FMyf1
 
 ## Regras que o Paulo pediu
 
