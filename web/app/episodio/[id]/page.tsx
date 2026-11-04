@@ -14,11 +14,13 @@ import { hrefEpisodio, hrefLivro, hrefPessoa } from "@/lib/links";
 import { resolverEpisodio } from "@/lib/resolver";
 import { formatTimestamp } from "@/lib/tempo";
 
-// Em cache e atualizada a cada minuto. Sem isto a página era montada do zero
+// Em cache (ver revalidate). Sem isto a página era montada do zero
 // a cada visita (~1 a 5 s na Vercel). A lista vazia em generateStaticParams
 // liga o cache sem pré-montar todos os episódios no build: cada um entra no
 // cache na primeira visita.
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 export async function generateStaticParams() {
   return [];
 }

@@ -12,7 +12,9 @@ import ListaCitacoes from "@/components/ListaCitacoes";
 import Newsletter from "@/components/Newsletter";
 import { formatTimestamp } from "@/lib/tempo";
 
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 // Liga o cache por livro sem pré-montar os ~470 no build: cada um entra no
 // cache na primeira visita (ver a página do episódio).
 export async function generateStaticParams() {

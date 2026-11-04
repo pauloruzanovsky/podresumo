@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // As miniaturas do YouTube já vêm leves; otimizá-las gastava a cota
+    // grátis de transformações da Vercel (4,9 mil de 5 mil em nov/2026).
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

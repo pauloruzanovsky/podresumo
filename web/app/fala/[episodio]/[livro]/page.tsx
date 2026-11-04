@@ -10,7 +10,9 @@ import { hrefEpisodio, hrefFala, hrefLivro, hrefPessoa, linkAmazon, linkAmazonEu
 import { PODCASTS_EM_INGLES } from "@/lib/podcasts";
 import { formatTimestamp } from "@/lib/tempo";
 
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 // Mesmo arranjo das páginas de livro e episódio: cache na primeira visita.
 export async function generateStaticParams() {
   return [];

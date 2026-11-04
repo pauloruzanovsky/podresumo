@@ -315,6 +315,9 @@ def main():
     print(f"acervo com capa real: {total_com_capa}/{len(livros)} "
           f"({100 * total_com_capa // max(len(livros), 1)}%)")
     print("O resto usa a capa gerada — nenhum card fica vazio.")
+    if achou:
+        from flows.atualizar_site import main as atualizar_site
+        atualizar_site()
 
 
 if __name__ == "__main__":

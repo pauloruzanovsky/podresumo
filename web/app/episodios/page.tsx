@@ -3,7 +3,9 @@ import { supabase } from "@/lib/supabase";
 import { podcastVisivel } from "@/lib/podcasts";
 import EpisodeList from "@/components/EpisodeList";
 
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Episódios",

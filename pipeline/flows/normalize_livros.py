@@ -649,6 +649,9 @@ def main():
     aplica_merges(merges)
     aplica_updates(updates)
 
+    from flows.atualizar_site import main as atualizar_site
+    atualizar_site()
+
     final = supabase.table("livros").select("id", count="exact").execute()
     livros = supabase.table("livros").select(
         "id", count="exact"

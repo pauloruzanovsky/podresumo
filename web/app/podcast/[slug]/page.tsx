@@ -18,7 +18,9 @@ import { APRESENTADORES, HOSTS, estantesDoMenu, livroDaCasa, podcastVisivel } fr
 import { hrefPessoa } from "@/lib/links";
 import Link from "next/link";
 
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 
 /**
  * A estante de um podcast — a página que fala do programa, não do site.

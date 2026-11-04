@@ -137,5 +137,5 @@ export const estantesDoMenu = unstable_cache(
     return estantes.sort((a, b) => b.episodios - a.episodios);
   },
   ["estantes-do-menu"],
-  { revalidate: 3600 }
+  { revalidate: 86400, tags: ["dados"] }
 );

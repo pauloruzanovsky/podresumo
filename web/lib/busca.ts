@@ -185,7 +185,7 @@ const carregar = unstable_cache(
     return { livros, episodios, pessoas: montarPessoas(fichas) };
   },
   ["busca-indice-v2"],
-  { revalidate: 300 }
+  { revalidate: 300, tags: ["dados"] }
 );
 
 function normaliza(texto: string) {

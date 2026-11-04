@@ -138,7 +138,7 @@ const indicePessoas = unstable_cache(
     return indice;
   },
   ["indice-pessoas"],
-  { revalidate: 3600 }
+  { revalidate: 86400, tags: ["dados"] }
 );
 
 /** As páginas que vão pro sitemap. */

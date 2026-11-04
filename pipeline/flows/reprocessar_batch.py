@@ -339,6 +339,9 @@ def coletar(batch_id, esperar=True):
     # grafia já conhecida não volta a dividir a pessoa no site
     from flows.normalize_pessoas import main as normalize_pessoas
     normalize_pessoas()
+    # páginas ficam 1 dia em cache: avisa o site pra mostrar já
+    from flows.atualizar_site import main as atualizar_site
+    atualizar_site()
 
     print("\nAgora rode, nesta ordem:")
     print("  python -m flows.normalize_livros          # confira o plano")
@@ -427,6 +430,8 @@ def grava_assinatura():
         preencher_slugs()
         from flows.normalize_pessoas import main as normalize_pessoas
         normalize_pessoas()
+        from flows.atualizar_site import main as atualizar_site
+        atualizar_site()
 
 
 # ─────────────────────────────────────────────────── síncrono ───

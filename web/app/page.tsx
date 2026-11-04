@@ -12,7 +12,9 @@ import Newsletter from "@/components/Newsletter";
 import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
 import BaralhoCitacoes, { type Destaque } from "@/components/BaralhoCitacoes";
 
-export const revalidate = 60;
+// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
+// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
+export const revalidate = 86400;
 
 interface LivroCard {
   id: string;

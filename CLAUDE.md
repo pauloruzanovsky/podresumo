@@ -118,8 +118,13 @@ comitar chave.
 - Podcast estrangeiro: `extract/transcript.py` pede o idioma original, porque a
   faixa "pt" do YouTube é tradução de máquina e a fala não seria literal.
   `reprocessar_batch` grava direto: podcast novo aparece no site na hora.
-- Páginas usam ISR (`revalidate = 60`). Endereço antigo por id redireciona
-  pro slug.
+- Páginas usam ISR (`revalidate = 86400`, 1 dia). Era 60 s e estourou a cota
+  grátis da Vercel em nov/2026 (572 mil ISR writes de 200 mil): com ~1.600
+  páginas e pouca visita, quase todo acesso de robô remontava a página. Não
+  baixar. Livro novo aparece na hora porque `flows.atualizar_site` chama
+  `/api/atualizar` (precisa de `ATUALIZAR_SEGREDO`, igual na Vercel e no
+  `pipeline/.env`) no fim da coleta, de `backfill_capas` e de
+  `normalize_livros --apply`. Endereço antigo por id redireciona pro slug.
 - Newsletter: inscrição em `/api/inscrever` manda o link assinado
   (`lib/confirmacao.ts`); o contato só entra no segmento do Resend pelo botão de
   `/confirmar`. Precisa de `RESEND_API_KEY`, `RESEND_SEGMENT_ID` e
