@@ -39,6 +39,9 @@ comitar chave.
 3. `reprocessar_batch` — extração paga. `--estimar` mede com count_tokens
    (grátis); `--enviar --novos` manda os `pending`; `--teto-brl` só envia se o
    pior caso couber; `--coletar ultimo` grava o resultado (`done`).
+   Sem API: `--exportar --novos` grava os prompts em `respostas/assinatura/`,
+   o Claude da assinatura escreve `<id>.json` ao lado e `--do-assinatura`
+   valida no schema e grava (inválido fica `pending`).
 4. `normalize_livros` — funde livros duplicados. **Rodar sem `--apply`, ler o
    plano, só então aplicar**: já propôs fusão errada de homônimos
    (`TITULOS_HOMONIMOS`, `ALIASES` no arquivo).
@@ -88,11 +91,15 @@ comitar chave.
   grátis pausa por inatividade) e baixa uma leva de transcrições dos 4
   podcasts. Dos em inglês, só episódio a partir de 02/11/2026, com 45 min ou
   mais e sem "Essentials" (`--desde`, `--min-minutos`, `--excluir`). Não gasta API.
-- `podlibris-lote-semanal` — domingo 21h: envia os episódios novos dos 4
-  podcasts, os mais recentes que cabem em R$ 10 no pior caso (`--ate-caber`);
-  o resto espera a semana seguinte. Episódio longo ≈ R$ 1 no pior caso.
+- `podlibris-lote-semanal` — domingo 21h: extrai os episódios novos dos 4
+  podcasts na assinatura (um subagente Opus por episódio; teste de 03/11
+  empatou com a API). O que falhar vai pro lote da API, os mais recentes que
+  cabem em R$ 10 no pior caso (`--ate-caber`); o resto espera a semana
+  seguinte. Episódio longo ≈ R$ 1 no pior caso.
 - `podlibris-newsletter-semanal` — segunda 9h: coleta o lote (a coleta já
-  preenche os slugs), busca capas e cria o rascunho da newsletter.
+  preenche os slugs), grava os títulos PT/EN da semana anterior e envia os dos
+  livros novos (`titulos_alt`, só se a estimativa for até US$ 1), busca capas e
+  cria o rascunho da newsletter.
 - GitHub Actions `manter-banco-ativo.yml` — acesso diário ao Supabase, de
   reserva.
 

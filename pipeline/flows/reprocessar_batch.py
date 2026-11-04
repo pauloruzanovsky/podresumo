@@ -15,6 +15,11 @@ Uso:
     python -m flows.reprocessar_batch --estimar        # custo, sem enviar
     python -m flows.reprocessar_batch --enviar [--limite N]
     python -m flows.reprocessar_batch --coletar <batch_id>
+
+Na assinatura (sem custo de API): `--exportar --novos` grava o prompt de cada
+episódio pendente em respostas/assinatura/; a rotina de domingo lê cada um
+com o Claude da assinatura e escreve <id>.json ao lado; `--do-assinatura`
+valida e grava. O que falhar continua `pending` e vai pro lote da API.
 """
 
 import argparse
@@ -29,13 +34,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
+import jsonschema
 from anthropic import Anthropic
 
 from extract.youtube import fetch_descricoes
 from load.supabase import grava_campos_ia, supabase, upsert_livros
 from transform.claude import (
-    MODELO_PADRAO, VERSAO_PROMPT, confere_modelo, extrai_json, extrator,
-    monta_params, preco,
+    MODELO_PADRAO, OUTPUT_SCHEMA, VERSAO_PROMPT, confere_modelo, extrai_json,
+    extrator, monta_params, preco,
 )
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -342,6 +348,87 @@ def coletar(batch_id, esperar=True):
     print("dos episódios, que é justamente o que a extração veio substituir.")
 
 
+# ──────────────────────────────────────────────── assinatura ───
+
+# Prompts exportados e respostas escritas pela rotina. Fica dentro de
+# respostas/, que é gitignored: tem transcrição inteira.
+ASSINATURA = os.path.join(CACHE, "assinatura")
+
+
+def exportar(eps):
+    """Grava o prompt de cada episódio (system + user, igual ao do lote) pra
+    o Claude da assinatura ler. Não chama a API."""
+    os.makedirs(ASSINATURA, exist_ok=True)
+    print(f"=== EXPORTANDO ({len(eps)} episódios) ===\n")
+    for e, p in zip(eps, params(eps)):
+        texto = p["system"] + "\n\n" + p["messages"][0]["content"]
+        with open(os.path.join(ASSINATURA, f"{e['id']}.prompt.txt"), "w", encoding="utf-8") as f:
+            f.write(texto)
+        print(f"  {e['id']}  {e['titulo'][:60]}")
+
+
+def grava_assinatura():
+    """Grava as respostas da assinatura que passarem no schema. Cada uma vai
+    antes pro cache (respostas/<id>.json, como a resposta paga), então
+    `--do-cache` também a regrava. A que falhar fica na pasta e o episódio
+    segue `pending`: o lote da API pega na mesma noite."""
+    titulos = {e["id"]: e for e in episodios(novos=True)}
+    ok = falhas = total_livros = 0
+    temas_renovados = set()
+    print("=== GRAVANDO DA ASSINATURA (sem custo de API) ===\n")
+    for nome in sorted(os.listdir(ASSINATURA)) if os.path.isdir(ASSINATURA) else []:
+        if not nome.endswith(".json"):
+            continue
+        ep_id = nome[:-5]
+        ep = titulos.get(ep_id)
+        if not ep:
+            print(f"  -  {ep_id} — não está pending, ignorado")
+            continue
+        caminho = os.path.join(ASSINATURA, nome)
+        try:
+            with open(caminho, encoding="utf-8") as f:
+                dados = json.load(f)
+            jsonschema.validate(dados, OUTPUT_SCHEMA)
+        except (ValueError, jsonschema.ValidationError) as erro:
+            print(f"  X  {ep['titulo'][:50]} — {getattr(erro, 'message', erro)!s:.120}")
+            falhas += 1
+            continue
+        # O structured output da API garante a forma, não o conteúdo; aqui
+        # nem a forma é garantida, então o minuto também é conferido.
+        inventados = [l["titulo"] for l in dados["livros"]
+                      if l["timestamp"] and l["timestamp"] not in ep["transcricao"]]
+        if inventados:
+            print(f"  !  {ep['titulo'][:50]} — timestamp fora da transcrição: {inventados}")
+
+        os.makedirs(CACHE, exist_ok=True)
+        with open(os.path.join(CACHE, f"{ep_id}.json"), "w", encoding="utf-8") as f:
+            json.dump({
+                "dados": dados, "bruto": None, "modelo": MODELO_PADRAO,
+                "origem": "assinatura", "extrator": extrator(),
+                "stop_reason": None,
+                "salvo_em": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "tokens_in": 0, "tokens_out": 0,
+            }, f, ensure_ascii=False, indent=2)
+
+        grava_campos_ia(ep_id, dados, extrator())
+        n = upsert_livros(ep_id, dados["livros"], substituir=True,
+                          temas_renovados=temas_renovados)
+        os.remove(caminho)
+        prompt = os.path.join(ASSINATURA, f"{ep_id}.prompt.txt")
+        if os.path.exists(prompt):
+            os.remove(prompt)
+        total_livros += n
+        ok += 1
+        print(f"  OK {ep['titulo'][:50]} — {n} obras")
+
+    print(f"\n  episódios gravados: {ok}  |  falhas: {falhas}  |  citações: {total_livros}")
+    if ok:
+        from flows.preencher_slugs import main as preencher_slugs
+        preencher_slugs()
+        from flows.normalize_pessoas import main as normalize_pessoas
+        normalize_pessoas()
+
+
 # ─────────────────────────────────────────────────── síncrono ───
 
 def sincrono(eps, gravar=False):
@@ -387,6 +474,10 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--do-cache", action="store_true",
                    help="grava no banco as respostas já salvas, sem chamar a API")
+    p.add_argument("--exportar", action="store_true",
+                   help="grava os prompts em respostas/assinatura/ (use com --novos)")
+    p.add_argument("--do-assinatura", action="store_true",
+                   help="valida e grava as respostas da assinatura, sem chamar a API")
     p.add_argument("--sincrono", action="store_true",
                    help="chamada normal (preço cheio); use com --limite")
     p.add_argument("--gravar", action="store_true",
@@ -420,11 +511,15 @@ def main():
     # episódios já lê a coluna de tracking.
     confere_schema()
     # e antes de gastar: modelo mais novo da mesma família no ar = para
-    if not args.do_cache and not args.coletar:
+    if not (args.do_cache or args.coletar or args.exportar or args.do_assinatura):
         confere_modelo()
 
     if args.do_cache:
         grava_do_cache(args.limite)
+    elif args.exportar:
+        exportar(alvo())
+    elif args.do_assinatura:
+        grava_assinatura()
     elif args.sincrono:
         sincrono(alvo(), gravar=args.gravar)
     elif args.coletar:
