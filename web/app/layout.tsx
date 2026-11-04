@@ -69,7 +69,7 @@ export default function RootLayout({
       >
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-          <div className="max-w-[1200px] mx-auto px-8 lg:px-12 h-14 flex items-center justify-between">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-8 lg:px-12 h-14 flex items-center justify-between">
             <LinkLogo className="flex items-center gap-2 text-marca">
               <IconePodlibris className="h-7 w-auto" ondas="currentColor" />
               <span className="font-serif text-xl font-bold tracking-tight">{SITE_NAME}</span>

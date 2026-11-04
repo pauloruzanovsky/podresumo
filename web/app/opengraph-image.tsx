@@ -32,8 +32,9 @@ export default async function Image() {
   ).length;
 
   return cartaoOg({
-    titulo: "O que ler em seguida, recomendado por quem você ouve.",
-    subtitulo: "Os livros citados nos podcasts, com o minuto exato de cada menção.",
-    rodape: `${livros} livros · ${episodios} episódios`,
+    titulo: `${livros.toLocaleString("pt-BR")} livros citados em ${episodios.toLocaleString("pt-BR")} episódios.`,
+    subtitulo: "Cada um com a fala de quem citou e o minuto exato.",
+    // os números já estão no título
+    rodape: "podlibris.com",
   });
 }

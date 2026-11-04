@@ -248,14 +248,18 @@ export default async function Home() {
           números que já vêm logo abaixo. */}
       <div className="text-center mb-10 sm:mb-16">
         <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-3 sm:mb-5 leading-tight sm:leading-[1.08]">
-          O que ler em seguida,{" "}
+          {/* Os números são o que só o Podlibris tem; "O que ler em seguida"
+              serviria pra qualquer site de livros. */}
+          {totalLivros.toLocaleString("pt-BR")} livros citados em{" "}
+          <span className="whitespace-nowrap">
+            {totalEpisodes.toLocaleString("pt-BR")} episódios.
+          </span>{" "}
           <span className="italic text-muted sm:block">
-            recomendado por quem você ouve.
+            Cada um com o minuto exato.
           </span>
         </h1>
         <p className="hidden sm:block text-muted text-lg max-w-xl mx-auto leading-relaxed mb-8">
-          Os livros citados nos podcasts, com a fala de quem citou e o
-          minuto exato pra ouvir.
+          A fala de quem citou cada livro, com um toque pra ouvir o trecho.
         </p>
 
         <div className="mt-4 sm:mt-0">
@@ -268,16 +272,7 @@ export default async function Home() {
           <Newsletter variante="hero" capas={recentes} />
         </div>
 
-        {/* Celular: os três números numa linha de texto. Desktop: o bloco. */}
-        <p className="sm:hidden text-xs text-muted mt-4">
-          <span className="font-semibold text-foreground">{totalLivros}</span> livros
-          {" · "}
-          <span className="font-semibold text-foreground">{totalEpisodes}</span> episódios
-          {" · "}
-          <span className="font-semibold text-foreground">{totalPodcasts}</span>{" "}
-          {totalPodcasts === 1 ? "podcast" : "podcasts"}
-        </p>
-
+        {/* No celular a linha de números saiu: repetia o título. */}
         <div className="hidden sm:flex justify-center gap-8 mt-10">
           <Stat value={totalLivros} label="livros" />
           <div className="w-px bg-border" />
