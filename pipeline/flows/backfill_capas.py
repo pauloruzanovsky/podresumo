@@ -79,25 +79,39 @@ def normaliza(texto: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", t)).strip()
 
 
-def combina(doc: dict, titulo: str, autor: str | None) -> bool:
+# O que vem depois do nosso título e indica OUTRO livro: adaptação, guia,
+# volume avulso. Foi assim que Duna ganhou a capa da graphic novel e Quem
+# Pensa Enriquece a do guia de estudo.
+DERIVADO = re.compile(
+    r"\b(graphic novel|hq|vol|volume|guia de estudo|workbook|summary|resumo"
+    r"|para jovens|young readers|devocional|edicao em quadrinhos)\b"
+)
+
+
+def combina(doc: dict, titulo: str, autor: str | None, exato: bool = False) -> bool:
     """A busca do Open Library é difusa: "A Peste" traz "Who Is a Pest?".
 
     Aceitar o primeiro resultado põe capa errada no livro, o que é pior que
     não ter capa. Aqui o resultado só passa se o título bater de verdade —
     igual, ou um sendo prefixo do outro (diferença de subtítulo) — e, quando
     sabemos o autor, se o sobrenome aparecer entre os autores do resultado.
+    `exato` só aceita título igual: quem chama tenta assim primeiro, porque
+    o prefixo também casa com outro livro da série ("Pai Rico, Pai Pobre:
+    Desenvolva a Sua Inteligência Financeira").
     """
     achado = normaliza(doc.get("title") or "")
     nosso = normaliza(titulo)
     if not achado or not nosso:
         return False
 
-    if not (
-        achado == nosso
-        or achado.startswith(nosso + " ")
-        or nosso.startswith(achado + " ")
-    ):
-        return False
+    if achado != nosso:
+        if exato:
+            return False
+        if achado.startswith(nosso + " "):
+            if DERIVADO.search(achado[len(nosso):]):
+                return False
+        elif not nosso.startswith(achado + " "):
+            return False
 
     if autor:
         partes = normaliza(autor).split()
@@ -124,9 +138,10 @@ def consulta(titulo: str, autor: str | None, **params) -> int | None:
         print(f"      erro na busca: {err}")
         return None
 
-    for doc in docs:
-        if doc.get("cover_i") and combina(doc, titulo, autor):
-            return doc["cover_i"]
+    for exato in (True, False):
+        for doc in docs:
+            if doc.get("cover_i") and combina(doc, titulo, autor, exato):
+                return doc["cover_i"]
     return None
 
 
@@ -182,14 +197,15 @@ def consulta_google(titulo: str, autor: str | None, q: str) -> str | None:
     if itens is None:
         return None
 
-    for item in itens:
-        info = item.get("volumeInfo") or {}
-        miniatura = (info.get("imageLinks") or {}).get("thumbnail")
-        # mesmo critério do Open Library: título tem que bater de verdade
-        doc = {"title": info.get("title"), "author_name": info.get("authors")}
-        if miniatura and combina(doc, titulo, autor):
-            # http -> https (o site é https) e sem a dobrinha de página no canto
-            return miniatura.replace("http://", "https://").replace("&edge=curl", "")
+    for exato in (True, False):
+        for item in itens:
+            info = item.get("volumeInfo") or {}
+            miniatura = (info.get("imageLinks") or {}).get("thumbnail")
+            # mesmo critério do Open Library: título tem que bater de verdade
+            doc = {"title": info.get("title"), "author_name": info.get("authors")}
+            if miniatura and combina(doc, titulo, autor, exato):
+                # http -> https (o site é https) e sem a dobrinha de página no canto
+                return miniatura.replace("http://", "https://").replace("&edge=curl", "")
     return None
 
 
@@ -255,10 +271,16 @@ def main():
         fonte = "OL "
         # Título do site primeiro; depois os absorvidos em fusões, que trazem
         # a edição em outro idioma quando a brasileira não tem capa nas fontes.
-        for titulo in [livro["titulo"], *(livro.get("titulo_alt") or [])]:
+        # Open Library em todos os títulos antes do Google: o Google acha
+        # "Duna" mas devolve a graphic novel, e o Open Library acha "Dune".
+        titulos = [livro["titulo"], *(livro.get("titulo_alt") or [])]
+        for titulo in titulos:
             cover = procura_capa(titulo, livro.get("autor"))
-            url = CAPA.format(cover) if cover else None
-            if not url and google_ativo:
+            if cover:
+                url = CAPA.format(cover)
+                break
+        for titulo in titulos if not url else []:
+            if google_ativo:
                 try:
                     url = procura_capa_google(titulo, livro.get("autor"))
                 except urllib.error.HTTPError as err:
