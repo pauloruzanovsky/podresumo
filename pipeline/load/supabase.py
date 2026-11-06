@@ -229,7 +229,10 @@ def upsert_livros(
             # o livro pode estar com o título no outro idioma ("Como Mudar Sua
             # Mente", citado como "How to Change Your Mind"): flows/titulos_alt
             # guarda os dois em titulo_alt
-            existente = busca_por("titulo_alt", [titulo])
+            # literal de array montado à mão: a biblioteca junta os itens sem
+            # aspas, e título com aspas ou vírgula (4'33") quebrava a busca
+            escapado = titulo.replace("\\", "\\\\").replace('"', '\\"')
+            existente = busca_por("titulo_alt", f'{{"{escapado}"}}')
 
         if existente.data:
             livro_id = existente.data[0]["id"]

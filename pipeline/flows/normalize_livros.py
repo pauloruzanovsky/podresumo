@@ -128,6 +128,11 @@ AUTHOR_FIXES = {
     "Hardwiring Happiness": "Rick Hanson",
     "Limbic Capitalism": "David Courtwright",
     "Jaws": "Sandra Kahn e Paul Ehrlich",
+    # acervo do Ferriss: quem citou virou autor, ou o nome veio abreviado
+    "Principia": "Isaac Newton",
+    "The Tao of Seneca": "Sêneca",
+    "Stumbling on Happiness": "Daniel Gilbert",
+    "Por que nós dormimos": "Matthew Walker",
     # a de Homero, citada no Modern Wisdom sem autor
     "Odisseia": "Homero",
 }
@@ -229,6 +234,12 @@ TITULOS_HOMONIMOS = {
     # discursos de Demóstenes contra Filipe II e, séculos depois, os de
     # Cícero contra Marco Antônio, batizados em homenagem
     "Filípicas",
+    # do acervo do Ferriss: livros diferentes com o mesmo título — Caro (2019)
+    # e Terkel (1974); Edith Eger (memórias) e Russ Roberts (romance de
+    # economia); Waldrop (1992) e Melanie Mitchell ("A Guided Tour")
+    "Working",
+    "The Choice",
+    "Complexity",
 }
 
 # Entradas que precisam de decisão humana e que o script não tenta consertar.
@@ -293,6 +304,7 @@ def monta_plano(livros):
     nao_livro_slugs = {slug_titulo(t) for t in NAO_LIVRO_TITULOS}
     # por chave (sem artigo, acento, subtítulo), não pelo texto exato
     autor_por_slug = {slug_titulo(t): a for t, a in AUTHOR_FIXES.items()}
+    homonimos = {slug_titulo(t) for t in TITULOS_HOMONIMOS}
 
     estado = {}
     for l in livros:
@@ -313,7 +325,13 @@ def monta_plano(livros):
         # só livro: filme não tem autor, e a chave sem artigo junta "A Odisseia"
         # (o filme) com "Odisseia" (Homero)
         correcao = autor_por_slug.get(slug_titulo(titulo))
-        if correcao and not eh_outro:
+        # em título homônimo a correção só vale pra grafia do mesmo autor: o
+        # "Jaws" de Peter Benchley não pode virar o de Kahn e Ehrlich
+        outro_autor = (
+            slug_titulo(titulo) in homonimos and autor
+            and not set(chave_autor(autor).split()) & set(chave_autor(correcao or "").split())
+        )
+        if correcao and not eh_outro and not outro_autor:
             autor = correcao
 
         estado[l["id"]] = {
@@ -355,8 +373,6 @@ def monta_plano(livros):
         if e["titulo_orig"] in SPLITS
     ]
     ids_split = {e["id"] for e, _ in splits}
-
-    homonimos = {slug_titulo(t) for t in TITULOS_HOMONIMOS}
 
     grupos = defaultdict(list)
     for e in estado.values():
