@@ -1,4 +1,5 @@
 import { carregarPessoa } from "@/lib/pessoas";
+import { listaE } from "@/lib/site";
 import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
 export const size = OG_SIZE;
@@ -34,7 +35,7 @@ export default async function Image({
 
   const n = p.participacoes.length;
   return cartaoComCapas({
-    rotulo: n ? `${n} ${n === 1 ? "participação" : "participações"} · ${p.podcasts.join(" e ")}` : p.podcasts.join(" e "),
+    rotulo: n ? `${n} ${n === 1 ? "participação" : "participações"} · ${listaE(p.podcasts)}` : listaE(p.podcasts),
     texto: p.nome,
     linha: p.livros.length ? `${livros} na conversa` : p.descricao ?? undefined,
     capas,

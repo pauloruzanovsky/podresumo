@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { podcastVisivel } from "@/lib/podcasts";
+import { PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 import { resolverLivro } from "@/lib/resolver";
 
@@ -37,12 +37,15 @@ export default async function Image({
     ...new Set(citacoes.map((c) => c.episodes?.podcasts?.nome).filter(Boolean)),
   ];
 
-  // A fala que vai no cartão: recomendação antes de menção, depois a mais
-  // recente. Fala longa demais não cabe e fica de fora.
+  // A fala que vai no cartão: em português antes de inglês (o link circula
+  // no WhatsApp daqui), recomendação antes de menção, depois a mais recente.
+  // Fala longa demais não cabe e fica de fora.
   const fala = citacoes
     .filter((c) => c.citacao_literal && c.citacao_literal.length <= 220)
     .sort(
       (a, b) =>
+        Number(PODCASTS_EM_INGLES.includes(a.episodes?.podcasts?.nome)) -
+          Number(PODCASTS_EM_INGLES.includes(b.episodes?.podcasts?.nome)) ||
         Number(b.natureza === "recomenda") - Number(a.natureza === "recomenda") ||
         (b.episodes?.data ?? "").localeCompare(a.episodes?.data ?? "")
     )[0];
@@ -55,6 +58,10 @@ export default async function Image({
     citacao: fala
       ? { texto: fala.citacao_literal, quem: fala.quem_citou }
       : undefined,
-    rodape: podcasts.length ? `${vezes} em ${podcasts.join(" e ")}` : vezes,
+    // três nomes de podcast não cabem ao lado do logo
+    rodape:
+      podcasts.length === 1 ? `${vezes} em ${podcasts[0]}`
+      : podcasts.length > 1 ? `${vezes} em ${podcasts.length} podcasts`
+      : vezes,
   });
 }

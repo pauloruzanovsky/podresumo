@@ -107,7 +107,10 @@ export default async function Home() {
 
   const totalLivros = livros.length;
 
-  // Mural: as capas reais dos livros mais citados.
+  // Mural: as capas reais dos livros mais citados. O apresentador divulgando
+  // o próprio livro no programa dele não conta (Protocols no Huberman Lab,
+  // 4 Horas para o Corpo no Ferriss); citado por outro podcast, conta.
+  const nomePodcast = new Map(visiveis.map((p) => [p.id, p.nome as string]));
   const mural: CapaMural[] = ((livrosRes.data ?? []) as any[])
     .filter((l) => l.capa_url && !livroDaCasa(l.autor))
     .map((l) => ({
@@ -116,7 +119,11 @@ export default async function Home() {
       titulo: l.titulo as string,
       autor: l.autor as string | null,
       capaUrl: l.capa_url as string,
-      n: ((l.episode_livros ?? []) as any[]).filter((r) => idsVisiveis.has(r.episodes?.podcast_id)).length,
+      n: ((l.episode_livros ?? []) as any[]).filter(
+        (r) =>
+          idsVisiveis.has(r.episodes?.podcast_id) &&
+          !livroDaCasa(l.autor, nomePodcast.get(r.episodes?.podcast_id))
+      ).length,
     }))
     .filter((l) => l.n > 0)
     .sort((a, b) => b.n - a.n || a.titulo.localeCompare(b.titulo))

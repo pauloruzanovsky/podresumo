@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { listaE } from "@/lib/site";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCover from "@/components/BookCover";
@@ -58,8 +59,8 @@ function formatDate(data: string | null) {
 function rotulo(p: Pessoa) {
   if (p.apresenta) return `Apresenta ${p.apresenta}`;
   if (p.participacoes.length)
-    return `${plural(p.participacoes.length, "participação", "participações")} · ${p.podcasts.join(" e ")}`;
-  return p.podcasts.join(" e ");
+    return `${plural(p.participacoes.length, "participação", "participações")} · ${listaE(p.podcasts)}`;
+  return listaE(p.podcasts);
 }
 
 export async function generateMetadata({

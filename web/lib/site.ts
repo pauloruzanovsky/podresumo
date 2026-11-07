@@ -17,6 +17,11 @@ export const SITE_NAME = "Podlibris";
 export const SITE_DESCRIPTION =
   "Os livros citados nos podcasts que você ouve — com o trecho do episódio e o minuto exato de cada citação.";
 
+/** "A", "A e B", "A, B e C". */
+export function listaE(itens: string[]) {
+  return itens.length < 2 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`;
+}
+
 /** Título de página: "Alguma coisa — Podlibris", sem repetir na home. */
 export function pageTitle(titulo?: string) {
   return titulo ? `${titulo} — ${SITE_NAME}` : SITE_NAME;

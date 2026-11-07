@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { listaE } from "@/lib/site";
 import { supabase } from "@/lib/supabase";
 import ComprarAmazon from "@/components/ComprarAmazon";
 import { ESTANTES, PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
@@ -55,7 +56,7 @@ export async function generateMetadata({
     ...new Set(rels.map((r) => r.episodes?.podcasts?.nome) as string[]),
   ];
 
-  const porQuem = podcasts.length ? ` em ${podcasts.join(" e ")}` : "";
+  const porQuem = podcasts.length ? ` em ${listaE(podcasts)}` : "";
   const vezes = citacoes === 1 ? "1 vez" : `${citacoes} vezes`;
   const titulo = livro.autor ? `${livro.titulo} — ${livro.autor}` : livro.titulo;
   const descricao = `Citado ${vezes}${porQuem}. Veja o trecho do episódio e o minuto exato de cada menção.`;
@@ -245,6 +246,9 @@ export default async function LivroPage({
     [...citacoes].sort(
       (a, b) =>
         Number(Boolean(b.citacao_literal)) - Number(Boolean(a.citacao_literal)) ||
+        // em português antes de inglês, igual ao cartão de compartilhamento
+        Number(PODCASTS_EM_INGLES.includes(a.podcast ?? "")) -
+          Number(PODCASTS_EM_INGLES.includes(b.podcast ?? "")) ||
         Number(b.natureza === "recomenda") - Number(a.natureza === "recomenda")
     )[0];
 
