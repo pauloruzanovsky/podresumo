@@ -146,11 +146,14 @@ export default async function EpisodioPage({
       "*, podcasts(nome), episode_livros(natureza, quem_citou, timestamp_seg, livros(id, slug, titulo, autor, tipo, capa_url))"
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
+  // erro do banco lança em vez de virar 404 no cache (ver lib/resolver)
+  if (error) throw new Error(`Erro ao carregar o episódio: ${error.message}`);
 
   // Só episódio extraído tem página; os catalogados (listed/pending)
   // aparecem no índice como "em breve". Podcast oculto também não abre.
-  if (error || !ep || ep.status !== "done" || !podcastVisivel(ep.podcasts?.nome))
+  if (!ep || ep.status !== "done" || !podcastVisivel(ep.podcasts?.nome))
     return notFound();
 
   const indice = await carregarIndice(ep.podcast_id);
