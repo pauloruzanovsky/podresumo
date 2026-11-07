@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import EpisodeCard from "./EpisodeCard";
@@ -14,12 +14,15 @@ interface Episode {
   thumbnail: string;
   resumo: string;
   main_insight: string;
-  main_action: string;
   tags: string[];
   convidados: string[];
   podcast: string;
-  livros: { id: string; titulo: string; autor: string }[];
+  livros: { id: string; slug: string | null; titulo: string }[];
 }
+
+// Quantos episódios entram por vez. Renderizar os ~870 de uma vez deixava a
+// página com vários MB de HTML; o resto entra conforme a pessoa rola.
+const PASSO = 24;
 
 export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
   const [search, setSearch] = useState("");
@@ -27,6 +30,13 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [view, setView] = useState<"cards" | "table">("cards");
   const scrollRef = useRef<HTMLDivElement>(null);
+  // O limite volta pro começo quando a busca ou um filtro muda: guardado junto
+  // com a assinatura dos filtros, sem efeito nem render extra.
+  const assinatura = `${search}|${activePodcast}|${activeTag}`;
+  const [pagina, setPagina] = useState({ assinatura, limite: PASSO });
+  const limite = pagina.assinatura === assinatura ? pagina.limite : PASSO;
+  const mostrarMais = () => setPagina({ assinatura, limite: limite + PASSO });
+  const fimRef = useRef<HTMLDivElement>(null);
 
   // Unique podcasts with episode count
   const podcastCounts = episodes.reduce((acc, ep) => {
@@ -64,6 +74,25 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
 
     return matchSearch && matchPodcast && matchTag;
   });
+
+  const visiveis = filtered.slice(0, limite);
+  const faltam = filtered.length - visiveis.length;
+
+  // Carrega a próxima leva um pouco antes de a pessoa chegar no fim.
+  useEffect(() => {
+    const fim = fimRef.current;
+    if (!fim || faltam <= 0) return;
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          setPagina({ assinatura, limite: limite + PASSO });
+        }
+      },
+      { rootMargin: "800px 0px" }
+    );
+    observador.observe(fim);
+    return () => observador.disconnect();
+  }, [assinatura, limite, faltam, view]);
 
   return (
     <div>
@@ -192,7 +221,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
       {/* Cards View */}
       {view === "cards" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filtered.map((ep) => (
+          {visiveis.map((ep) => (
             <EpisodeCard key={ep.id} episode={ep} />
           ))}
           {filtered.length === 0 && (
@@ -216,7 +245,7 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((ep) => (
+              {visiveis.map((ep) => (
                 <tr
                   key={ep.id}
                   className="border-t border-border hover:bg-card-hover transition-colors"
@@ -263,6 +292,18 @@ export default function EpisodeList({ episodes }: { episodes: Episode[] }) {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {faltam > 0 && (
+        <div ref={fimRef} className="flex justify-center mt-8">
+          <button
+            type="button"
+            onClick={mostrarMais}
+            className="px-5 py-2.5 rounded-xl bg-card border border-border text-sm font-medium text-foreground hover:bg-card-hover transition-colors"
+          >
+            Mostrar mais episódios ({faltam})
+          </button>
         </div>
       )}
     </div>

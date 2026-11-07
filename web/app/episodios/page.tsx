@@ -13,30 +13,61 @@ export const metadata: Metadata = {
   alternates: { canonical: "/episodios" },
 };
 
-export default async function EpisodiosPage() {
-  const { data: episodes, error } = await supabase
-    .from("episodes")
-    .select("id, slug, titulo, data, duracao, thumbnail, resumo, main_insight, main_action, tags, convidados, ep_number, podcasts(nome), episode_livros(livro_id, livros(slug, titulo, autor))")
-    .eq("status", "done")
-    .order("data", { ascending: false });
+// O cartão mostra 2 linhas de resumo e de insight; o texto inteiro dos ~870
+// episódios passava de 2 MB no HTML. A busca da lista procura neste trecho.
+const TRECHO = 280;
+function trecho(texto: string | null) {
+  if (!texto || texto.length <= TRECHO) return texto ?? "";
+  return texto.slice(0, TRECHO).replace(/\s+\S*$/, "") + "…";
+}
 
+export default async function EpisodiosPage() {
+  // Duas consultas em paralelo em vez de uma com os livros aninhados: o
+  // limite de 3 s do Supabase vale por consulta, e a junta passava dele
+  // quando o banco estava sem cota de disco (07/11/2026).
+  const [episodiosRes, livrosRes] = await Promise.all([
+    supabase
+      .from("episodes")
+      .select("id, slug, titulo, data, duracao, thumbnail, resumo, main_insight, tags, convidados, ep_number, podcasts(nome)")
+      .eq("status", "done")
+      .order("data", { ascending: false }),
+    supabase
+      .from("episodes")
+      .select("id, episode_livros(livro_id, livros(slug, titulo))")
+      .eq("status", "done"),
+  ]);
+
+  const error = episodiosRes.error ?? livrosRes.error;
   if (error) {
     // lança pra não gravar a mensagem no cache (ver app/page.tsx)
     throw new Error(`Erro ao carregar episódios: ${error.message}`);
   }
 
-  const episodesWithBooks = ((episodes ?? []) as any[])
+  const livrosPorEpisodio = new Map<string, any[]>(
+    ((livrosRes.data ?? []) as any[]).map((ep) => [ep.id, ep.episode_livros ?? []])
+  );
+
+  const episodesWithBooks = ((episodiosRes.data ?? []) as any[])
     .filter((ep: any) => podcastVisivel(ep.podcasts?.nome))
     .map((ep: any) => ({
-    ...ep,
-    podcast: ep.podcasts?.nome ?? "",
-    livros: (ep.episode_livros ?? []).map((rel: any) => ({
-      id: rel.livro_id,
-      slug: rel.livros?.slug ?? null,
-      titulo: rel.livros?.titulo,
-      autor: rel.livros?.autor,
-    })),
-  }));
+      id: ep.id,
+      slug: ep.slug,
+      titulo: ep.titulo,
+      data: ep.data,
+      duracao: ep.duracao,
+      thumbnail: ep.thumbnail,
+      resumo: trecho(ep.resumo),
+      main_insight: trecho(ep.main_insight),
+      tags: ep.tags,
+      convidados: ep.convidados,
+      ep_number: ep.ep_number,
+      podcast: ep.podcasts?.nome ?? "",
+      livros: (livrosPorEpisodio.get(ep.id) ?? []).map((rel: any) => ({
+        id: rel.livro_id,
+        slug: rel.livros?.slug ?? null,
+        titulo: rel.livros?.titulo,
+      })),
+    }));
 
   const totalBooks = new Set(
     episodesWithBooks.flatMap((ep) => ep.livros.map((l: { titulo: string }) => l.titulo))

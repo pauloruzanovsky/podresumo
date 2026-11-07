@@ -14,7 +14,7 @@ interface EpisodeCardProps {
     main_insight: string;
     tags: string[];
     podcast: string;
-    livros: { titulo: string; autor: string }[];
+    livros: { titulo: string }[];
   };
 }
 
