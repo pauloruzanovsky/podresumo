@@ -133,6 +133,9 @@ AUTHOR_FIXES = {
     "The Tao of Seneca": "Sêneca",
     "Stumbling on Happiness": "Daniel Gilbert",
     "Por que nós dormimos": "Matthew Walker",
+    "Why We Sleep": "Matthew Walker",
+    "Think on These Things": "Jiddu Krishnamurti",
+    "Studying Studies": "Peter Attia",
     # a de Homero, citada no Modern Wisdom sem autor
     "Odisseia": "Homero",
 }
@@ -240,6 +243,10 @@ TITULOS_HOMONIMOS = {
     "Working",
     "The Choice",
     "Complexity",
+    # o filme de 1987 e "Predator: Badlands" (2025); a trilogia do Tolkien e
+    # a série "The Rings of Power" — o subtítulo cai na chave e juntava os dois
+    "Predator",
+    "The Lord of the Rings",
 }
 
 # Entradas que precisam de decisão humana e que o script não tenta consertar.

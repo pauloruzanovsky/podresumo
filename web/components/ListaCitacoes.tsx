@@ -5,6 +5,7 @@ import Link from "next/link";
 import Compartilhar from "./Compartilhar";
 import { hrefEpisodio, hrefFala, hrefPessoa } from "@/lib/links";
 import { formatTimestamp } from "@/lib/tempo";
+import { slugify } from "@/lib/slug";
 
 /**
  * Lista enxuta das citações de um livro: uma linha por episódio, com quem
@@ -23,9 +24,10 @@ export interface CitacaoLinha {
   citacao_literal: string | null;
   contexto: string | null;
   quem_citou: string | null;
+  podcast: string | null;
 }
 
-const COLUNAS = "md:grid-cols-[minmax(0,1fr)_10rem_4.5rem]";
+const COLUNAS = "md:grid-cols-[minmax(0,1fr)_9rem_9rem_4.5rem]";
 
 
 /** "TÍTULO | Os Sócios 296" -> "TÍTULO": o número já aparece ao lado. */
@@ -95,6 +97,7 @@ export default function ListaCitacoes({
           className={`hidden md:grid ${COLUNAS} gap-x-4 py-2.5 border-b border-border text-[11px] uppercase tracking-widest text-muted`}
         >
           <span>Episódio</span>
+          <span>Podcast</span>
           <span>Quem citou</span>
           <span className="text-right">Ouvir</span>
         </div>
@@ -120,6 +123,13 @@ function Linha({ c, livro }: { c: CitacaoLinha; livro: LivroDaLista }) {
           {c.ep_number && <span className="font-mono text-xs text-muted mr-2">#{c.ep_number}</span>}
           {tituloLimpo(c.titulo, c.ep_number)}
         </Link>
+        {c.podcast ? (
+          <Link href={`/podcast/${slugify(c.podcast)}`} className="hidden md:block text-sm text-muted truncate hover:text-foreground hover:underline">
+            {c.podcast}
+          </Link>
+        ) : (
+          <span className="hidden md:block text-sm text-muted">—</span>
+        )}
         {c.quem_citou ? (
           <Link href={hrefPessoa(c.quem_citou)} className="hidden md:block text-sm text-muted truncate hover:text-foreground hover:underline">
             {c.quem_citou}
@@ -148,11 +158,17 @@ function Linha({ c, livro }: { c: CitacaoLinha; livro: LivroDaLista }) {
         </span>
       </div>
 
-      {/* no celular quem citou vai embaixo do título */}
-      {c.quem_citou && (
-        <Link href={hrefPessoa(c.quem_citou)} className="md:hidden block mt-1 text-xs text-muted hover:underline">
-          {c.quem_citou}
-        </Link>
+      {/* no celular podcast e quem citou vão embaixo do título */}
+      {(c.podcast || c.quem_citou) && (
+        <p className="md:hidden mt-1 text-xs text-muted">
+          {c.podcast}
+          {c.podcast && c.quem_citou && " · "}
+          {c.quem_citou && (
+            <Link href={hrefPessoa(c.quem_citou)} className="hover:underline">
+              {c.quem_citou}
+            </Link>
+          )}
+        </p>
       )}
 
       {fala && (

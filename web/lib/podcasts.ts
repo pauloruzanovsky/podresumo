@@ -53,6 +53,8 @@ export const HOSTS: Record<string, string[]> = {
  */
 const DA_CASA_SO_NO_PROPRIO_PODCAST: Record<string, string[]> = {
   "The Tim Ferriss Show": ["Tim Ferriss"],
+  // Protocols: divulgação no Huberman Lab, indicação no Ferriss e no MW
+  "Huberman Lab": ["Andrew Huberman"],
 };
 
 /** Quem apresenta fica de fora dos placares de quem mais cita. */

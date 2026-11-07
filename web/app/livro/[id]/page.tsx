@@ -93,6 +93,7 @@ interface Citacao {
   // caem no layout antigo (paráfrase + minuto).
   citacao_literal: string | null;
   quem_citou: string | null;
+  podcast: string | null;
   natureza: "recomenda" | "menciona" | "critica" | null;
   episode_id: string;
   episode_slug: string | null;
@@ -217,6 +218,7 @@ export default async function LivroPage({
       timestamp_seg: rel.timestamp_seg,
       citacao_literal: rel.citacao_literal,
       quem_citou: rel.quem_citou,
+      podcast: rel.episodes.podcasts?.nome ?? null,
       natureza: rel.natureza,
       episode_id: rel.episode_id,
       episode_slug: rel.episodes.slug ?? null,
