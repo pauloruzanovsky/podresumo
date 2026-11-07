@@ -167,6 +167,9 @@ ALIASES = [
     ["Em Nome do Povo", "O Nome do Povo", "Inimigos do Povo"],
     ["Como Fazer Amigos e Influenciar Pessoas", "Como Fazer Amigos"],
     ["4 Horas para o Corpo", "Quatro Horas para o Corpo", "The 4-Hour Body"],
+    # acervo do Ferriss: plural e título ouvido errado na transcrição
+    ["No Biological Free Lunch", "No Biological Free Lunches"],
+    ["How to Start a War", "If You Want to Start a War"],
     ["Fora de Série: Outliers", "Fora de Série (Outliers)"],
     # Modern Wisdom: título em inglês do livro que o Os Sócios cita em português
     ["Hábitos Atômicos", "Atomic Habits"],
@@ -259,6 +262,10 @@ def sem_acento(s: str) -> str:
     )
 
 
+NUMEROS = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6",
+           "seven": "7", "eight": "8", "nine": "9", "ten": "10", "quatro": "4"}
+
+
 def slug_titulo(titulo: str) -> str:
     """Chave de comparação: sem subtítulo, sem acento, sem pontuação e sem
     artigo inicial."""
@@ -266,6 +273,8 @@ def slug_titulo(titulo: str) -> str:
     t = re.split(r"\s+[-–—]\s+", t)[0]
     t = sem_acento(t).lower()
     t = re.sub(r"[^\w\s]", " ", t)
+    # número por extenso: "The Four-Hour Chef" e "The 4-Hour Chef"
+    t = re.sub(r"\b(" + "|".join(NUMEROS) + r")\b", lambda m: NUMEROS[m.group(1)], t)
     t = re.sub(r"\s+", " ", t).strip()
     # Artigo inicial não distingue livro: "A Psicologia Financeira" e
     # "Psicologia Financeira" ficavam em grupos separados e nunca se fundiam.
