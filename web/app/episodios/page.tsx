@@ -21,7 +21,8 @@ export default async function EpisodiosPage() {
     .order("data", { ascending: false });
 
   if (error) {
-    return <p className="text-erro">Erro ao carregar episódios: {error.message}</p>;
+    // lança pra não gravar a mensagem no cache (ver app/page.tsx)
+    throw new Error(`Erro ao carregar episódios: ${error.message}`);
   }
 
   const episodesWithBooks = ((episodes ?? []) as any[])

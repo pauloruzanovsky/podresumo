@@ -69,8 +69,10 @@ export default function TransicaoCapa() {
     }
 
     // O <Link> só pré-carrega até o loading.tsx nas páginas de livro (não são
-    // montadas no build). Buscar a página inteira quando o dedo encosta ou o
-    // mouse passa ganha o tempo até o clique e encurta a espera acima.
+    // montadas no build). Buscar a página inteira quando o dedo encosta ganha
+    // o tempo até o clique e encurta a espera acima. Só no toque, não no
+    // hover: passar o mouse pelo mural pedia dezenas de páginas, cada uma
+    // consultando o Supabase, que já estava sem cota de disco.
     const jaBuscados = new Set<string>();
     function adiantar(e: PointerEvent) {
       const link = (e.target as Element | null)?.closest?.("a[href^='/livro/']");
@@ -83,11 +85,9 @@ export default function TransicaoCapa() {
 
     document.addEventListener("click", aoClicar, true);
     document.addEventListener("pointerdown", adiantar, true);
-    document.addEventListener("pointerover", adiantar, true);
     return () => {
       document.removeEventListener("click", aoClicar, true);
       document.removeEventListener("pointerdown", adiantar, true);
-      document.removeEventListener("pointerover", adiantar, true);
     };
   }, [router]);
 

@@ -65,12 +65,12 @@ export default async function Home() {
   );
   const idsVisiveis = new Set(visiveis.map((p) => p.id));
 
+  // Lança em vez de mostrar a mensagem: página que dá erro não entra no
+  // cache, então a Vercel segue servindo a última versão boa (e o build
+  // falha em vez de publicar a home quebrada). Em 07/11/2026 a mensagem de
+  // timeout do Supabase ficou gravada na home.
   if (livrosRes.error) {
-    return (
-      <p className="text-erro">
-        Erro ao carregar livros: {livrosRes.error.message}
-      </p>
-    );
+    throw new Error(`Erro ao carregar livros: ${livrosRes.error.message}`);
   }
 
   const livros: LivroCard[] = ((livrosRes.data ?? []) as any[])
