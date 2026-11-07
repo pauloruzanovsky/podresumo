@@ -269,3 +269,62 @@ body {
 .tags-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* Movimento. O site é rápido e tem que continuar parecendo: nada aqui segura
+   o clique, só responde a ele. Quem pediu menos movimento no sistema não vê
+   nada disso. */
+
+/* A capa do topo do livro é o destino da capa clicada (TransicaoCapa.tsx). */
+[data-capa-destino] {
+  view-transition-name: capa-livro;
+}
+
+/* Resposta ao toque: no celular não existe hover, e sem isto o toque não
+   dava sinal nenhum até a página nova aparecer. */
+a:has([data-capa]),
+a.bg-card,
+a:has(> .bg-card) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-capa] {
+    transition: transform 150ms ease-out;
+  }
+  a:active [data-capa] {
+    transform: scale(0.95);
+  }
+  a.bg-card,
+  a > .bg-card {
+    transition: transform 120ms ease-out, background-color 150ms, border-color 150ms;
+  }
+  a.bg-card:active,
+  a:active > .bg-card {
+    transform: scale(0.98);
+  }
+
+  /* o resto da página troca num fade curto; a capa voa um pouco mais devagar */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 180ms;
+  }
+  ::view-transition-group(capa-livro) {
+    animation-duration: 380ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  ::view-transition-old(capa-livro),
+  ::view-transition-new(capa-livro) {
+    /* a capa pequena e a grande têm proporções levemente diferentes; sem
+       isto o navegador estica uma por cima da outra */
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

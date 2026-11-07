@@ -357,6 +357,7 @@ export default async function LivroPage({
             capaUrl={livro.capa_url}
             size="lg"
             carregar="eager"
+            destino
             className="w-36 sm:w-44 shrink-0 sm:self-start shadow-[0_24px_50px_-18px_rgba(43,37,33,0.7)] -rotate-1"
           />
 

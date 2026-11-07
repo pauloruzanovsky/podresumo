@@ -49,6 +49,7 @@ export default function BookCover({
   size = "sm",
   className = "",
   carregar = "lazy",
+  destino = false,
 }: {
   titulo: string;
   autor?: string | null;
@@ -62,7 +63,12 @@ export default function BookCover({
   /** "eager" onde o lazy não percebe a capa entrando na tela (mural que
    *  corre sozinho) ou ela já está na primeira tela. */
   carregar?: "lazy" | "eager";
+  /** A capa do topo da página do livro: é pra ela que a capa clicada voa
+   *  (components/TransicaoCapa). Uma por página. */
+  destino?: boolean;
 }) {
+  // data-capa marca a capa pro toque e pra transição (globals.css)
+  const marcas = destino ? { "data-capa": "", "data-capa-destino": "" } : { "data-capa": "" };
   const cor = PALETA[hash(titulo) % PALETA.length];
 
   // Capa real: o Open Library padroniza a largura (180px no M) mas não a
@@ -78,6 +84,7 @@ export default function BookCover({
   if (capaUrl) {
     return (
       <div
+        {...marcas}
         className={`relative aspect-[2/3] rounded-lg overflow-hidden ${className}`}
         style={{ background: `linear-gradient(150deg, ${cor.de}, ${cor.para})` }}
       >
@@ -95,6 +102,7 @@ export default function BookCover({
 
   return (
     <div
+      {...marcas}
       className={`relative aspect-[2/3] rounded-lg overflow-hidden ${className}`}
       style={{ background: `linear-gradient(150deg, ${cor.de}, ${cor.para})` }}
       aria-hidden="true"
