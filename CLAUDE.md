@@ -102,6 +102,9 @@ comitar chave.
   cria o rascunho da newsletter.
 - GitHub Actions `manter-banco-ativo.yml` — acesso diário ao Supabase, de
   reserva.
+- GitHub Actions `aquecer-cache.yml` — quando a Vercel termina um deploy,
+  visita a home e tudo que ela linka (~80 páginas), porque deploy zera o
+  cache e a primeira visita a um livro levava de 1,5 a 6 s.
 
 ## Site (web)
 

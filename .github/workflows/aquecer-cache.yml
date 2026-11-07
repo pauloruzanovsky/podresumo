@@ -1,0 +1,30 @@
+name: Aquecer cache depois do deploy
+
+# Cada deploy na Vercel começa com o cache das páginas vazio (e mesmo as
+# montadas no build são remontadas na primeira visita, medido em 07/11/2026).
+# A primeira pessoa a abrir um livro esperava 1,5 a 5 s enquanto o servidor
+# montava a página no Supabase, e a capa do carrossel não voava (a transição
+# espera só 300 ms). Este job visita a home e tudo que ela linka logo que a
+# Vercel avisa que o deploy terminou, pra essa espera ficar com o robô.
+#
+# ~70 páginas, 3 por vez: menos de um minuto e uns 70 ISR writes por deploy.
+
+on:
+  status:
+  workflow_dispatch:
+
+jobs:
+  aquecer:
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'Vercel' && github.event.state == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Visitar a home e o que ela linka
+        run: |
+          SITE=https://podlibris.com
+          curl -sS --max-time 60 "$SITE/" -o home.html
+          { echo "/episodios"; grep -o 'href="/\(livro\|podcast\|episodio\|pessoa\)/[^"#?]*"' home.html | sed 's/href="//;s/"$//'; } \
+            | sort -u > paginas.txt
+          echo "$(wc -l < paginas.txt) páginas"
+          xargs -P 3 -I{} curl -sS -o /dev/null --max-time 60 \
+            -w "%{http_code} %{time_total}s {}\n" "$SITE{}" < paginas.txt | sort -k2 -rn | head -15

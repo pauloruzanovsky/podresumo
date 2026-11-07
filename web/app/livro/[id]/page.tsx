@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listaE } from "@/lib/site";
-import { supabase, todas } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import ComprarAmazon from "@/components/ComprarAmazon";
 import { ESTANTES, PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
@@ -16,34 +16,12 @@ import { formatTimestamp } from "@/lib/tempo";
 // 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
 // passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
 export const revalidate = 86400;
-// Os livros mais citados já saem montados do build; o resto entra no cache
-// na primeira visita. Cada deploy zera o cache da Vercel, e a primeira visita
-// a um livro monta a página na hora (1,5 s ou mais com o Supabase lento):
-// o clique numa capa do carrossel da home demorava e a capa não voava
-// (TransicaoCapa espera 300 ms). Os 250 do topo cobrem o carrossel e quase todo o
-// resto da home (o baralho sorteia todo dia).
-const PRE_MONTADOS = 250;
+// Liga o cache por livro sem montar nenhum no build: cada um entra no cache
+// na primeira visita. Montar os mais citados no build não adiantou (07/11/2026):
+// na Vercel a página montada no build é remontada na primeira visita mesmo
+// assim. Quem esquenta o cache depois do deploy é o workflow aquecer-cache.
 export async function generateStaticParams() {
-  const rels = await todas((de, ate) =>
-    supabase.from("episode_livros").select("livro_id").order("episode_id").order("livro_id").range(de, ate)
-  );
-  if (rels.error) return []; // sem a lista, cai no cache da primeira visita
-  const contagem = new Map<string, number>();
-  for (const r of rels.data as { livro_id: string }[]) {
-    contagem.set(r.livro_id, (contagem.get(r.livro_id) ?? 0) + 1);
-  }
-  const topo = [...contagem.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, PRE_MONTADOS)
-    .map(([id]) => id);
-  const { data, error } = await supabase
-    .from("livros")
-    .select("slug")
-    .in("id", topo)
-    .eq("tipo", "livro")
-    .not("slug", "is", null);
-  if (error) return [];
-  return (data ?? []).map((l) => ({ id: l.slug as string }));
+  return [];
 }
 
 /**
