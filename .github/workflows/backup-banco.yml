@@ -1,0 +1,50 @@
+name: Backup do banco
+
+# O Supabase grátis não faz backup. Todo domingo de madrugada este job
+# exporta as quatro tabelas inteiras (.github/scripts/backup_banco.py),
+# criptografa com a senha do secret BACKUP_SENHA e guarda como artefato por
+# 35 dias (as 5 últimas semanas).
+#
+# Criptografado porque o repositório é público: qualquer pessoa logada no
+# GitHub pode baixar artefato de repositório público.
+#
+# Baixar: Actions > Backup do banco > a execução > Artifacts. Abrir:
+#   gpg --batch --passphrase "<BACKUP_SENHA>" -d backup-AAAA-MM-DD.tar.gz.gpg | tar xz
+# Sem a senha o arquivo não abre: ela fica guardada fora do GitHub também.
+
+on:
+  schedule:
+    - cron: "0 6 * * 0" # domingo 06:00 UTC = 03:00 em Brasília
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Exportar as tabelas
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 .github/scripts/backup_banco.py backup
+
+      - name: Empacotar e criptografar
+        env:
+          SENHA: ${{ secrets.BACKUP_SENHA }}
+        run: |
+          if [ -z "$SENHA" ]; then echo "::error::Falta o secret BACKUP_SENHA."; exit 1; fi
+          nome="backup-$(date -u +%F).tar.gz.gpg"
+          tar cz backup | gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "$SENHA" -o "$nome"
+          rm -rf backup
+          echo "NOME=$nome" >> "$GITHUB_ENV"
+          ls -lh "$nome"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NOME }}
+          path: ${{ env.NOME }}
+          retention-days: 35
+          compression-level: 0 # já vem comprimido
