@@ -130,11 +130,14 @@ comitar chave.
   travou por swap e Disk IO e derrubava as páginas fora do cache. Banco fora
   do ar no build da Vercel faz o build falhar e a versão no ar continua.
 - Dado novo entra com deploy novo: `flows.atualizar_site` chama o deploy hook
-  (`VERCEL_DEPLOY_HOOK` no `pipeline/.env`), no máximo 1 vez por hora, no fim
+  (`VERCEL_DEPLOY_HOOK` no `pipeline/.env`), no máximo 1 vez a cada 6 h, no fim
   da coleta, de `backfill_capas`, `descricoes` e `normalize_livros --apply`; o
   GitHub Actions `deploy-diario.yml` (mesmo hook como secret) pega o resto.
-- Páginas usam ISR (`revalidate = 86400`, 1 dia). Era 60 s e estourou a cota
-  grátis da Vercel em nov/2026 (572 mil ISR writes de 200 mil). Não baixar.
+- Páginas e cartões usam `revalidate = false`: montados na primeira visita e
+  guardados até o próximo deploy (os dados só mudam com deploy). Com 60 s e
+  depois 1 dia, os robôs estouraram a cota grátis da Vercel em nov/2026 (695
+  mil ISR writes de 200 mil, 4h06 de CPU de 4h). Não pôr prazo de volta, e
+  não multiplicar deploys: cada um zera o cache.
   Endereço antigo por id redireciona pro slug.
 - Newsletter: inscrição em `/api/inscrever` manda o link assinado
   (`lib/confirmacao.ts`); o contato só entra no segmento do Resend pelo botão de

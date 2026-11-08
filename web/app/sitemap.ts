@@ -6,9 +6,8 @@ import { hrefEpisodio, hrefLivro } from "@/lib/links";
 import { slugify } from "@/lib/slug";
 import { pessoasIndexaveis } from "@/lib/pessoas";
 
-// Revalida junto com as páginas: o sitemap precisa acompanhar livro novo
-// entrando no acervo a cada sync.
-export const revalidate = 3600;
+// Muda junto com as páginas: livro novo entra no sitemap no deploy seguinte.
+export const revalidate = false;
 
 /**
  * O acervo é o ativo de busca: ~157 páginas de livro e ~66 de episódio, cada

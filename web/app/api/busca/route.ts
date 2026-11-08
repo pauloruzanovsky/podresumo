@@ -9,8 +9,9 @@ export async function GET(req: Request) {
     const sugestoes = paraSugestoes(await buscarTudo(q));
     return NextResponse.json(
       { sugestoes },
-      // a mesma letra digitada por muita gente não refaz o trabalho
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+      // a mesma letra digitada por muita gente não refaz o trabalho; 1 dia porque
+      // os dados só mudam com deploy, e deploy novo já zera o cache da Vercel
+      { headers: { "Cache-Control": "public, s-maxage=86400" } }
     );
   } catch {
     return NextResponse.json({ sugestoes: [] }, { status: 503 });

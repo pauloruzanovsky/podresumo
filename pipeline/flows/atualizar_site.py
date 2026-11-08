@@ -4,14 +4,15 @@ lê um retrato tirado no build (web/scripts/retrato.mjs). Dado novo entra com
 um deploy novo, e este aviso pede esse deploy pelo deploy hook da Vercel.
 Roda sozinho no fim da coleta, das capas, das descrições e da fusão de livros.
 
-    python -m flows.atualizar_site            # pede o deploy (no máx. 1 por hora)
+    python -m flows.atualizar_site            # pede o deploy (no máx. 1 a cada 6 h)
     python -m flows.atualizar_site --agora    # pede mesmo que tenha pedido há pouco
 
 Precisa de VERCEL_DEPLOY_HOOK no .env (Vercel > Settings > Git > Deploy Hooks).
 
-No máximo um pedido por hora: a extração do acervo grava episódio por
-episódio, e um deploy a cada gravação estouraria o limite diário da Vercel e
-o próprio banco (cada build lê o banco inteiro). O que ficar de fora entra no
+No máximo um pedido a cada 6 h: a extração do acervo grava episódio por
+episódio, e cada deploy zera o cache da Vercel, que os robôs remontam página
+por página (CPU e ISR writes estouraram a cota grátis em nov/2026). Cada
+build também lê o banco inteiro. O que ficar de fora entra no
 pedido seguinte ou no deploy diário (.github/workflows/deploy-diario.yml).
 Falha aqui só avisa: o dado já está no banco.
 """
@@ -28,7 +29,7 @@ load_dotenv()
 MARCA = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "respostas", "ultimo_deploy.txt"
 )
-INTERVALO_S = 3600
+INTERVALO_S = 6 * 3600
 
 
 def main(agora: bool = False):

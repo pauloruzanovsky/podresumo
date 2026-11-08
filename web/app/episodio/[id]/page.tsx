@@ -18,9 +18,10 @@ import { formatTimestamp } from "@/lib/tempo";
 // a cada visita (~1 a 5 s na Vercel). A lista vazia em generateStaticParams
 // liga o cache sem pré-montar todos os episódios no build: cada um entra no
 // cache na primeira visita.
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 export async function generateStaticParams() {
   return [];
 }

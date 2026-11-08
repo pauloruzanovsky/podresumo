@@ -12,9 +12,10 @@ import Newsletter from "@/components/Newsletter";
 import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
 import BaralhoCitacoes, { type Destaque } from "@/components/BaralhoCitacoes";
 
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 
 interface LivroCard {
   id: string;

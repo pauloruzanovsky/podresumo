@@ -10,9 +10,10 @@ import { hrefEpisodio, hrefFala, hrefLivro, hrefPessoa, linkAmazon, linkAmazonEu
 import { PODCASTS_EM_INGLES } from "@/lib/podcasts";
 import { formatTimestamp } from "@/lib/tempo";
 
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 // Mesmo arranjo das páginas de livro e episódio: cache na primeira visita.
 export async function generateStaticParams() {
   return [];

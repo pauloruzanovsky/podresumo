@@ -6,7 +6,14 @@ import { resolverLivro } from "@/lib/resolver";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Livro citado em podcast";
-export const revalidate = 3600;
+// cartão só muda com deploy novo (ver lib/dados.ts)
+export const revalidate = false;
+
+// lista vazia: o cartão é desenhado na primeira visita e guardado (sem isto a
+// Vercel o redesenhava a cada pedido, com max-age=0)
+export async function generateStaticParams() {
+  return [];
+}
 
 /** Cartão do livro: título, autor e — quando a extração trouxe — a fala de
  *  quem indicou. Substitui a capa do Open Library como imagem do link: a capa

@@ -5,7 +5,8 @@ import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Podlibris — os livros citados nos podcasts";
-export const revalidate = 3600;
+// cartão só muda com deploy novo (ver lib/dados.ts)
+export const revalidate = false;
 
 /** Cartão da home, e o padrão de toda página que não tem o seu. */
 export default async function Image() {

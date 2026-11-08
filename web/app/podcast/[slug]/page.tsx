@@ -18,9 +18,10 @@ import { APRESENTADORES, HOSTS, estantesDoMenu, livroDaCasa, podcastVisivel } fr
 import { hrefPessoa } from "@/lib/links";
 import Link from "next/link";
 
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 
 /**
  * A estante de um podcast — a página que fala do programa, não do site.

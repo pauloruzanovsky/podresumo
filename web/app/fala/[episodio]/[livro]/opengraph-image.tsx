@@ -5,7 +5,14 @@ import { formatTimestamp } from "@/lib/tempo";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Fala sobre um livro citado em podcast";
-export const revalidate = 3600;
+// cartão só muda com deploy novo (ver lib/dados.ts)
+export const revalidate = false;
+
+// lista vazia: o cartão é desenhado na primeira visita e guardado (sem isto a
+// Vercel o redesenhava a cada pedido, com max-age=0)
+export async function generateStaticParams() {
+  return [];
+}
 
 /** A fala é o cartão inteiro: a citação grande, a capa do lado e o minuto. */
 export default async function Image({

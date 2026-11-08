@@ -5,7 +5,14 @@ import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/li
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Participações e livros citados de uma pessoa nos podcasts";
-export const revalidate = 3600;
+// cartão só muda com deploy novo (ver lib/dados.ts)
+export const revalidate = false;
+
+// lista vazia: o cartão é desenhado na primeira visita e guardado (sem isto a
+// Vercel o redesenhava a cada pedido, com max-age=0)
+export async function generateStaticParams() {
+  return [];
+}
 
 /** Apresentador: "Bruno Perini — 251 livros citados. O mais citado: Fundação,
  *  15 vezes". Convidado: as participações e quantos livros levou à conversa. */

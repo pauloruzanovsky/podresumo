@@ -6,7 +6,14 @@ import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Livros citados no podcast";
-export const revalidate = 3600;
+// cartão só muda com deploy novo (ver lib/dados.ts)
+export const revalidate = false;
+
+// lista vazia: o cartão é desenhado na primeira visita e guardado (sem isto a
+// Vercel o redesenhava a cada pedido, com max-age=0)
+export async function generateStaticParams() {
+  return [];
+}
 
 /** "A estante de Os Sócios Podcast — 82 livros citados em 36 episódios". É o
  *  cartão que o próprio podcast tem motivo pra repostar. */

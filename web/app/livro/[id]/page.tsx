@@ -13,9 +13,10 @@ import ListaCitacoes from "@/components/ListaCitacoes";
 import Newsletter from "@/components/Newsletter";
 import { formatTimestamp } from "@/lib/tempo";
 
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 // Liga o cache por livro sem montar nenhum no build: cada um entra no cache
 // na primeira visita. Montar os mais citados no build não adiantou (07/11/2026):
 // na Vercel a página montada no build é remontada na primeira visita mesmo

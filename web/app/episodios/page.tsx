@@ -3,9 +3,10 @@ import { supabase } from "@/lib/dados";
 import { podcastVisivel } from "@/lib/podcasts";
 import EpisodeList from "@/components/EpisodeList";
 
-// 1 dia: os dados só mudam na coleta semanal. Com 60 s, cada robô que
-// passava por uma das ~1.600 páginas a remontava (572 mil ISR writes/mês).
-export const revalidate = 86400;
+// Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
+// os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
+// só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
+export const revalidate = false;
 
 export const metadata: Metadata = {
   title: "Episódios",
