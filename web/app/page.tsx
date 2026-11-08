@@ -12,6 +12,7 @@ import Newsletter from "@/components/Newsletter";
 import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
 import BaralhoCitacoes, { type Destaque } from "@/components/BaralhoCitacoes";
 import { carregarEmComum } from "@/lib/emComum";
+import { LinhaRanking } from "@/components/RankingEmComum";
 
 // Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
 // os dados só mudam com deploy novo, que já zera o cache. Remontar a cada dia
@@ -286,38 +287,29 @@ export default async function Home() {
 
       {destaques.length > 0 && <BaralhoCitacoes falas={destaques} />}
 
-      {/* Os podcasts cruzados: o que só aparece juntando todos os programas */}
+      {/* O top 10 dos livros citados em todos os podcasts, já aberto: é o que
+          só aparece juntando os programas, e chama mais atenção que um link */}
       {emComum.livros.length > 0 && (
-        <Link
-          href="/livros-em-comum"
-          className="group flex items-center gap-5 sm:gap-7 mb-14 p-5 sm:p-7 bg-card border border-border rounded-2xl hover:bg-card-hover transition-colors"
+        <Section
+          id="livros-em-comum"
+          title="Os livros que todo mundo cita"
+          subtitle={`Os mais citados nos ${emComum.podcasts} podcasts juntos. Toque num livro pra ouvir o que cada programa disse.`}
         >
-          <span className="flex items-end shrink-0" aria-hidden="true">
-            {emComum.livros.slice(0, 3).map((l, j) => (
-              <BookCover
-                key={l.id}
-                titulo={l.titulo}
-                autor={l.autor}
-                capaUrl={l.capaUrl}
-                className={`shadow-[0_12px_24px_-12px_rgba(43,37,33,0.6)] ring-2 ring-card ${
-                  j === 0 ? "relative z-10 w-14 sm:w-20" : j === 1 ? "-ml-6 w-12 sm:w-16 -rotate-6 order-first" : "-ml-6 w-12 sm:w-16 rotate-6"
-                }`}
-              />
+          <ol className="flex flex-col gap-2.5">
+            {emComum.livros.slice(0, 10).map((l, i) => (
+              <LinhaRanking key={l.id} l={l} i={i} />
             ))}
-          </span>
-          <span className="min-w-0">
-            <span className="block text-[11px] font-semibold text-muted uppercase tracking-widest mb-1.5">
-              Os podcasts cruzados
-            </span>
-            <span className="block font-serif text-xl sm:text-2xl font-semibold leading-snug group-hover:underline">
-              Os livros que todo mundo cita
-            </span>
-            <span className="block text-sm text-muted mt-1 leading-snug">
-              {emComum.livros.filter((l) => l.falas.length === emComum.podcasts).length} em todos os{" "}
-              {emComum.podcasts} podcasts, {emComum.livros.length} em mais de um, com a fala de cada programa.
-            </span>
-          </span>
-        </Link>
+          </ol>
+          <div className="flex justify-center mt-5">
+            <Link
+              href="/livros-em-comum"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent text-sm font-semibold rounded-full transition-colors"
+            >
+              Ver o ranking completo · {emComum.livros.length} livros
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </Section>
       )}
 
       {/* Estantes — a porta de entrada: é por elas que se chega às páginas
