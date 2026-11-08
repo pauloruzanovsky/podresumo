@@ -23,15 +23,25 @@ export interface AutorPlacar {
   capas: { id: string; titulo: string; capa_url: string | null }[];
 }
 
-// ouro, prata, bronze — o número vai por cima, em tinta escura
-const MEDALHAS = ["#d9b54a", "#c3c5c8", "#c8935f"];
+// ouro, prata, bronze: brilho em cima, sombra embaixo, como metal de verdade;
+// o número vai por cima, em tinta escura, com a serifa dos títulos
+const MEDALHAS = [
+  { brilho: "#f7e7a6", meio: "#d9b54a", sombra: "#a98328" },
+  { brilho: "#f4f5f7", meio: "#c3c5c8", sombra: "#8f9399" },
+  { brilho: "#f0caa0", meio: "#c8935f", sombra: "#93603a" },
+];
 
 export function Posicao({ i }: { i: number }) {
   if (i < 3) {
+    const m = MEDALHAS[i];
     return (
       <span
-        className="grid place-items-center w-7 h-7 rounded-full text-[11px] font-bold text-[#2b2521] shadow-[inset_0_-2px_0_rgba(0,0,0,0.15)] shrink-0"
-        style={{ background: MEDALHAS[i] }}
+        className="relative grid place-items-center w-7 h-7 rounded-full font-serif text-[13px] font-semibold text-[#2b2521] shrink-0"
+        style={{
+          background: `linear-gradient(145deg, ${m.brilho} 0%, ${m.meio} 48%, ${m.sombra} 100%)`,
+          // aro claro por dentro, borda escura fina e uma sombra curta embaixo
+          boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,0.45), 0 0 0 1px ${m.sombra}, 0 3px 6px -2px rgba(43,37,33,0.45)`,
+        }}
         aria-label={`${i + 1}º lugar`}
       >
         {i + 1}
@@ -39,7 +49,7 @@ export function Posicao({ i }: { i: number }) {
     );
   }
   return (
-    <span className="grid place-items-center w-7 h-7 font-mono text-xs text-muted shrink-0">
+    <span className="grid place-items-center w-7 h-7 font-serif text-sm text-muted tabular-nums shrink-0">
       {i + 1}
     </span>
   );
