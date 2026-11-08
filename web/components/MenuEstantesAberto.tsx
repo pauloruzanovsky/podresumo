@@ -121,6 +121,22 @@ export default function MenuEstantesAberto({
             ))}
           </ul>
           <Link
+            href="/livros-em-comum"
+            onClick={() => setAberto(false)}
+            className="flex items-center gap-3 mt-1 p-2 border-t border-border rounded-b-xl hover:bg-card-hover transition-colors"
+          >
+            <span className="grid place-items-center w-11 h-11 rounded-lg bg-accent text-on-accent shrink-0" aria-hidden="true">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="9" cy="12" r="5" strokeWidth={1.8} />
+                <circle cx="15" cy="12" r="5" strokeWidth={1.8} />
+              </svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-foreground">Os livros que todo mundo cita</span>
+              <span className="block text-xs text-muted">Os podcasts cruzados</span>
+            </span>
+          </Link>
+          <Link
             href={todas}
             onClick={irPraLista}
             className="block mt-1 pt-2.5 pb-1.5 border-t border-border text-center text-xs font-medium text-muted hover:text-foreground transition-colors"
