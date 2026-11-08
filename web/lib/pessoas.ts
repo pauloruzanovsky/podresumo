@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 import { slugify } from "@/lib/slug";
 import { HOSTS, podcastVisivel } from "@/lib/podcasts";
 import { tituloEpisodio } from "@/lib/falas";

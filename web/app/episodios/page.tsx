@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import { podcastVisivel } from "@/lib/podcasts";
 import EpisodeList from "@/components/EpisodeList";
 

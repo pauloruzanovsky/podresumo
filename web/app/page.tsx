@@ -1,4 +1,4 @@
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 import { APRESENTADORES, PODCASTS_EM_INGLES, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";

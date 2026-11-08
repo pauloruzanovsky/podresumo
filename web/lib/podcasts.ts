@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { slugify } from "@/lib/slug";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 
 /**
  * Podcasts que estão no banco mas não aparecem no site.

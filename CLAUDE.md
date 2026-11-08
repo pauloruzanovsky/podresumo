@@ -121,13 +121,21 @@ comitar chave.
 - Podcast estrangeiro: `extract/transcript.py` pede o idioma original, porque a
   faixa "pt" do YouTube é tradução de máquina e a fala não seria literal.
   `reprocessar_batch` grava direto: podcast novo aparece no site na hora.
+- **O site não lê o banco.** `web/scripts/retrato.mjs` roda antes do build
+  (`npm run build`/`npm run dev`) e grava `web/retrato/dados.json` (gitignored,
+  ~12 MB, sem transcrições); `lib/dados.ts` responde às mesmas consultas do
+  supabase-js em memória, então as páginas só importam de `@/lib/dados`.
+  Consulta nova que use filtro ou relação fora do que `lib/dados.ts` cobre
+  lança erro: estender lá. Motivo: em 08/11/2026 o Supabase grátis (0,5 GB)
+  travou por swap e Disk IO e derrubava as páginas fora do cache. Banco fora
+  do ar no build da Vercel faz o build falhar e a versão no ar continua.
+- Dado novo entra com deploy novo: `flows.atualizar_site` chama o deploy hook
+  (`VERCEL_DEPLOY_HOOK` no `pipeline/.env`), no máximo 1 vez por hora, no fim
+  da coleta, de `backfill_capas`, `descricoes` e `normalize_livros --apply`; o
+  GitHub Actions `deploy-diario.yml` (mesmo hook como secret) pega o resto.
 - Páginas usam ISR (`revalidate = 86400`, 1 dia). Era 60 s e estourou a cota
-  grátis da Vercel em nov/2026 (572 mil ISR writes de 200 mil): com ~1.600
-  páginas e pouca visita, quase todo acesso de robô remontava a página. Não
-  baixar. Livro novo aparece na hora porque `flows.atualizar_site` chama
-  `/api/atualizar` (precisa de `ATUALIZAR_SEGREDO`, igual na Vercel e no
-  `pipeline/.env`) no fim da coleta, de `backfill_capas` e de
-  `normalize_livros --apply`. Endereço antigo por id redireciona pro slug.
+  grátis da Vercel em nov/2026 (572 mil ISR writes de 200 mil). Não baixar.
+  Endereço antigo por id redireciona pro slug.
 - Newsletter: inscrição em `/api/inscrever` manda o link assinado
   (`lib/confirmacao.ts`); o contato só entra no segmento do Resend pelo botão de
   `/confirmar`. Precisa de `RESEND_API_KEY`, `RESEND_SEGMENT_ID` e

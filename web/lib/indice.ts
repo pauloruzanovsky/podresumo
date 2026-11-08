@@ -1,4 +1,4 @@
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 
 /**
  * Índice de um podcast: os episódios que têm página no site, do mais novo

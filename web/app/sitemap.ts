@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 import { podcastVisivel } from "@/lib/podcasts";
 import { SITE_URL } from "@/lib/site";
 import { hrefEpisodio, hrefLivro } from "@/lib/links";

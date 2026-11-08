@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "retrato": "node scripts/retrato.mjs",
+    "dev": "node scripts/retrato.mjs && next dev",
+    "build": "node scripts/retrato.mjs && next build",
     "start": "next start",
     "lint": "eslint"
   },

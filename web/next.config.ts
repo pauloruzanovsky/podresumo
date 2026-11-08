@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // O retrato do banco (scripts/retrato.mjs) é lido com fs em lib/dados.ts;
+  // sem isto ele não iria junto pras funções da Vercel.
+  outputFileTracingIncludes: {
+    "/**": ["./retrato/dados.json"],
+  },
   // A biblioteca saiu: com um podcast só no site ela repetia a estante dele
   // (ver ESTANTE_PRINCIPAL em lib/podcasts). Redireciona aqui, antes da
   // página, pra o navegador e o Google receberem um 307 de verdade — feito

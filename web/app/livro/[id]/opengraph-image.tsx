@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import { PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 import { resolverLivro } from "@/lib/resolver";

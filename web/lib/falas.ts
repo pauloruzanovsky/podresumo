@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import { podcastVisivel } from "@/lib/podcasts";
 import { resolverEpisodio, resolverLivro } from "@/lib/resolver";
 

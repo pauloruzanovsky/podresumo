@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import Image from "next/image";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";

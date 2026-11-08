@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# retrato do banco, gerado no build (scripts/retrato.mjs)
+/retrato/

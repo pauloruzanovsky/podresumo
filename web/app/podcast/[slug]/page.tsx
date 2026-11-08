@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 import { acharPorSlug, slugify } from "@/lib/slug";
 import CapaPodcast from "@/components/CapaPodcast";
 import EpisodeIndex from "@/components/EpisodeIndex";

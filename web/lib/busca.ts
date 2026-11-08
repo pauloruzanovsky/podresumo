@@ -3,7 +3,7 @@ import { listaE } from "@/lib/site";
 import { tituloEpisodio } from "@/lib/falas";
 import { hrefEpisodio, hrefLivro, hrefPessoa } from "@/lib/links";
 import { HOSTS, estantesDoMenu, podcastVisivel } from "@/lib/podcasts";
-import { supabase, todas } from "@/lib/supabase";
+import { supabase, todas } from "@/lib/dados";
 
 /**
  * A busca do site: livros, pessoas (autor, convidado, quem citou, host),

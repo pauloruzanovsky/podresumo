@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import { tituloEpisodio } from "@/lib/falas";
 import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 import { resolverEpisodio } from "@/lib/resolver";

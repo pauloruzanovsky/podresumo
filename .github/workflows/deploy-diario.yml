@@ -1,0 +1,32 @@
+name: Deploy diário
+
+# O site lê um retrato do banco tirado no build (web/scripts/retrato.mjs), e
+# dado novo só entra com deploy novo. O pipeline pede o deploy no fim de cada
+# coleta (pipeline/flows/atualizar_site.py), no máximo uma vez por hora; este
+# deploy diário pega o que ficou de fora e garante que o site nunca passe de
+# um dia atrás do banco.
+#
+# Precisa do secret VERCEL_DEPLOY_HOOK (o mesmo URL do pipeline/.env). Sem
+# ele o job só avisa e passa.
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # todo dia 10:00 UTC = 07:00 em Brasília
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pedir deploy à Vercel
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::Sem o secret VERCEL_DEPLOY_HOOK; nenhum deploy pedido."
+            exit 0
+          fi
+          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK") || status="sem resposta"
+          echo "Vercel respondeu: $status"
+          case "$status" in 2*) ;; *) echo "::error::O deploy hook respondeu '$status'."; exit 1;; esac

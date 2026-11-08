@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listaE } from "@/lib/site";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/dados";
 import ComprarAmazon from "@/components/ComprarAmazon";
 import { ESTANTES, PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import Link from "next/link";
@@ -263,13 +263,6 @@ export default async function LivroPage({
     .filter((a) => Number.isFinite(a) && a > 0);
   const anoInicial = anos.length ? Math.min(...anos) : 0;
   const anoFinal = anos.length ? Math.max(...anos) : 0;
-  const porAno: [number, number][] = anos.length
-    ? Array.from({ length: anoFinal - anoInicial + 1 }, (_, i) => {
-        const ano = anoInicial + i;
-        return [ano, anos.filter((a) => a === ano).length];
-      })
-    : [];
-  const maxAno = Math.max(1, ...porAno.map(([, n]) => n));
   const contaQuem = new Map<string, number>();
   for (const c of citacoes)
     if (c.quem_citou) contaQuem.set(c.quem_citou, (contaQuem.get(c.quem_citou) ?? 0) + 1);
@@ -379,6 +372,16 @@ export default async function LivroPage({
               )}
             </p>
 
+            {/* Do que o livro trata, no topo e não depois das citações: em
+                livro muito citado a lista empurrava o texto pra milhares de
+                pixels abaixo. Texto próprio, escrito a partir da sinopse
+                (flows.descricoes), não a da editora. */}
+            {livro.descricao && (
+              <p className="text-[15px] sm:text-base text-foreground/80 leading-relaxed mt-4 max-w-xl">
+                {livro.descricao}
+              </p>
+            )}
+
             {/* Os temas saíram daqui de propósito: `livros.temas` vem de texto
                 livre da extração e não é afirmação confiável sobre o livro.
                 A estante usa as categorias de lib/categorias pra filtrar. */}
@@ -403,21 +406,6 @@ export default async function LivroPage({
               )}
               .
             </p>
-
-            {/* quantas vezes por ano: o livro que atravessa os anos aparece aqui */}
-            {porAno.length > 1 && (
-              <div className="mt-3 flex items-end justify-center sm:justify-start gap-1.5" aria-hidden="true">
-                {porAno.map(([ano, n]) => (
-                  <div key={ano} className="flex flex-col items-center gap-1">
-                    <span
-                      className="w-5 rounded-sm bg-chart"
-                      style={{ height: Math.max(3, (n / maxAno) * 28), opacity: n ? 1 : 0.25 }}
-                    />
-                    <span className="text-[9px] text-muted tabular-nums">{String(ano).slice(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
 
             <div className="flex items-center justify-center sm:justify-start gap-3 mt-6 flex-wrap">
               <ComprarAmazon
