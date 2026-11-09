@@ -49,6 +49,12 @@ PAUSA_SEG = 8
 # o YouTube deixa por dia.
 SEM_LEGENDA = {
     "hR1gy3THj3o",  # #264 — Estados Unidos vs. Venezuela
+    "0PwFujd0F1I",  # #80 — Ascensão, declínio (e queda?) dos Estados Unidos
+    "mVrVcGrL7hE",  # #23 — Como é viver num país socialista?
+    "Jp43mamrhcI",  # #19 — Do zero a 700 franquias
+    "O9Mzk4hUK0A",  # #18 — Especial Dia dos Namorados
+    "lINP5eZXzW8",  # #17 — Gestão de negócios
+    "APcfwTmXHcM",  # #12 — Democracia: o Deus que falhou?
 }
 
 # Falhas seguidas que indicam bloqueio: insistir só prolonga o castigo.

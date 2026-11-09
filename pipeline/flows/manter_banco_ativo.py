@@ -34,7 +34,18 @@ ESTADOS = {
 def main():
     try:
         podcasts = supabase.table("podcasts").select("id, nome").execute().data
-        episodios = supabase.table("episodes").select("podcast_id, status").execute().data
+        # Em páginas: o Supabase devolve no máximo 1000 linhas por consulta, e
+        # em 09/11/2026 o banco passou disso (a contagem parava de crescer).
+        episodios, inicio = [], 0
+        while True:
+            pagina = (
+                supabase.table("episodes").select("podcast_id, status")
+                .order("id").range(inicio, inicio + 999).execute().data
+            )
+            episodios += pagina
+            if len(pagina) < 1000:
+                break
+            inicio += 1000
     except Exception as e:
         # Sai com erro: a rotina precisa relatar isso, não seguir em frente.
         print(f"BANCO INACESSÍVEL: {e}")
