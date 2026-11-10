@@ -46,13 +46,13 @@ interface Arrasto {
 export default function BaralhoCitacoes({
   falas,
   titulo,
-  abaixo,
+  busca,
 }: {
   falas: Destaque[];
   /** O título da home, acima da carta no celular e à esquerda no computador. */
   titulo: ReactNode;
-  /** O que vem depois da carta (a busca). */
-  abaixo: ReactNode;
+  /** A busca, logo abaixo do título. */
+  busca: ReactNode;
 }) {
   const [topo, setTopo] = useState(0);
   const [pronto, setPronto] = useState(false);
@@ -153,10 +153,15 @@ export default function BaralhoCitacoes({
       className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-x-14 gap-y-4 sm:gap-y-6"
       aria-label="Citações dos episódios"
     >
-      {/* No celular a ordem é título, carta, busca: a carta é o que só este
-          site tem e precisa aparecer sem rolar. No computador o título e a
-          busca dividem a coluna da esquerda e a carta ocupa a da direita. */}
-      <div className="lg:self-end">{titulo}</div>
+      {/* No celular a ordem é título, busca, carta: a busca é a ação de quem
+          já sabe o que quer, e a carta vem logo depois, ainda na primeira
+          tela. No computador o título e a busca dividem a coluna da
+          esquerda e a carta ocupa a da direita. */}
+      <div className="lg:self-end flex flex-col gap-5 lg:gap-6">
+        {titulo}
+        {/* o bloco dá a largura: direto no flex, o mx-auto da busca a encolhia */}
+        <div className="w-full">{busca}</div>
+      </div>
 
       <div
         ref={mesa}
@@ -255,16 +260,13 @@ export default function BaralhoCitacoes({
         })}
       </div>
 
-      <div className="lg:self-start flex flex-col gap-5 lg:gap-6">
-        <Setas
-          className="flex justify-center lg:justify-start lg:order-last"
-          visivel={pronto && n > 1}
-          posicao={topo + 1}
-          total={n}
-          aoPassar={passar}
-        />
-        {abaixo}
-      </div>
+      <Setas
+        className="flex justify-center lg:justify-start lg:self-start"
+        visivel={pronto && n > 1}
+        posicao={topo + 1}
+        total={n}
+        aoPassar={passar}
+      />
     </section>
   );
 }

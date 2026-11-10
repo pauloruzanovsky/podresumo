@@ -280,12 +280,7 @@ export default async function Home() {
         <BaralhoCitacoes
           falas={destaques}
           titulo={<Titulo livros={totalLivros} episodios={totalEpisodes} />}
-          // o bloco dá a largura: direto no flex, o mx-auto da busca a encolhia
-          abaixo={
-            <div className="w-full">
-              <HomeSearch />
-            </div>
-          }
+          busca={<HomeSearch />}
         />
       ) : (
         <div className="text-center">
