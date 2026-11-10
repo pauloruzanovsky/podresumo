@@ -23,8 +23,10 @@ Uso:
     python -m flows.newsletter --simular      # imprime o e-mail, não cria nada
     python -m flows.newsletter                # cria o rascunho no Resend
     python -m flows.newsletter --teste a@b.com  # manda só pra este endereço
-    python -m flows.newsletter --dias 14      # janela diferente de 7 dias
+    python -m flows.newsletter --semana 2026-11-02  # outra semana (qualquer dia dela)
+    python -m flows.newsletter --enviar <id>  # envia o rascunho que o Paulo aprovou
     python -m flows.newsletter --abertura "Esta semana..."
+    python -m flows.newsletter --fala mastery,rapido-e-devagar  # abre com o 1º, depois os outros
 """
 
 import argparse
@@ -59,10 +61,6 @@ PODCASTS_EM_INGLES = ["Modern Wisdom", "The Tim Ferriss Show", "Huberman Lab"]
 MAX_LIVROS = 3
 # quatro podcasts dão uns 7 episódios por semana
 MAX_EPISODIOS = 8
-# `processed_at` muda a cada reprocessamento: sem este corte, episódio de 2023
-# reextraído aparecia como novidade (388 livros numa semana). Com folga pro
-# episódio que espera o lote de domingo.
-EPISODIO_RECENTE_DIAS = 30
 FALA_MIN, FALA_MAX = 40, 280
 
 # Cores fixas da marca (brand/): e-mail não tem os tokens de tema do site.
@@ -117,13 +115,27 @@ def citacoes_de(ids: list[str]) -> list[dict]:
     return citacoes
 
 
-def carregar(dias: int):
+def semana_de(dia: date) -> tuple[date, date]:
+    """Segunda a domingo da semana que contém `dia`."""
+    segunda = dia - timedelta(days=dia.weekday())
+    return segunda, segunda + timedelta(days=6)
+
+
+def semana_passada(hoje: date) -> tuple[date, date]:
+    """A semana fechada mais recente: gerado na segunda, na terça ou refeito no
+    meio da semana, o e-mail sai igual."""
+    return semana_de(hoje - timedelta(days=7))
+
+
+def carregar(semana: tuple[date, date]):
     podcasts = supabase.table("podcasts").select("id, nome").execute().data
     podcast = next(p for p in podcasts if p["nome"] == PODCAST)
     nomes = {p["id"]: p["nome"] for p in podcasts}
     agora = datetime.now(timezone.utc)
-    desde = (agora - timedelta(days=dias)).isoformat()
-    recente = (agora - timedelta(days=EPISODIO_RECENTE_DIAS)).date().isoformat()
+    # A semana é a de lançamento no YouTube, de segunda a domingo, não a da
+    # extração: episódio antigo extraído agora (fila atrasada,
+    # reprocessamento) não é novidade.
+    desde, ate = semana[0].isoformat(), semana[1].isoformat()
 
     # Os quatro podcasts: desde nov/2026 o lote semanal extrai os episódios
     # novos de todos, não só do Os Sócios.
@@ -131,8 +143,8 @@ def carregar(dias: int):
         supabase.table("episodes")
         .select("id, slug, titulo, ep_number, data, link_youtube, podcast_id")
         .eq("status", "done")
-        .gte("processed_at", desde)
-        .gte("data", recente)
+        .gte("data", desde)
+        .lte("data", ate)
         .order("data", desc=True)
         .execute()
         .data
@@ -200,8 +212,10 @@ def rodizio(agora: datetime, podcasts: list[dict]) -> dict | None:
     return {**c, "ep": por_ep[c["episode_id"]], "podcast": nomes[por_ep[c["episode_id"]]["podcast_id"]]}
 
 
-def escolher(episodios, citacoes):
-    """(a fala da semana, os livros seguintes). Um livro aparece uma vez só."""
+def escolher(episodios, citacoes, fala_slug=None):
+    """(a fala da semana, os livros seguintes). Um livro aparece uma vez só.
+    `fala_slug` (slugs separados por vírgula) força o livro que abre o e-mail e,
+    em ordem, os seguintes; o que faltar a escolha automática completa."""
     por_livro: dict[str, list] = {}
     for c in citacoes:
         por_livro.setdefault(c["livros"]["slug"] or c["livros"]["titulo"], []).append(c)
@@ -223,6 +237,14 @@ def escolher(episodios, citacoes):
          if cs[0]["livros"]["autor"] not in APRESENTADORES),
         key=nota, reverse=True,
     )
+    if fala_slug:
+        por_slug = {c["livros"]["slug"]: c for c in melhores}
+        escolhidos = []
+        for slug in [x.strip() for x in fala_slug.split(",") if x.strip()]:
+            if slug not in por_slug:
+                sys.exit(f"--fala {slug}: esse livro não foi citado nos episódios da semana.")
+            escolhidos.append(por_slug[slug])
+        melhores = escolhidos + [c for c in melhores if c not in escolhidos]
     return melhores[0] if melhores else None, melhores[1:MAX_LIVROS + 1], len(por_livro)
 
 
@@ -236,7 +258,7 @@ def assunto_de(fala: dict | None, episodios, n_livros: int) -> str:
         return f"“{frase}”"
     quem = fala.get("quem_citou")
     livro = fala["livros"]["titulo"]
-    return f"O que {quem} disse sobre {livro}" if quem else f"{livro}, e mais {n_livros - 1} na estante"
+    return f"O que {quem} disse sobre o livro {livro}" if quem else f"{livro}, e mais {n_livros - 1} na estante"
 
 
 # ─────────────────────────────────────────────────── html ───
@@ -339,10 +361,10 @@ def lista_episodios(episodios, citacoes) -> str:
     return f'<div style="font-family:{SANS};font-size:14px;line-height:1.45;color:{TINTA};">{"".join(linhas)}</div>'
 
 
-def montar(episodios, citacoes, placar, fora, acervo=None, abertura=None, hoje=None):
+def montar(episodios, citacoes, placar, fora, acervo=None, abertura=None, hoje=None, fala_slug=None):
     hoje = hoje or date.today()
     por_ep = {ep["id"]: ep for ep in episodios}
-    fala, livros, n_livros = escolher(episodios, citacoes)
+    fala, livros, n_livros = escolher(episodios, citacoes, fala_slug)
     assunto = assunto_de(fala or acervo, episodios, n_livros)
 
     partes = [cabecalho(hoje)]
@@ -456,6 +478,20 @@ def criar_rascunho(assunto: str, html_email: str):
     print("  revise e envie em resend.com/broadcasts")
 
 
+def enviar(broadcast_id: str):
+    """Envia pra lista o rascunho que o Paulo aprovou. Só com ok dele, por id."""
+    chave = os.getenv("RESEND_API_KEY")
+    r = requests.get(f"https://api.resend.com/broadcasts/{broadcast_id}",
+                     headers={"Authorization": f"Bearer {chave}"}, timeout=30)
+    if r.status_code >= 300:
+        sys.exit(f"Rascunho {broadcast_id} não encontrado ({r.status_code}): {r.text[:200]}")
+    b = r.json()
+    if b.get("status") != "draft":
+        sys.exit(f"Esse broadcast não é rascunho (status: {b.get('status')}); nada enviado.")
+    resend(f"broadcasts/{broadcast_id}/send", {})
+    print(f"Enviado pra lista: {b.get('subject')}  ({broadcast_id})")
+
+
 def enviar_teste(assunto: str, html_email: str, destino: str):
     """Só pra um endereço, fora da lista. Sem contato não há link de saída."""
     html_email = html_email.replace(DESCADASTRO, SITE)
@@ -469,19 +505,27 @@ def enviar_teste(assunto: str, html_email: str, destino: str):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--simular", action="store_true", help="só imprime o e-mail")
-    p.add_argument("--dias", type=int, default=7)
+    p.add_argument("--semana", type=date.fromisoformat, metavar="AAAA-MM-DD",
+                   help="qualquer dia da semana desejada (padrão: a semana passada, de segunda a domingo)")
+    p.add_argument("--enviar", metavar="ID", help="envia pra lista o rascunho aprovado (id do Resend)")
     p.add_argument("--abertura", help="texto do Paulo no topo do e-mail")
     p.add_argument("--teste", metavar="EMAIL", help="envia só pra este endereço, fora da lista")
+    p.add_argument("--fala", metavar="SLUG", help="slugs, separados por vírgula, do livro que abre o e-mail e dos seguintes")
     args = p.parse_args()
 
-    episodios, citacoes, placar, fora, acervo = carregar(args.dias)
+    if args.enviar:
+        enviar(args.enviar)
+        return
+    semana = semana_de(args.semana) if args.semana else semana_passada(date.today())
+    print(f"Semana: {semana[0]:%d/%m} a {semana[1]:%d/%m}", file=sys.stderr)
+    episodios, citacoes, placar, fora, acervo = carregar(semana)
     if not episodios:
-        print(f"Nenhum episódio novo nos últimos {args.dias} dias — sem e-mail esta semana.")
+        print("Nenhum episódio lançado nessa semana — sem e-mail.")
         return
     if not os.getenv("AMAZON_TAG"):
         print("ATENÇÃO: AMAZON_TAG não está no pipeline/.env: os links da Amazon saem sem comissão.", file=sys.stderr)
 
-    assunto, corpo = montar(episodios, citacoes, placar, fora, acervo, args.abertura)
+    assunto, corpo = montar(episodios, citacoes, placar, fora, acervo, args.abertura, fala_slug=args.fala)
     if args.simular:
         print(f"ASSUNTO: {assunto}\n\n{corpo}")
         return

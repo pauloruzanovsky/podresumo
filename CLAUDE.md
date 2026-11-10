@@ -49,9 +49,12 @@ comitar chave.
    `capas_manuais.json` sobrepõe.
 6. `preencher_slugs` — gera os endereços `/livro/<slug>` e `/episodio/<slug>`
    uma vez só; slug nunca é reescrito.
-7. `newsletter` — monta o e-mail da semana e deixa como **rascunho** no Resend
-   (broadcast). Nunca envia sozinho: o Paulo revisa e envia em
-   resend.com/broadcasts. `--teste <email>` manda só pra um endereço.
+7. `newsletter` — monta o e-mail da semana (episódios **lançados** de segunda a
+   domingo da semana passada) e deixa como **rascunho** no Resend (broadcast).
+   Nunca envia sozinho: o rascunho aparece no chat com um botão de aprovar, e
+   só depois do clique do Paulo `--enviar <id>` manda pra lista. `--fala
+   slug1,slug2` escolhe a fala de abertura e os livros seguintes; `--teste
+   <email>` manda só pra um endereço. Envio previsto: terça de manhã.
 8. `capas_podcasts` — arte de cada podcast, da busca da Apple Podcasts. Rodar
    uma vez ao cadastrar podcast novo.
 9. `normalize_pessoas` — unifica grafias de convidado, autor e quem citou. A
