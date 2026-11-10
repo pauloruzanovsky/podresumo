@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/dados";
 import { PODCASTS_EM_INGLES, podcastVisivel } from "@/lib/podcasts";
 import { cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
@@ -25,7 +26,7 @@ export default async function Image({
 }) {
   const { id: param } = await params;
   const ref = await resolverLivro(param);
-  if (!ref) return cartaoOg({ titulo: "Livro não encontrado" });
+  if (!ref) notFound();
   const id = ref.id;
   const { data: livro } = await supabase
     .from("livros")
@@ -35,7 +36,7 @@ export default async function Image({
     .eq("id", id)
     .single();
 
-  if (!livro) return cartaoOg({ titulo: "Livro não encontrado" });
+  if (!livro) notFound();
 
   const citacoes = ((livro.episode_livros ?? []) as any[]).filter((c) =>
     podcastVisivel(c.episodes?.podcasts?.nome)

@@ -14,6 +14,26 @@ import { SITE_URL } from "@/lib/site";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const REMETENTE = "Podlibris <livros@newsletter.podlibris.com>";
 
+/**
+ * Freio contra robô: sem ele, um script mandava e-mail do nosso domínio pra
+ * qualquer endereço, quantas vezes quisesse, gastando a cota do Resend (a
+ * mesma da newsletter) e a reputação do remetente. Fica na memória da função,
+ * então vale por instância: segura laço simples, não ataque distribuído. A
+ * regra de rate limit no Firewall da Vercel é a trava de verdade.
+ */
+const JANELA_MS = 10 * 60 * 1000;
+const POR_IP = 5; // pedidos de um IP por janela
+const vistosIp = new Map<string, number[]>();
+const vistosEmail = new Map<string, number>(); // último envio pra cada endereço
+
+function passou(ip: string, agora: number): boolean {
+  if (vistosIp.size > 5000) vistosIp.clear();
+  const recentes = (vistosIp.get(ip) ?? []).filter((t) => agora - t < JANELA_MS);
+  recentes.push(agora);
+  vistosIp.set(ip, recentes);
+  return recentes.length > POR_IP;
+}
+
 export async function POST(req: Request) {
   const chave = process.env.RESEND_API_KEY;
   const segredo = process.env.NEWSLETTER_SEGREDO;
@@ -21,6 +41,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, erro: "A newsletter ainda não está configurada." },
       { status: 503 }
+    );
+  }
+
+  // o formulário manda JSON; exigir isso obriga um site de fora a passar pelo
+  // preflight de CORS, que ele não passa
+  if (!req.headers.get("content-type")?.includes("application/json")) {
+    return NextResponse.json({ ok: false, erro: "Pedido inválido." }, { status: 415 });
+  }
+
+  const agora = Date.now();
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "sem-ip";
+  if (passou(ip, agora)) {
+    return NextResponse.json(
+      { ok: false, erro: "Muitas tentativas. Tente de novo daqui a alguns minutos." },
+      { status: 429 }
     );
   }
 
@@ -39,6 +74,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, erro: "Esse e-mail não parece válido." }, { status: 400 });
   }
 
+  // mesmo endereço de novo dentro da janela: o link anterior ainda vale, então
+  // responde que deu certo sem mandar outro e-mail
+  const ultimo = vistosEmail.get(email);
+  if (ultimo && agora - ultimo < JANELA_MS) return NextResponse.json({ ok: true });
+  if (vistosEmail.size > 5000) vistosEmail.clear();
+  vistosEmail.set(email, agora);
+
   const link = `${SITE_URL}/confirmar?t=${criaToken(email, segredo)}`;
   const resposta = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -53,6 +95,7 @@ export async function POST(req: Request) {
   });
 
   if (!resposta.ok) {
+    vistosEmail.delete(email); // não mandou: a próxima tentativa tem que mandar
     console.error("resend", resposta.status, (await resposta.text()).slice(0, 300));
     return NextResponse.json(
       { ok: false, erro: "Não deu pra inscrever agora. Tente de novo em instantes." },

@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
 import { carregarPessoa } from "@/lib/pessoas";
 import { listaE } from "@/lib/site";
-import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
+import { capaOg, cartaoComCapas, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
@@ -23,7 +24,7 @@ export default async function Image({
 }) {
   const { slug } = await params;
   const p = await carregarPessoa(slug);
-  if (!p) return cartaoOg({ titulo: "Pessoa não encontrada" });
+  if (!p) notFound();
 
   const capas = (
     await Promise.all(p.livros.slice(0, 3).map((l) => (l.capaUrl ? capaOg(l.capaUrl) : null)))

@@ -1,5 +1,6 @@
+import { notFound } from "next/navigation";
 import { carregarFala } from "@/lib/falas";
-import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
+import { capaOg, cartaoComCapas, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 import { formatTimestamp } from "@/lib/tempo";
 
 export const size = OG_SIZE;
@@ -22,7 +23,7 @@ export default async function Image({
 }) {
   const { episodio, livro } = await params;
   const f = await carregarFala(episodio, livro);
-  if (!f) return cartaoOg({ titulo: "Fala não encontrada" });
+  if (!f) notFound();
 
   const capa = f.livro.capaUrl ? await capaOg(f.livro.capaUrl) : null;
   return cartaoComCapas({

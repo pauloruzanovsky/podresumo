@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/dados";
 import { tituloEpisodio } from "@/lib/falas";
-import { capaOg, cartaoComCapas, cartaoOg, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
+import { capaOg, cartaoComCapas, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og";
 import { resolverEpisodio } from "@/lib/resolver";
 
 export const size = OG_SIZE;
@@ -24,14 +25,14 @@ export default async function Image({
 }) {
   const { id } = await params;
   const ref = await resolverEpisodio(id);
-  if (!ref) return cartaoOg({ titulo: "Episódio não encontrado" });
+  if (!ref) notFound();
 
   const { data: ep } = await supabase
     .from("episodes")
     .select("titulo, ep_number, podcasts(nome), episode_livros(livros(tipo, capa_url))")
     .eq("id", ref.id)
     .single();
-  if (!ep) return cartaoOg({ titulo: "Episódio não encontrado" });
+  if (!ep) notFound();
 
   const livros = ((ep.episode_livros ?? []) as any[])
     .map((r) => r.livros)
