@@ -149,7 +149,7 @@ body {
    empurra a página. A de cima fica em 0; só 1 e 2 aparecem atrás dela. */
 .baralho {
   display: grid;
-  padding: 22px 18px 30px 14px;
+  padding: 16px 18px 30px 14px;
   touch-action: pan-y;
 }
 .carta {
@@ -158,9 +158,9 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 28px;
+  gap: 20px;
   min-width: 0;
-  padding: 26px 24px 24px;
+  padding: 22px 22px 20px;
   border-radius: 24px;
   background: var(--tema-carta-1);
   box-shadow:
@@ -208,15 +208,17 @@ body {
 .baralho.arrastando .carta {
   cursor: grabbing;
 }
+/* No celular a carta divide a primeira tela com o título: fonte um pouco
+   menor, pro "Ouvir o trecho" caber sem rolar. */
 .carta blockquote {
-  font-size: 1.375rem;
-  line-height: 1.3;
+  font-size: 1.25rem;
+  line-height: 1.28;
 }
 .carta[data-tamanho="media"] blockquote {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
 }
 .carta[data-tamanho="curta"] blockquote {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1.22;
 }
 @media (min-width: 640px) {

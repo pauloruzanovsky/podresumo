@@ -19,6 +19,14 @@ import { LinhaRanking } from "@/components/RankingEmComum";
 // só gastava CPU e ISR writes com robôs (cota da Vercel estourada em nov/2026).
 export const revalidate = false;
 
+/**
+ * Fala que anuncia o assunto do episódio ("Hoje vamos falar de mais um livro,
+ * o Almanaque…") é recomendação no papel, mas na carta do dia não diz nada
+ * sobre o livro. Fica fora do baralho; a página do livro continua mostrando.
+ */
+const ABERTURA_DE_EPISODIO =
+  /^\W*(hoje|nesse|neste|no) (a gente |n[óo]s )?(vamos|vai|epis[óo]dio|v[íi]deo)|^\W*(fala,? )?(pessoal|galera)\b|^\W*(bem[- ]vindos?|sejam? bem[- ]vind)/i;
+
 interface LivroCard {
   id: string;
   titulo: string;
@@ -150,7 +158,10 @@ export default async function Home() {
         r.livros?.capa_url &&
         !livroDaCasa(r.livros?.autor) &&
         r.citacao_literal.length >= 70 &&
-        r.citacao_literal.length <= 200
+        // a mesa tem a altura da fala mais longa: com 200 o botão de ouvir
+        // caía pra fora da primeira tela no celular
+        r.citacao_literal.length <= 170 &&
+        !ABERTURA_DE_EPISODIO.test(r.citacao_literal)
     )
     .sort((a, b) => sorteio(a) - sorteio(b))
     .filter((r) => !vistos.has(r.livros.id) && vistos.add(r.livros.id))
@@ -249,43 +260,45 @@ export default async function Home() {
       };
     })
     .filter((e) => e.total > 0)
-    .sort((a, b) => b.total - a.total);
+    // A casa primeiro: o Os Sócios (em português) abre a lista, mesmo com
+    // menos livros que o Ferriss. Depois, por tamanho.
+    .sort(
+      (a, b) =>
+        Number(PODCASTS_EM_INGLES.includes(a.nome)) - Number(PODCASTS_EM_INGLES.includes(b.nome)) ||
+        b.total - a.total
+    );
 
   return (
     <div className="-mt-6 sm:-mt-4">
       <MuralCapas capas={mural} />
 
-      {/* Hero + Busca — compacto no celular: a newsletter precisa caber na
-          primeira tela. O selo "N livros descobertos" saiu: repetia os
-          números que já vêm logo abaixo. */}
-      <div className="text-center mb-10 sm:mb-16">
-        <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-3 sm:mb-5 leading-tight sm:leading-[1.08]">
-          {/* Os números são o que só o Podlibris tem; "O que ler em seguida"
-              serviria pra qualquer site de livros. */}
-          {totalLivros.toLocaleString("pt-BR")} livros citados em{" "}
-          <span className="whitespace-nowrap">
-            {totalEpisodes.toLocaleString("pt-BR")} episódios.
-          </span>{" "}
-          <span className="italic text-muted sm:block">
-            Cada um com o minuto exato.
-          </span>
-        </h1>
-        <p className="hidden sm:block text-muted text-lg max-w-xl mx-auto leading-relaxed mb-8">
-          A fala de quem citou cada livro, com um toque pra ouvir o trecho.
-        </p>
-
-        <div className="mt-4 sm:mt-0">
-          <HomeSearch />
+      {/* Primeira tela: título, a carta da citação do dia e a busca. A carta
+          é o diferencial (a fala e o minuto) e antes só aparecia depois de
+          rolar uma tela inteira no celular, abaixo de um segundo título que
+          repetia o primeiro. A newsletter desceu pra logo depois. */}
+      {destaques.length > 0 ? (
+        <BaralhoCitacoes
+          falas={destaques}
+          titulo={<Titulo livros={totalLivros} episodios={totalEpisodes} />}
+          // o bloco dá a largura: direto no flex, o mx-auto da busca a encolhia
+          abaixo={
+            <div className="w-full">
+              <HomeSearch />
+            </div>
+          }
+        />
+      ) : (
+        <div className="text-center">
+          <Titulo livros={totalLivros} episodios={totalEpisodes} />
+          <div className="mt-6">
+            <HomeSearch />
+          </div>
         </div>
+      )}
 
-        {/* Newsletter na primeira tela: abaixo da busca, que segue sendo a
-            ação principal, num cartão mais discreto que ela. */}
-        <div className="max-w-3xl mx-auto mt-4 sm:mt-6">
-          <Newsletter variante="hero" capas={recentes} />
-        </div>
+      <div className="max-w-3xl mx-auto mt-8 mb-14 sm:mt-12 sm:mb-16">
+        <Newsletter variante="hero" capas={recentes} />
       </div>
-
-      {destaques.length > 0 && <BaralhoCitacoes falas={destaques} />}
 
       {/* O top 10 dos livros citados em todos os podcasts, já aberto: é o que
           só aparece juntando os programas, e chama mais atenção que um link */}
@@ -354,7 +367,7 @@ export default async function Home() {
                         <span className="block text-[10px] uppercase tracking-widest text-muted">
                           A estante de
                         </span>
-                        <span className="block font-serif text-2xl font-semibold leading-tight group-hover:underline">
+                        <span className="block font-serif text-xl sm:text-2xl font-semibold leading-tight group-hover:underline">
                           {e.nome}
                         </span>
                         <SeloEstante estante={selos.find((s) => s.slug === e.slug)} className="mt-1" />
@@ -366,9 +379,12 @@ export default async function Home() {
                   </div>
                 </Link>
 
-                {/* Pódio: o gosto da estante, cada item leva pra ela já filtrada */}
+                {/* Pódio: o gosto da estante, cada item leva pra ela já filtrada.
+                    Só no computador: no celular os três pódios faziam cada
+                    estante ocupar mais de uma tela, e a página do podcast já
+                    tem os placares completos. */}
                 <div
-                  className={`grid grid-cols-1 gap-6 mt-6 pt-6 border-t border-border ${
+                  className={`hidden md:grid grid-cols-1 gap-6 mt-6 pt-6 border-t border-border ${
                     estantes.length > 1 ? "" : "md:grid-cols-3"
                   }`}
                 >
@@ -436,6 +452,18 @@ export default async function Home() {
         </Section>
       )}
     </div>
+  );
+}
+
+/** Os números são o que só o Podlibris tem; "O que ler em seguida" serviria
+ *  pra qualquer site de livros. */
+function Titulo({ livros, episodios }: { livros: number; episodios: number }) {
+  return (
+    <h1 className="font-serif text-[1.75rem] sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.12] text-balance">
+      {livros.toLocaleString("pt-BR")} livros citados em{" "}
+      <span className="whitespace-nowrap">{episodios.toLocaleString("pt-BR")} episódios.</span>{" "}
+      <span className="italic text-muted">Cada um com a fala e o minuto exato.</span>
+    </h1>
   );
 }
 

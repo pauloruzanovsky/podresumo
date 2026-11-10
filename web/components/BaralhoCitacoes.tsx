@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import BookCover from "./BookCover";
 import Compartilhar from "./Compartilhar";
 import { hrefEpisodio, hrefFala, hrefLivro } from "@/lib/links";
@@ -43,7 +43,17 @@ interface Arrasto {
   ativo: boolean;
 }
 
-export default function BaralhoCitacoes({ falas }: { falas: Destaque[] }) {
+export default function BaralhoCitacoes({
+  falas,
+  titulo,
+  abaixo,
+}: {
+  falas: Destaque[];
+  /** O título da home, acima da carta no celular e à esquerda no computador. */
+  titulo: ReactNode;
+  /** O que vem depois da carta (a busca). */
+  abaixo: ReactNode;
+}) {
   const [topo, setTopo] = useState(0);
   const [pronto, setPronto] = useState(false);
   const mesa = useRef<HTMLDivElement>(null);
@@ -140,28 +150,17 @@ export default function BaralhoCitacoes({ falas }: { falas: Destaque[] }) {
 
   return (
     <section
-      className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-x-14 gap-y-6 lg:items-center mb-14 sm:mb-16"
+      className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-x-14 gap-y-4 sm:gap-y-6"
       aria-label="Citações dos episódios"
     >
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-3">
-          Na voz de quem recomendou
-        </p>
-        <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] text-balance">
-          Cada livro, a fala e o minuto.
-        </h2>
-        <Setas
-          className="hidden lg:flex mt-8"
-          visivel={pronto && n > 1}
-          posicao={topo + 1}
-          total={n}
-          aoPassar={passar}
-        />
-      </div>
+      {/* No celular a ordem é título, carta, busca: a carta é o que só este
+          site tem e precisa aparecer sem rolar. No computador o título e a
+          busca dividem a coluna da esquerda e a carta ocupa a da direita. */}
+      <div className="lg:self-end">{titulo}</div>
 
       <div
         ref={mesa}
-        className="baralho"
+        className="baralho lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center"
         onPointerDown={aoApertar}
         onPointerMove={aoMover}
         onPointerUp={aoSoltar}
@@ -256,13 +255,16 @@ export default function BaralhoCitacoes({ falas }: { falas: Destaque[] }) {
         })}
       </div>
 
-      <Setas
-        className="flex lg:hidden justify-center"
-        visivel={pronto && n > 1}
-        posicao={topo + 1}
-        total={n}
-        aoPassar={passar}
-      />
+      <div className="lg:self-start flex flex-col gap-5 lg:gap-6">
+        <Setas
+          className="flex justify-center lg:justify-start lg:order-last"
+          visivel={pronto && n > 1}
+          posicao={topo + 1}
+          total={n}
+          aoPassar={passar}
+        />
+        {abaixo}
+      </div>
     </section>
   );
 }

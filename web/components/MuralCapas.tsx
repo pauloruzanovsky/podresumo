@@ -68,7 +68,7 @@ export default function MuralCapas({ capas }: { capas: CapaMural[] }) {
   const meio = Math.ceil(capas.length / 2);
   return (
     <div
-      className="mural relative -mx-8 lg:-mx-12 mb-8 sm:mb-12 flex flex-col gap-3 sm:gap-4 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
+      className="mural relative -mx-8 lg:-mx-12 mb-5 sm:mb-12 flex flex-col gap-3 sm:gap-4 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
       aria-label="Livros citados"
     >
       <Fileira capas={capas.slice(0, meio)} sentido="ida" duracao="110s" carregar="eager" />
