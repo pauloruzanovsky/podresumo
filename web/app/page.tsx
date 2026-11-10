@@ -459,7 +459,8 @@ export default async function Home() {
  *  pra qualquer site de livros. */
 function Titulo({ livros, episodios }: { livros: number; episodios: number }) {
   return (
-    <h1 className="font-serif text-[1.75rem] sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.12] text-balance">
+    // centralizado enquanto a carta vem embaixo; à esquerda quando vira coluna
+    <h1 className="font-serif text-[1.75rem] sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.12] text-balance text-center lg:text-left">
       {livros.toLocaleString("pt-BR")} livros citados em{" "}
       <span className="whitespace-nowrap">{episodios.toLocaleString("pt-BR")} episódios.</span>{" "}
       <span className="italic text-muted">Cada um com a fala e o minuto exato.</span>
