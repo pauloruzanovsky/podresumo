@@ -11,7 +11,7 @@ import { slugify } from "@/lib/slug";
  * Lista enxuta das citações de um livro: uma linha por episódio, com quem
  * citou e o minuto, e a fala recolhida. Usada quando o livro tem citações
  * demais pra caber em cards. O filtro por pessoa responde "o que fulano disse
- * sobre este livro?".
+ * sobre este livro?", e o de podcast, "o que cada programa disse?".
  */
 export interface CitacaoLinha {
   episode_id: string;
@@ -48,16 +48,26 @@ export default function ListaCitacoes({
   citacoes: CitacaoLinha[];
   livro: LivroDaLista;
 }) {
+  const [podcast, setPodcast] = useState<string | null>(null);
   const [pessoa, setPessoa] = useState<string | null>(null);
 
-  // Quem citou e quantas vezes, do que mais citou pro que menos.
-  const pessoas = useMemo(() => {
-    const n = new Map<string, number>();
-    for (const c of citacoes) if (c.quem_citou) n.set(c.quem_citou, (n.get(c.quem_citou) ?? 0) + 1);
-    return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, [citacoes]);
+  // Cada filtro conta dentro do outro: com um podcast escolhido, a lista de
+  // quem citou só traz quem falou do livro ali, e vice-versa.
+  const podcasts = useMemo(
+    () => contagem(citacoes.filter((c) => !pessoa || c.quem_citou === pessoa), (c) => c.podcast),
+    [citacoes, pessoa]
+  );
+  const pessoas = useMemo(
+    () => contagem(citacoes.filter((c) => !podcast || c.podcast === podcast), (c) => c.quem_citou),
+    [citacoes, podcast]
+  );
+  const totalPodcasts = useMemo(() => new Set(citacoes.map((c) => c.podcast).filter(Boolean)).size, [citacoes]);
+  const totalPessoas = useMemo(() => new Set(citacoes.map((c) => c.quem_citou).filter(Boolean)).size, [citacoes]);
 
-  const visiveis = pessoa ? citacoes.filter((c) => c.quem_citou === pessoa) : citacoes;
+  const visiveis = citacoes.filter(
+    (c) => (!podcast || c.podcast === podcast) && (!pessoa || c.quem_citou === pessoa)
+  );
+  const filtrando = podcast !== null || pessoa !== null;
 
   return (
     <section className="mt-8">
@@ -65,29 +75,50 @@ export default function ListaCitacoes({
         Todas as {citacoes.length} citações
       </h3>
 
-      {/* Só vale filtrar quando mais de uma pessoa citou o livro. */}
-      {pessoas.length > 1 && (
+      {/* Só vale filtrar quando há mais de um podcast ou mais de uma pessoa.
+          Select nativo: com dezenas de nomes, os botões viravam uma parede
+          antes da lista, e no celular o sistema abre a roleta própria. */}
+      {(totalPodcasts > 1 || totalPessoas > 1) && (
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs text-muted mr-1">Citado por</span>
-          {[["Todos", citacoes.length] as const, ...pessoas].map(([nome, n]) => {
-            const ativo = nome === "Todos" ? pessoa === null : pessoa === nome;
-            return (
+          {totalPodcasts > 1 && (
+            <Filtro
+              rotulo="Podcast"
+              todos="Todos os podcasts"
+              valor={podcast}
+              opcoes={podcasts}
+              aoMudar={(v) => {
+                setPodcast(v);
+                // quem citou só noutro podcast sairia com a lista vazia
+                if (v && pessoa && !citacoes.some((c) => c.podcast === v && c.quem_citou === pessoa)) {
+                  setPessoa(null);
+                }
+              }}
+            />
+          )}
+          {totalPessoas > 1 && (
+            <Filtro
+              rotulo="Quem citou"
+              todos="Todos que citaram"
+              valor={pessoa}
+              opcoes={pessoas}
+              aoMudar={setPessoa}
+            />
+          )}
+          {filtrando && (
+            <span className="text-xs text-muted">
+              {visiveis.length} de {citacoes.length}
               <button
-                key={nome}
                 type="button"
-                onClick={() => setPessoa(nome === "Todos" || ativo ? null : nome)}
-                aria-pressed={ativo}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  ativo
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-card text-muted border-border hover:text-foreground hover:border-foreground/20"
-                }`}
+                onClick={() => {
+                  setPodcast(null);
+                  setPessoa(null);
+                }}
+                className="ml-2 underline hover:text-foreground"
               >
-                {nome}
-                <span className={ativo ? "ml-1.5 opacity-60" : "ml-1.5 text-muted/60"}>{n}</span>
+                limpar
               </button>
-            );
-          })}
+            </span>
+          )}
         </div>
       )}
 
@@ -108,6 +139,63 @@ export default function ListaCitacoes({
         </ol>
       </div>
     </section>
+  );
+}
+
+/** [nome, quantas citações], de quem mais aparece pro que menos. */
+function contagem(citacoes: CitacaoLinha[], chave: (c: CitacaoLinha) => string | null) {
+  const n = new Map<string, number>();
+  for (const c of citacoes) {
+    const k = chave(c);
+    if (k) n.set(k, (n.get(k) ?? 0) + 1);
+  }
+  return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function Filtro({
+  rotulo,
+  todos,
+  valor,
+  opcoes,
+  aoMudar,
+}: {
+  rotulo: string;
+  todos: string;
+  valor: string | null;
+  opcoes: [string, number][];
+  aoMudar: (v: string | null) => void;
+}) {
+  const ativo = valor !== null;
+  return (
+    <label className={`relative inline-flex min-w-0 max-w-full ${ativo ? "text-background" : "text-muted"}`}>
+      <span className="sr-only">{rotulo}</span>
+      <select
+        value={valor ?? ""}
+        onChange={(e) => aoMudar(e.target.value || null)}
+        className={`appearance-none max-w-full truncate pl-3.5 pr-8 py-1.5 rounded-full text-xs font-medium border cursor-pointer transition-colors outline-none ${
+          ativo
+            ? "bg-foreground text-background border-foreground"
+            : "bg-card text-muted border-border hover:text-foreground hover:border-foreground/20"
+        }`}
+      >
+        <option value="">{todos}</option>
+        {opcoes.map(([nome, n]) => (
+          <option key={nome} value={nome}>
+            {nome} ({n})
+          </option>
+        ))}
+      </select>
+      <svg
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </label>
   );
 }
 

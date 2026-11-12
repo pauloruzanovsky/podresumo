@@ -123,9 +123,12 @@ export default function Newsletter({
 
   if (hero) {
     return (
+      // id: destino do "Te aviso por e-mail" da home; scroll-mt pro menu fixo
+      // não cobrir a faixa
       <section
+        id="newsletter"
         aria-label="Newsletter semanal"
-        className="bg-card border border-border rounded-2xl p-4 sm:p-5 text-left"
+        className="bg-card border border-border rounded-2xl p-4 sm:p-5 text-left scroll-mt-24"
       >
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex items-center gap-4 min-w-0 md:flex-1">

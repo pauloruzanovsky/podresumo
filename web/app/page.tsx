@@ -464,7 +464,7 @@ export default async function Home() {
                 <h3 className="font-serif text-lg sm:text-xl font-semibold">
                   Chegando às estantes
                 </h3>
-                <a href="#email-hero" className="text-sm text-muted hover:text-foreground hover:underline">
+                <a href="#newsletter" className="text-sm text-muted hover:text-foreground hover:underline">
                   Te aviso por e-mail quando abrirem →
                 </a>
               </div>
