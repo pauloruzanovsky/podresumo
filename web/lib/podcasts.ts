@@ -74,6 +74,42 @@ export function podcastVisivel(nome?: string | null): boolean {
 }
 
 /**
+ * Estantes anunciadas que ainda não têm episódio no banco: aparecem na home
+ * como "chegando", sem página própria (não há link pra estante vazia). Ao
+ * publicar o podcast, tirar daqui: a estante de verdade toma o lugar.
+ * Capa: a mesma busca da Apple Podcasts de `flows/capas_podcasts`.
+ */
+export interface EstanteEmBreve {
+  nome: string;
+  apresentador: string;
+  capa: string;
+}
+
+export const ESTANTES_EM_BREVE: EstanteEmBreve[] = [
+  {
+    nome: "Primocast",
+    apresentador: "Thiago Nigro",
+    capa: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/74/e6/42/74e64223-1639-a713-931f-5a824b7bb3a8/mza_7184285444775230214.jpg/600x600bb.jpg",
+  },
+  {
+    // o antigo Stock Pickers, que o Salomão levou pra Market Makers
+    nome: "Market Makers",
+    apresentador: "Thiago Salomão",
+    capa: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/c0/0a/1e/c00a1e22-03e1-ba6a-fef1-bd2c7efd2822/mza_3684500461907909266.jpg/600x600bb.jpg",
+  },
+  {
+    nome: "Founders",
+    apresentador: "David Senra",
+    capa: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/ed/71/4f/ed714f67-f095-a4ef-f38e-d8c02300666a/mza_11432355988627368701.jpg/600x600bb.jpg",
+  },
+  {
+    nome: "The Knowledge Project",
+    apresentador: "Shane Parrish",
+    capa: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/4a/9c/e2/4a9ce2fd-ddf6-0d00-8760-4e7167378ecf/mza_16600443422050351456.jpeg/600x600bb.jpg",
+  },
+];
+
+/**
  * Podcasts que a rotina semanal acompanha: entram na lista quando a rotina
  * passa a baixá-los. Os demais são uma seleção de episódios, e o selo diz isso.
  */

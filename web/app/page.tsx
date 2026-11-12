@@ -1,5 +1,12 @@
 import { supabase, todas } from "@/lib/dados";
-import { APRESENTADORES, PODCASTS_EM_INGLES, estantesDoMenu, livroDaCasa, podcastVisivel } from "@/lib/podcasts";
+import {
+  APRESENTADORES,
+  ESTANTES_EM_BREVE,
+  PODCASTS_EM_INGLES,
+  estantesDoMenu,
+  livroDaCasa,
+  podcastVisivel,
+} from "@/lib/podcasts";
 import { Posicao } from "@/components/Rankings";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
@@ -267,6 +274,10 @@ export default async function Home() {
         Number(PODCASTS_EM_INGLES.includes(a.nome)) - Number(PODCASTS_EM_INGLES.includes(b.nome)) ||
         b.total - a.total
     );
+  // Podcast publicado sai do "em breve" mesmo se esquecerem de tirar da lista
+  const emBreve = ESTANTES_EM_BREVE.filter(
+    (p) => !estantes.some((e) => e.nome.toLowerCase() === p.nome.toLowerCase())
+  );
 
   return (
     <div className="-mt-6 sm:-mt-4">
@@ -444,6 +455,35 @@ export default async function Home() {
               </div>
             ))}
           </div>
+
+          {/* As próximas estantes: prateleira vazia, sem link pra página
+              nenhuma; o convite é a newsletter, que avisa quando abrir. */}
+          {emBreve.length > 0 && (
+            <div className="mt-5 p-5 sm:p-6 bg-card border border-dashed border-border rounded-2xl">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="font-serif text-lg sm:text-xl font-semibold">
+                  Chegando às estantes
+                </h3>
+                <a href="#email-hero" className="text-sm text-muted hover:text-foreground hover:underline">
+                  Te aviso por e-mail quando abrirem →
+                </a>
+              </div>
+              <ul className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5">
+                {emBreve.map((p) => (
+                  <li key={p.nome} className="min-w-0">
+                    <div className="relative">
+                      <CapaPodcast capa={p.capa} className="w-full rounded-xl shadow-md opacity-80" />
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-background/90 text-[10px] uppercase tracking-widest text-foreground">
+                        Em breve
+                      </span>
+                    </div>
+                    <span className="mt-2 block text-sm font-medium leading-snug truncate">{p.nome}</span>
+                    <span className="block text-xs text-muted truncate">{p.apresentador}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Section>
       )}
     </div>
