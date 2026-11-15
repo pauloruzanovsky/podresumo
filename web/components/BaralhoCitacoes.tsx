@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import BookCover from "./BookCover";
 import Compartilhar from "./Compartilhar";
 import { hrefEpisodio, hrefFala, hrefLivro } from "@/lib/links";
@@ -158,14 +158,15 @@ export default function BaralhoCitacoes({
           tela. No computador o título e a busca dividem a coluna da
           esquerda e a carta ocupa a da direita. */}
       <div className="lg:self-end flex flex-col gap-5 lg:gap-6">
-        {titulo}
+        <div className="entra">{titulo}</div>
         {/* o bloco dá a largura: direto no flex, o mx-auto da busca a encolhia */}
-        <div className="w-full">{busca}</div>
+        <div className="w-full entra" style={{ "--atraso": "90ms" } as CSSProperties}>{busca}</div>
       </div>
 
       <div
         ref={mesa}
-        className="baralho lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center"
+        style={{ "--atraso": "180ms" } as CSSProperties}
+        className="entra baralho lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center"
         onPointerDown={aoApertar}
         onPointerMove={aoMover}
         onPointerUp={aoSoltar}

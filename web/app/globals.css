@@ -330,3 +330,92 @@ a:has(> .bg-card) {
     animation: none !important;
   }
 }
+
+/* ── Acabamento (nov/2026) ─────────────────────────────────────────────
+   Superfícies do navegador na paleta do site: seleção, cursor, foco e a
+   barra de rolagem do Firefox. Sem isto, elas saíam com o azul padrão. */
+::selection {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+input,
+textarea {
+  caret-color: var(--color-accent);
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+html {
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* No celular: campo com letra menor que 16px faz o iPhone dar zoom ao tocar */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A primeira tela entra uma vez, em sequência: título, busca, carta. Em
+     CSS e não em JavaScript, pra aparecer já no primeiro desenho mesmo
+     num celular lento. */
+  .entra {
+    animation: entra 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* O contador (components/ui/number-ticker) some só até começar a contar */
+  [data-js] [data-ticker]:not([data-pronto]) {
+    opacity: 0;
+    /* se o JavaScript travar, o número aparece sozinho mesmo assim */
+    animation: ticker-aparece 0s 1.5s forwards;
+  }
+
+  /* Botão afunda de leve ao apertar: resposta imediata no toque */
+  button:not(:disabled):active,
+  a.rounded-full:active {
+    transform: scale(0.97);
+    transition: transform 100ms ease-out;
+  }
+
+  /* A linha do ranking abre deslizando em vez de pular (onde o navegador
+     sabe animar até "auto"; nos outros, abre como antes) */
+  @supports (interpolate-size: allow-keywords) {
+    details.abre-suave {
+      interpolate-size: allow-keywords;
+    }
+    details.abre-suave::details-content {
+      block-size: 0;
+      overflow: clip;
+      transition:
+        block-size 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        content-visibility 280ms allow-discrete;
+    }
+    details.abre-suave[open]::details-content {
+      block-size: auto;
+    }
+  }
+}
+
+@keyframes entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes ticker-aparece {
+  to {
+    opacity: 1;
+  }
+}

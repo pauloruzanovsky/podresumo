@@ -3,6 +3,7 @@ import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import Compartilhar from "@/components/Compartilhar";
 import Newsletter from "@/components/Newsletter";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { curto, LinhaRanking, plural } from "@/components/RankingEmComum";
 import { CAMINHO_EM_COMUM as CAMINHO, carregarEmComum, type LivroEmComum } from "@/lib/emComum";
 import { hrefLivro } from "@/lib/links";
@@ -111,14 +112,11 @@ export default async function LivrosEmComumPage() {
             ))}
           </div>
         )}
-        <p className="text-xs uppercase tracking-widest text-muted mb-3">
-          Os {podcasts} podcasts, cruzados
-        </p>
         <h1 className="font-serif text-3xl sm:text-5xl font-semibold tracking-tight leading-tight mb-4">
           Os livros que todo mundo cita
         </h1>
         <p className="text-muted text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
-          <span className="font-semibold text-foreground">{livros.length}</span> livros aparecem em mais de
+          <NumberTicker value={livros.length} className="font-semibold text-foreground" /> livros aparecem em mais de
           um podcast. Toque num livro pra ver o que cada programa disse, com o minuto exato.
         </p>
         <div className="flex justify-center mt-5">
@@ -143,6 +141,7 @@ export default async function LivrosEmComumPage() {
                   key={l.id}
                   l={l}
                   i={inicio.get(g.n)! + i}
+                  entrada={i}
                   carregar={gi === 0 && i < 6 ? "eager" : undefined}
                 />
               ))}

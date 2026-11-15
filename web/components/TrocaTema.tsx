@@ -10,7 +10,7 @@
 const CHAVE = "tema";
 
 /** Roda no <head>: escolha salva, senão a preferência do sistema. */
-export const SCRIPT_TEMA = `try{var t=localStorage.getItem("${CHAVE}");if(t!=="claro"&&t!=="escuro")t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.theme=t==="escuro"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}`;
+export const SCRIPT_TEMA = `document.documentElement.dataset.js="";try{var t=localStorage.getItem("${CHAVE}");if(t!=="claro"&&t!=="escuro")t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.theme=t==="escuro"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}`;
 
 export default function TrocaTema() {
   function trocar() {

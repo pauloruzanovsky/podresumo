@@ -19,6 +19,7 @@ import Newsletter from "@/components/Newsletter";
 import MuralCapas, { type CapaMural } from "@/components/MuralCapas";
 import BaralhoCitacoes, { type Destaque } from "@/components/BaralhoCitacoes";
 import { carregarEmComum } from "@/lib/emComum";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { LinhaRanking } from "@/components/RankingEmComum";
 
 // Sem prazo: o site lê o retrato do banco tirado no build (lib/dados.ts), então
@@ -316,7 +317,7 @@ export default async function Home() {
         >
           <ol className="flex flex-col gap-2.5">
             {emComum.livros.slice(0, 10).map((l, i) => (
-              <LinhaRanking key={l.id} l={l} i={i} />
+              <LinhaRanking key={l.id} l={l} i={i} entrada={i} />
             ))}
           </ol>
           <div className="flex justify-center mt-5">
@@ -496,8 +497,10 @@ function Titulo({ livros, episodios }: { livros: number; episodios: number }) {
   return (
     // centralizado enquanto a carta vem embaixo; à esquerda quando vira coluna
     <h1 className="font-serif text-[1.75rem] sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.12] text-balance text-center lg:text-left">
-      {livros.toLocaleString("pt-BR")} livros citados em{" "}
-      <span className="whitespace-nowrap">{episodios.toLocaleString("pt-BR")} episódios.</span>{" "}
+      <NumberTicker value={livros} /> livros citados em{" "}
+      <span className="whitespace-nowrap">
+        <NumberTicker value={episodios} delay={0.1} /> episódios.
+      </span>{" "}
       <span className="italic text-muted">Cada um com a fala e o minuto exato.</span>
     </h1>
   );

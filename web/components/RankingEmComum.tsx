@@ -2,6 +2,7 @@ import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import CapaPodcast from "@/components/CapaPodcast";
 import ComprarAmazon from "@/components/ComprarAmazon";
+import { BlurFade } from "@/components/ui/blur-fade";
 import { Posicao } from "@/components/Rankings";
 import type { FalaNoPodcast, LivroEmComum } from "@/lib/emComum";
 import { hrefEpisodio, hrefFala, hrefLivro, hrefPessoa, linkAmazon, linkAmazonEua } from "@/lib/links";
@@ -88,10 +89,22 @@ function Fala({ f, livro }: { f: FalaNoPodcast; livro: LivroEmComum }) {
  * ficam recolhidas (details): aberta, a lista inteira virava um paredão de
  * texto e deixava de parecer ranking.
  */
-export function LinhaRanking({ l, i, carregar }: { l: LivroEmComum; i: number; carregar?: "eager" }) {
+export function LinhaRanking({
+  l,
+  i,
+  carregar,
+  entrada,
+}: {
+  l: LivroEmComum;
+  i: number;
+  carregar?: "eager";
+  /** posição na lista visível: as linhas entram em cascata quando aparecem */
+  entrada?: number;
+}) {
   return (
     <li>
-      <details className="group bg-card border border-border rounded-2xl open:shadow-[0_18px_40px_-24px_rgba(43,37,33,0.45)] transition-shadow">
+      <BlurFade inView delay={(entrada ?? 0) < 8 ? (entrada ?? 0) * 0.04 : 0} duration={0.35} offset={8} blur="4px">
+      <details className="abre-suave group bg-card border border-border rounded-2xl open:shadow-[0_18px_40px_-24px_rgba(43,37,33,0.45)] transition-shadow">
         <summary className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
           <Posicao i={i} />
           {/* a capa leva à página do livro; o resto da linha abre as falas */}
@@ -155,6 +168,7 @@ export function LinhaRanking({ l, i, carregar }: { l: LivroEmComum; i: number; c
           </div>
         </div>
       </details>
+      </BlurFade>
     </li>
   );
 }
