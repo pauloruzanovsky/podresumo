@@ -2,24 +2,70 @@ name: Deploy diário
 
 # O site lê um retrato do banco tirado no build (web/scripts/retrato.mjs), e
 # dado novo só entra com deploy novo. O pipeline pede o deploy no fim de cada
-# coleta (pipeline/flows/atualizar_site.py), no máximo uma vez por hora; este
-# deploy diário pega o que ficou de fora e garante que o site nunca passe de
-# um dia atrás do banco.
+# coleta (pipeline/flows/atualizar_site.py), no máximo uma vez a cada 6 h;
+# este deploy diário pega o que ficou de fora e garante que o site nunca passe
+# de um dia atrás do banco.
 #
-# Precisa do secret VERCEL_DEPLOY_HOOK (o mesmo URL do pipeline/.env). Sem
-# ele o job só avisa e passa.
+# Só pede deploy se o banco mudou desde o último: cada deploy zera o cache da
+# Vercel, e os robôs remontam e regravam o site inteiro (~60 mil ISR writes por
+# passada; a cota grátis é 200 mil por mês, estourada em nov/2026). Compara a
+# versão do retrato que está no ar (/retrato-versao.txt, gravada no build) com
+# a do banco agora (`retrato.mjs --versao`, que só lê). Se não der pra
+# comparar (site ou banco sem resposta), pede o deploy como antes.
+#
+# Precisa dos secrets VERCEL_DEPLOY_HOOK (o mesmo URL do pipeline/.env),
+# SUPABASE_URL e SUPABASE_SERVICE_KEY (os mesmos do manter-banco-ativo). Sem o
+# hook o job só avisa e passa.
 
 on:
   schedule:
     - cron: "0 10 * * *" # todo dia 10:00 UTC = 07:00 em Brasília
   workflow_dispatch:
+    inputs:
+      forcar:
+        description: "Pedir o deploy mesmo se o banco não mudou"
+        type: boolean
+        default: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: web/scripts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ver se o banco mudou desde o último deploy
+        id: mudou
+        env:
+          FORCAR: ${{ inputs.forcar }}
+          # o retrato lê com estes nomes; a leitura é pública (RLS), então a
+          # chave de serviço vê as mesmas linhas que a anon do build
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ "$FORCAR" = "true" ]; then
+            echo "Deploy forçado à mão."
+            echo "deploy=sim" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          no_ar=$(curl -sSf --max-time 30 "https://podlibris.com/retrato-versao.txt" | tr -d '[:space:]') || no_ar=""
+          banco=$(node web/scripts/retrato.mjs --versao | tail -n 1 | tr -d '[:space:]') || banco=""
+          echo "Versão no ar: ${no_ar:-sem resposta}. Versão do banco: ${banco:-sem resposta}."
+          if [ -n "$no_ar" ] && [ "$no_ar" = "$banco" ]; then
+            echo "O site já tem os dados de hoje; nenhum deploy pedido."
+            echo "deploy=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=sim" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Pedir deploy à Vercel
+        if: steps.mudou.outputs.deploy == 'sim'
         env:
           HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: |
