@@ -27,6 +27,12 @@ Uso:
     python -m flows.newsletter --enviar <id>  # envia o rascunho que o Paulo aprovou
     python -m flows.newsletter --abertura "Esta semana..."
     python -m flows.newsletter --fala mastery,rapido-e-devagar  # abre com o 1º, depois os outros
+    python -m flows.newsletter --se-faltar    # só cria se a semana ainda não tem rascunho
+    python -m flows.newsletter --substituir   # cria e apaga o rascunho anterior da semana
+
+A semana é a de segunda a domingo; no domingo, a própria semana. A rotina de
+domingo à noite cria o rascunho depois da extração; a de segunda só refaz se
+a coleta do lote da API trouxer episódio dessa semana.
 """
 
 import argparse
@@ -123,8 +129,24 @@ def semana_de(dia: date) -> tuple[date, date]:
 
 def semana_passada(hoje: date) -> tuple[date, date]:
     """A semana fechada mais recente: gerado na segunda, na terça ou refeito no
-    meio da semana, o e-mail sai igual."""
+    meio da semana, o e-mail sai igual. No domingo é a própria semana: a
+    rotina de domingo à noite cria o rascunho logo depois da extração, pro
+    Paulo achá-lo pronto na segunda."""
+    if hoje.weekday() == 6:
+        return semana_de(hoje)
     return semana_de(hoje - timedelta(days=7))
+
+
+def criados_na_semana(semana: tuple[date, date]) -> list[dict]:
+    """Broadcasts criados a partir do domingo que fecha `semana`: o rascunho
+    dela nasce no domingo à noite ou na segunda."""
+    chave = os.getenv("RESEND_API_KEY")
+    r = requests.get("https://api.resend.com/broadcasts",
+                     headers={"Authorization": f"Bearer {chave}"}, timeout=30)
+    if r.status_code >= 300:
+        sys.exit(f"Resend recusou a lista de envios ({r.status_code}): {r.text[:200]}")
+    corte = semana[1].isoformat()
+    return [b for b in r.json()["data"] if b["created_at"][:10] >= corte]
 
 
 def carregar(semana: tuple[date, date]):
@@ -478,6 +500,7 @@ def criar_rascunho(assunto: str, html_email: str):
     etapas.registra("newsletter_rascunho", id=dados.get("id"), assunto=assunto)
     print(f"Rascunho criado: {assunto}\n  id no Resend: {dados.get('id')}")
     print("  revise e envie em resend.com/broadcasts")
+    return dados.get("id")
 
 
 def enviar(broadcast_id: str):
@@ -516,6 +539,10 @@ def main():
     p.add_argument("--abertura", help="texto do Paulo no topo do e-mail")
     p.add_argument("--teste", metavar="EMAIL", help="envia só pra este endereço, fora da lista")
     p.add_argument("--fala", metavar="SLUG", help="slugs, separados por vírgula, do livro que abre o e-mail e dos seguintes")
+    p.add_argument("--se-faltar", action="store_true",
+                   help="não cria se a semana já tem rascunho ou envio (a rotina de segunda, depois da de domingo)")
+    p.add_argument("--substituir", action="store_true",
+                   help="cria o rascunho novo e apaga os rascunhos anteriores da mesma semana")
     args = p.parse_args()
 
     if args.enviar:
@@ -523,6 +550,12 @@ def main():
         return
     semana = semana_de(args.semana) if args.semana else semana_passada(date.today())
     print(f"Semana: {semana[0]:%d/%m} a {semana[1]:%d/%m}", file=sys.stderr)
+    if args.se_faltar and not (args.simular or args.teste):
+        ja = criados_na_semana(semana)
+        if ja:
+            b = ja[0]
+            print(f"A semana já tem rascunho: {b['name']}  ({b['id']}, {b['status']}). Nada criado.")
+            return
     episodios, citacoes, placar, fora, acervo = carregar(semana)
     if not episodios:
         print("Nenhum episódio lançado nessa semana — sem e-mail.")
@@ -537,7 +570,16 @@ def main():
     if args.teste:
         enviar_teste(assunto, corpo, args.teste)
         return
-    criar_rascunho(assunto, corpo)
+    antigos = [b for b in criados_na_semana(semana) if b["status"] == "draft"] if args.substituir else []
+    novo = criar_rascunho(assunto, corpo)
+    # o rascunho velho sai do Resend: o botão de aprovar dele deixa de enviar
+    chave = os.getenv("RESEND_API_KEY")
+    for b in antigos:
+        if b["id"] == novo:
+            continue
+        r = requests.delete(f"https://api.resend.com/broadcasts/{b['id']}",
+                            headers={"Authorization": f"Bearer {chave}"}, timeout=30)
+        print(f"  rascunho anterior {'apagado' if r.status_code < 300 else 'NÃO apagado'}: {b['name']} ({b['id']})")
 
 
 if __name__ == "__main__":

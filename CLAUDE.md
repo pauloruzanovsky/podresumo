@@ -51,7 +51,9 @@ comitar chave.
 6. `preencher_slugs` — gera os endereços `/livro/<slug>` e `/episodio/<slug>`
    uma vez só; slug nunca é reescrito.
 7. `newsletter` — monta o e-mail da semana (episódios **lançados** de segunda a
-   domingo da semana passada) e deixa como **rascunho** no Resend (broadcast).
+   domingo; no domingo, a própria semana) e deixa como **rascunho** no Resend
+   (broadcast). Nasce na rotina de domingo, logo depois da extração;
+   `--se-faltar` não duplica e `--substituir` refaz apagando o anterior.
    Nunca envia sozinho: o rascunho aparece no chat com um botão de aprovar, e
    só depois do clique do Paulo `--enviar <id>` manda pra lista. `--fala
    slug1,slug2` escolhe a fala de abertura e os livros seguintes; `--teste
@@ -117,11 +119,14 @@ checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
   podcasts na assinatura (um subagente Opus por episódio; teste de 03/11
   empatou com a API). O que falhar vai pro lote da API, os mais recentes que
   cabem em R$ 10 no pior caso (`--ate-caber`); o resto espera a semana
-  seguinte. Episódio longo ≈ R$ 1 no pior caso.
+  seguinte. Episódio longo ≈ R$ 1 no pior caso. Depois busca capas e cria o
+  rascunho da newsletter da semana, com o botão de aprovar no chat da rotina:
+  o Paulo o acha pronto na segunda de manhã.
 - `podlibris-newsletter-semanal` — segunda 9h: coleta o lote (a coleta já
   preenche os slugs), grava os títulos PT/EN da semana anterior e envia os dos
   livros novos (`titulos_alt`, só se a estimativa for até US$ 1), busca capas e
-  cria o rascunho da newsletter.
+  só refaz o rascunho (`--substituir`) se a coleta gravou episódio; senão
+  `--se-faltar` mantém o de domingo.
 - `podlibris-painel` — todo dia às 4h: roda `flows.painel` e republica o
   painel de controle seguindo `pipeline/painel/PUBLICAR.md`. As rotinas de
   domingo e segunda também republicam no fim. Não gasta API.

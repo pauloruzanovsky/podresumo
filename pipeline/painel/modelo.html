@@ -290,7 +290,7 @@ const D = /*__DADOS__*/null;
 
   // 3b. newsletter
   const CURTO = {'Episódios da semana': 'Episódios', 'Lote coletado': 'Lote coletado', 'Rascunho criado': 'Rascunho', 'Aprovado pelo Paulo': 'Seu ok', 'Enviado': 'Enviado'};
-  const ESPERA = {'Episódios da semana': 'espera a semana fechar', 'Lote coletado': 'espera a coleta do lote', 'Rascunho criado': 'espera o rascunho de segunda', 'Aprovado pelo Paulo': 'espera seu ok', 'Enviado': 'espera o envio'};
+  const ESPERA = {'Episódios da semana': 'espera a semana fechar', 'Lote coletado': 'espera a coleta do lote', 'Rascunho criado': 'espera o rascunho, que sai domingo à noite', 'Aprovado pelo Paulo': 'espera seu ok', 'Enviado': 'espera o envio'};
   const nr = D.newsletter_resumo[0];
   const atual = nl.find((e) => e.status !== 'feito');
   $('nl-h').textContent = 'A newsletter de ' + nr.semana + ' ' + (atual ? ESPERA[atual.etapa] || 'está em andamento' : 'foi enviada');

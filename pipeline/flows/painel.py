@@ -398,7 +398,8 @@ def resend_todos(caminho: str, para=None, **params) -> list[dict]:
 def newsletter(log: list[dict], servicos: list[dict]) -> tuple[list[dict], dict]:
     hoje = date.today()
     ini, fim = semana_passada(hoje)
-    corte = iso(datetime.combine(fim + timedelta(days=1), datetime.min.time()))
+    # o rascunho nasce no domingo à noite (rotina de domingo) ou na segunda
+    corte = iso(datetime.combine(fim, datetime.min.time()))
     resumo = {"semana": f"{ini:%d/%m} a {fim:%d/%m}", "etapa_atual": None}
 
     eps = supabase.table("episodes").select("id, status").gte("data", ini.isoformat()).lte("data", fim.isoformat()).execute().data
@@ -419,7 +420,7 @@ def newsletter(log: list[dict], servicos: list[dict]) -> tuple[list[dict], dict]
     aprovado = next((e for e in reversed(log) if e["tipo"] == "newsletter_enviada" and e["at"] >= corte), None)
 
     passos = [
-        ("Episódios da semana", not faltam and hoje > fim,
+        ("Episódios da semana", not faltam and hoje >= fim,
          None, f"{len(eps)} episódio(s) lançado(s); {len(faltam)} ainda sem extração" if faltam else f"{len(eps)} episódio(s) lançado(s)"),
         ("Lote coletado", not faltam and not lote_aberto, coletado and coletado["at"],
          "lote da API esperando coleta" if lote_aberto else ""),
@@ -428,7 +429,7 @@ def newsletter(log: list[dict], servicos: list[dict]) -> tuple[list[dict], dict]
         ("Aprovado pelo Paulo", bool(enviado or aprovado), (aprovado and aprovado["at"]) or (enviado and iso(enviado["sent_at"])), ""),
         ("Enviado", bool(enviado), enviado and iso(enviado["sent_at"]), enviado["name"] if enviado else ""),
     ]
-    if not eps and hoje > fim:
+    if not eps and hoje >= fim:
         passos = [("Episódios da semana", True, None, "nenhum episódio lançado: sem e-mail esta semana")]
     linhas = []
     for i, (nome, ok, em, detalhe) in enumerate(passos, 1):
@@ -588,7 +589,7 @@ def webshare_cartao(servicos: list[dict], log: list[dict]):
 
 # ───────────────────────────────────────────────────────── main ───
 
-def pagina(rotinas_, acervo_resumo, nl_etapas, servicos) -> dict:
+def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log) -> dict:
     """O título (o ponto, numa frase) e os pedidos do topo da página."""
     frases, pedidos = [], []
     vercel = "https://vercel.com/pauloruzanovskys-projects/podresumo/usage"
@@ -609,7 +610,9 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos) -> dict:
     etapa = {e["etapa"]: e["status"] for e in nl_etapas}
     if etapa.get("Rascunho criado") == "feito" and etapa.get("Enviado") != "feito":
         frases.append("a newsletter espera seu ok")
-        pedidos.append({"texto": "Aprovar o rascunho da newsletter no chat da rotina de segunda",
+        ultimo = next((e for e in reversed(log) if e["tipo"] == "newsletter_rascunho"), None)
+        dia = "segunda" if ultimo and datetime.fromisoformat(ultimo["at"]).weekday() == 0 else "domingo"
+        pedidos.append({"texto": f"Aprovar o rascunho da newsletter no chat da rotina de {dia}",
                         "prazo": "terça de manhã", "link": "https://resend.com/broadcasts", "nivel": "atencao"})
     if any(s["servico"] == "Vercel" and s["status"] == "erro" for s in servicos):
         frases.append("a Vercel passou da cota grátis")
@@ -710,7 +713,7 @@ def main():
         "newsletter": nl_etapas,
         "newsletter_resumo": [nl_resumo],
         "servicos": servicos,
-        "pagina": pagina(lista_rotinas, acervo_resumo, nl_etapas, servicos),
+        "pagina": pagina(lista_rotinas, acervo_resumo, nl_etapas, servicos, log),
     }
     with open(SAIDA, "w", encoding="utf-8") as f:
         json.dump(painel, f, ensure_ascii=False, indent=1)
