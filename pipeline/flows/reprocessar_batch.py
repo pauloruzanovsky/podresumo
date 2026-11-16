@@ -374,7 +374,7 @@ def exportar(eps):
         print(f"  {e['id']}  {e['titulo'][:60]}")
 
 
-def grava_assinatura():
+def grava_assinatura(sem_deploy=False):
     """Grava as respostas da assinatura que passarem no schema. Cada uma vai
     antes pro cache (respostas/<id>.json, como a resposta paga), então
     `--do-cache` também a regrava. A que falhar fica na pasta e o episódio
@@ -436,7 +436,8 @@ def grava_assinatura():
         from flows.normalize_pessoas import main as normalize_pessoas
         normalize_pessoas()
         from flows.atualizar_site import main as atualizar_site
-        atualizar_site()
+        if not sem_deploy:
+            atualizar_site()
 
 
 # ─────────────────────────────────────────────────── síncrono ───
@@ -503,6 +504,8 @@ def main():
     p.add_argument("--ate-caber", action="store_true",
                    help="com --teto-brl: envia os mais recentes que cabem, em vez de nada")
     p.add_argument("--limite", type=int, help="processa só os N mais recentes")
+    p.add_argument("--sem-deploy", action="store_true",
+                   help="com --do-assinatura: não pede deploy (a rotina de domingo pede um só no fim)")
     p.add_argument("--podcast", help='só este podcast (trecho do nome, ex.: "socios")')
     p.add_argument("--pendentes", action="store_true",
                    help=f"só os ainda não extraídos com o prompt {VERSAO_PROMPT}")
@@ -529,7 +532,7 @@ def main():
     elif args.exportar:
         exportar(alvo())
     elif args.do_assinatura:
-        grava_assinatura()
+        grava_assinatura(sem_deploy=args.sem_deploy)
     elif args.sincrono:
         sincrono(alvo(), gravar=args.gravar)
     elif args.coletar:

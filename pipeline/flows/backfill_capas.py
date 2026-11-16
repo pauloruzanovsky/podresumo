@@ -13,8 +13,14 @@ Estratégia de busca, em ordem, até achar:
   2. só o título (nome de autor com "e", "coautor" etc. atrapalha o match)
   3. título sem subtítulo (corta em ":" ou " - ")
 
+Livro sem capa nas fontes é tentado de novo só depois de DIAS_RETENTAR dias
+(`respostas/capas_tentadas.json`). Antes disso cada rodada refazia os ~1.700
+sem capa, a maioria estudos científicos que nunca terão capa, e levava horas:
+a rotina de segunda cortava em 20 minutos e os livros novos ficavam sem capa.
+
 Uso:
-    python -m flows.backfill_capas            # só livros sem capa
+    python -m flows.backfill_capas            # livros sem capa: novos e os tentados há mais de 30 dias
+    python -m flows.backfill_capas --retentar # todos os sem capa, mesmo os tentados há pouco
     python -m flows.backfill_capas --refazer  # revisita todos
     python -m flows.backfill_capas --simular --limite 20   # mede sem gravar
 
@@ -46,6 +52,24 @@ CAPA = "https://covers.openlibrary.org/b/id/{}-M.jpg"
 # O Open Library pede um User-Agent identificável; sem ele a API responde 403.
 UA = "PodResumo/1.0 (acervo de livros citados em podcasts)"
 PAUSA = 0.35  # gentileza com uma API pública e gratuita
+TENTADAS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "respostas", "capas_tentadas.json")
+DIAS_RETENTAR = 30
+
+
+def le_tentadas() -> dict[str, str]:
+    """{id do livro: data da última busca sem sucesso}."""
+    try:
+        with open(TENTADAS, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def grava_tentadas(tentadas: dict[str, str]):
+    os.makedirs(os.path.dirname(TENTADAS), exist_ok=True)
+    with open(TENTADAS, "w", encoding="utf-8") as f:
+        json.dump(tentadas, f)
 
 # Capas escolhidas à mão (ver o próprio arquivo pra como usar). Valem acima
 # de qualquer busca e nunca são sobrescritas.
@@ -234,6 +258,10 @@ def main():
     parser.add_argument("--simular", action="store_true",
                         help="consulta e mostra o resultado, sem gravar")
     parser.add_argument("--limite", type=int, help="só os N primeiros")
+    parser.add_argument("--retentar", action="store_true",
+                        help=f"busca também os sem capa tentados nos últimos {DIAS_RETENTAR} dias")
+    parser.add_argument("--sem-deploy", action="store_true",
+                        help="não pede deploy (a rotina de domingo pede um só no fim)")
     args = parser.parse_args()
 
     try:
@@ -258,7 +286,16 @@ def main():
                 print(f"  capa manual: {livro['titulo']}")
     livros_busca = [l for l in livros if l["titulo"] not in manuais]
 
-    alvos = livros_busca if args.refazer else [l for l in livros_busca if not l.get("capa_url")]
+    tentadas = le_tentadas()
+    limite_data = time.strftime("%Y-%m-%d", time.localtime(time.time() - DIAS_RETENTAR * 86400))
+    if args.refazer:
+        alvos = livros_busca
+    else:
+        alvos = [l for l in livros_busca if not l.get("capa_url")
+                 and (args.retentar or tentadas.get(str(l["id"]), "") < limite_data)]
+        pulados = sum(1 for l in livros_busca if not l.get("capa_url")) - len(alvos)
+        if pulados:
+            print(f"{pulados} sem capa tentados nos últimos {DIAS_RETENTAR} dias ficam pra depois (--retentar busca todos)")
     if args.limite:
         alvos = alvos[:args.limite]
 
@@ -295,6 +332,11 @@ def main():
                 break
         if url:
             achou += 1
+            tentadas.pop(str(livro["id"]), None)
+        elif not args.simular:
+            tentadas[str(livro["id"])] = time.strftime("%Y-%m-%d")
+            if i % 50 == 0:
+                grava_tentadas(tentadas)  # sobrevive a uma rodada interrompida
         # Não apaga capa que já existia quando a busca de agora não achou nada.
         if not args.simular and (url or not livro.get("capa_url")):
             supabase.table("livros").update({"capa_url": url}).eq("id", livro["id"]).execute()
@@ -307,6 +349,8 @@ def main():
     ja_tinham = 0 if args.refazer else len([l for l in livros if l.get("capa_url")])
     total_com_capa = ja_tinham + achou
 
+    if not args.simular:
+        grava_tentadas(tentadas)
     print(f"\n=== {achou}/{len(alvos)} encontradas nesta rodada "
           f"({do_google} pelo Google Books) ===")
     if args.simular:
@@ -318,8 +362,9 @@ def main():
           f"({100 * total_com_capa // max(len(livros), 1)}%)")
     print("O resto usa a capa gerada — nenhum card fica vazio.")
     if achou:
-        from flows.atualizar_site import main as atualizar_site
-        atualizar_site()
+        if not args.sem_deploy:
+            from flows.atualizar_site import main as atualizar_site
+            atualizar_site()
 
 
 if __name__ == "__main__":

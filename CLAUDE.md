@@ -119,9 +119,11 @@ checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
   podcasts na assinatura (um subagente Opus por episódio; teste de 03/11
   empatou com a API). O que falhar vai pro lote da API, os mais recentes que
   cabem em R$ 10 no pior caso (`--ate-caber`); o resto espera a semana
-  seguinte. Episódio longo ≈ R$ 1 no pior caso. Depois busca capas e cria o
-  rascunho da newsletter da semana, com o botão de aprovar no chat da rotina:
-  o Paulo o acha pronto na segunda de manhã.
+  seguinte. Episódio longo ≈ R$ 1 no pior caso. Depois busca capas, pede UM
+  deploy com extração e capas juntas (`--sem-deploy` nos dois passos, depois
+  `atualizar_site --agora`) e cria o rascunho da newsletter da semana, com o
+  botão de aprovar no chat da rotina: o Paulo acha o rascunho e o site
+  prontos na segunda de manhã.
 - `podlibris-newsletter-semanal` — segunda 9h: coleta o lote (a coleta já
   preenche os slugs), grava os títulos PT/EN da semana anterior e envia os dos
   livros novos (`titulos_alt`, só se a estimativa for até US$ 1), busca capas e
