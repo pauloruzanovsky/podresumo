@@ -8,6 +8,11 @@ name: Aquecer cache depois do deploy
 # Vercel avisa que o deploy terminou, pra essa espera ficar com o robô.
 #
 # ~70 páginas, 3 por vez: menos de um minuto e uns 70 ISR writes por deploy.
+#
+# Desde 16/11/2026 o Bot Protection da Vercel está em Challenge e responde 429
+# a quem não é navegador. O job manda o cabeçalho x-podlibris-robo com o
+# secret ROBO_SEGREDO, que uma regra do Firewall da Vercel deixa passar
+# (Bypass). Sem a regra, o job falha em vez de fingir que aqueceu.
 
 on:
   status:
@@ -20,11 +25,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Visitar a home e o que ela linka
+        env:
+          ROBO: ${{ secrets.ROBO_SEGREDO }}
         run: |
           SITE=https://podlibris.com
-          curl -sS --max-time 60 "$SITE/" -o home.html
+          if ! curl -sSf --max-time 60 -H "x-podlibris-robo: $ROBO" "$SITE/" -o home.html; then
+            echo "A home não respondeu 200: o Firewall da Vercel barrou o robô? Confira a regra do x-podlibris-robo e o secret ROBO_SEGREDO."
+            exit 1
+          fi
           { echo "/episodios"; grep -o 'href="/\(livro\|podcast\|episodio\|pessoa\)/[^"#?]*"' home.html | sed 's/href="//;s/"$//'; } \
             | sort -u > paginas.txt
           echo "$(wc -l < paginas.txt) páginas"
-          xargs -P 3 -I{} curl -sS -o /dev/null --max-time 60 \
-            -w "%{http_code} %{time_total}s {}\n" "$SITE{}" < paginas.txt | sort -k2 -rn | head -15
+          xargs -P 3 -I{} curl -sS -o /dev/null --max-time 60 -H "x-podlibris-robo: $ROBO" \
+            -w "%{http_code} %{time_total}s {}\n" "$SITE{}" < paginas.txt > visitas.txt
+          sort -k2 -rn visitas.txt | head -15
+          falhas=$(grep -vc '^200 ' visitas.txt || true)
+          echo "$falhas de $(wc -l < visitas.txt) páginas não responderam 200"
+          [ "$falhas" -le 5 ]

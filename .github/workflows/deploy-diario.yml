@@ -16,6 +16,11 @@ name: Deploy diário
 # Precisa dos secrets VERCEL_DEPLOY_HOOK (o mesmo URL do pipeline/.env),
 # SUPABASE_URL e SUPABASE_SERVICE_KEY (os mesmos do manter-banco-ativo). Sem o
 # hook o job só avisa e passa.
+#
+# O Bot Protection da Vercel (Challenge, desde 16/11/2026) responde 429 a quem
+# não é navegador: a leitura da versão manda o cabeçalho x-podlibris-robo com o
+# secret ROBO_SEGREDO, que uma regra do Firewall deixa passar. Sem a regra, a
+# leitura falha e o deploy sai todo dia, como antes.
 
 on:
   schedule:
@@ -48,13 +53,14 @@ jobs:
           # chave de serviço vê as mesmas linhas que a anon do build
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ROBO: ${{ secrets.ROBO_SEGREDO }}
         run: |
           if [ "$FORCAR" = "true" ]; then
             echo "Deploy forçado à mão."
             echo "deploy=sim" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          no_ar=$(curl -sSf --max-time 30 "https://podlibris.com/retrato-versao.txt" | tr -d '[:space:]') || no_ar=""
+          no_ar=$(curl -sSf --max-time 30 -H "x-podlibris-robo: $ROBO" "https://podlibris.com/retrato-versao.txt" | tr -d '[:space:]') || no_ar=""
           banco=$(node web/scripts/retrato.mjs --versao | tail -n 1 | tr -d '[:space:]') || banco=""
           echo "Versão no ar: ${no_ar:-sem resposta}. Versão do banco: ${banco:-sem resposta}."
           if [ -n "$no_ar" ] && [ "$no_ar" = "$banco" ]; then
