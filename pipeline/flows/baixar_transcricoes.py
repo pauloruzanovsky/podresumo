@@ -35,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from extract.transcript import fetch_transcript
 from extract.youtube import fetch_episodes, fetch_videos
 from flows.reprocessar_batch import acha_podcast
-from load.supabase import supabase
+from load.supabase import supabase, todas
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -79,8 +79,11 @@ def episodio_inteiro(e: dict, desde: str | None, min_minutos: int, excluir: list
 
 def faltantes(eps: list[dict]) -> list[dict]:
     # `listed` é só catálogo (catalogar_episodios): ainda falta a transcrição.
+    # `todas` pagina: sem isso o Supabase corta em 1000 linhas e episódio já
+    # extraído parecia novo, era baixado de novo e voltava pra `pending`.
     com_transcricao = {
-        e["id"] for e in supabase.table("episodes").select("id, status").execute().data
+        e["id"]
+        for e in todas(lambda: supabase.table("episodes").select("id, status").order("id"))
         if e["status"] != "listed"
     }
     return [

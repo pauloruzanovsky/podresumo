@@ -6,6 +6,7 @@ Busca a transcrição (legendas automáticas) de um vídeo.
 import os
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import RequestBlocked
 from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 
 from extract.youtube import idioma_original
@@ -13,10 +14,11 @@ from extract.youtube import idioma_original
 SEM_IDIOMA = ["pt", "pt-BR"]
 
 
-def cria_api() -> YouTubeTranscriptApi:
+def api_proxy() -> YouTubeTranscriptApi | None:
     """
-    Usa proxy residencial se configurado no .env; senão, conexão direta
-    (o YouTube bloqueia o IP depois de ~15 downloads).
+    Proxy residencial configurado no .env, ou None. É só reserva: entra quando
+    a conexão direta é bloqueada (o YouTube bloqueia o IP depois de ~15
+    downloads seguidos), o que na leva semanal quase não acontece.
     - PROXY_URL: qualquer serviço, ex. http://usuario:senha@geo.iproyal.com:12321
     - WEBSHARE_PROXY_USERNAME e WEBSHARE_PROXY_PASSWORD: Webshare
     """
@@ -31,7 +33,11 @@ def cria_api() -> YouTubeTranscriptApi:
         return YouTubeTranscriptApi(
             proxy_config=WebshareProxyConfig(proxy_username=usuario, proxy_password=senha)
         )
-    return YouTubeTranscriptApi()
+    return None
+
+
+# Depois do primeiro bloqueio, o resto da execução vai direto pro proxy.
+_direta_bloqueada = False
 
 
 def idiomas_da_faixa(video_id: str) -> list[str]:
@@ -63,26 +69,54 @@ def fetch_transcript(video_id: str) -> str:
     """
     print(f"📝 Buscando transcrição do vídeo {video_id}...")
 
-    ytt_api = cria_api()
+    global _direta_bloqueada
     idiomas = idiomas_da_faixa(video_id)
 
+    if not _direta_bloqueada:
+        try:
+            return _formata(_baixa(YouTubeTranscriptApi(), video_id, idiomas))
+        except RequestBlocked:
+            _direta_bloqueada = True
+            print("🚫 Conexão direta bloqueada pelo YouTube; tentando pelo proxy.")
+
+    proxy = api_proxy()
+    if proxy is None:
+        print("❌ Bloqueado e sem proxy configurado no .env.")
+        return ""
     try:
-        transcript = ytt_api.fetch(video_id, languages=idiomas)
+        return _formata(_baixa(proxy, video_id, idiomas))
+    except Exception as e:
+        print(f"❌ Proxy falhou: {e}")
+        return ""
+
+
+def _baixa(ytt_api: YouTubeTranscriptApi, video_id: str, idiomas: list[str]):
+    """Os trechos da transcrição, ou None se o vídeo não tem faixa que sirva.
+    Bloqueio do YouTube sobe como RequestBlocked, pra quem chamou trocar de
+    conexão."""
+    try:
+        return ytt_api.fetch(video_id, languages=idiomas)
+    except RequestBlocked:
+        raise
     except Exception as e:
         # Idioma conhecido e sem faixa: as outras são dublagem, melhor nada.
         if idiomas != SEM_IDIOMA:
             print(f"❌ Sem faixa no idioma original {idiomas}: {e}")
-            return ""
-        try:
-            # Fallback: lista transcrições disponíveis e pega a primeira
-            transcript_list = ytt_api.list(video_id)
-            # Pega a primeira transcrição disponível
-            first = next(iter(transcript_list))
-            transcript = ytt_api.fetch(video_id, languages=[first.language_code])
-        except Exception as e:
-            print(f"❌ Transcrição não disponível: {e}")
-            return ""
+            return None
+    try:
+        # Fallback: lista transcrições disponíveis e pega a primeira
+        first = next(iter(ytt_api.list(video_id)))
+        return ytt_api.fetch(video_id, languages=[first.language_code])
+    except RequestBlocked:
+        raise
+    except Exception as e:
+        print(f"❌ Transcrição não disponível: {e}")
+        return None
 
+
+def _formata(transcript) -> str:
+    if transcript is None:
+        return ""
     # Junta trechos com timestamps no formato [HH:MM:SS]
     lines = []
     for entry in transcript:

@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from extract.youtube import fetch_episodes
 from flows.reprocessar_batch import acha_podcast
-from load.supabase import supabase
+from load.supabase import supabase, todas
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -42,7 +42,7 @@ def main():
     podcast = acha_podcast(args.podcast)
     # 5000 = "a playlist inteira"; fetch_episodes pagina de 50 em 50.
     eps = fetch_episodes(args.playlist_id, 5000)
-    no_banco = {e["id"] for e in supabase.table("episodes").select("id").execute().data}
+    no_banco = {e["id"] for e in todas(lambda: supabase.table("episodes").select("id").order("id"))}
     novos = [e for e in eps if e["video_id"] not in no_banco]
 
     print(f"\nplaylist: {len(eps)} vídeos | já no banco: {len(eps) - len(novos)} "

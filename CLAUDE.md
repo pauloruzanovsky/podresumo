@@ -35,7 +35,8 @@ comitar chave.
 1. `catalogar_episodios` — cadastra a playlist inteira como `listed`.
 2. `baixar_transcricoes` — baixa transcrições e marca `pending`. O YouTube
    bloqueia o IP depois de ~15 downloads (dura 2–15h); por isso roda em levas
-   pequenas. O #264 não tem legenda (pulado de propósito).
+   pequenas. Vai pela conexão direta; o proxy do `.env` (Webshare) é só
+   reserva e entra quando o YouTube bloqueia. O #264 não tem legenda (pulado de propósito).
 3. `reprocessar_batch` — extração paga. `--estimar` mede com count_tokens
    (grátis); `--enviar --novos` manda os `pending`; `--teto-brl` só envia se o
    pior caso couber; `--coletar ultimo` grava o resultado (`done`).
