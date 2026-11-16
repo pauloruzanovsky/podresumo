@@ -1,0 +1,329 @@
+<title>Painel Podlibris</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Painel de leitura rápida: cabeçalho, título com o ponto, pedidos, 4 números; depois 4 seções. */
+  :root {
+    --bg: #fff; --soft: #f9f9f9; --card: #fff;
+    --text: rgba(0,0,0,.9); --text-2: rgba(0,0,0,.6); --text-3: rgba(0,0,0,.47);
+    --line: rgba(0,0,0,.12); --shadow: 0 4px 20px rgba(0,0,0,.075);
+    --clay: #d97757; --clay-strong: #c6613f; --gray-bar: rgba(0,0,0,.22);
+    --good: #006c10; --good-bg: rgba(16,161,34,.14);
+    --bad: #a42528; --bad-bg: rgba(220,60,61,.12);
+    --watch: #794c02; --watch-bg: rgba(251,179,21,.16);
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #151515; --soft: #0b0b0b; --card: #1f1f1f;
+    --text: rgba(255,255,255,.93); --text-2: rgba(255,255,255,.57); --text-3: rgba(255,255,255,.4);
+    --line: rgba(255,255,255,.12); --shadow: none; --gray-bar: rgba(255,255,255,.25);
+    --good: #53c556; --bad: #f17778; --watch: #e49c06; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #151515; --soft: #0b0b0b; --card: #1f1f1f;
+    --text: rgba(255,255,255,.93); --text-2: rgba(255,255,255,.57); --text-3: rgba(255,255,255,.4);
+    --line: rgba(255,255,255,.12); --shadow: none; --gray-bar: rgba(255,255,255,.25);
+    --good: #53c556; --bad: #f17778; --watch: #e49c06; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 var(--sans); }
+  .pg { max-width: 60rem; margin: 0 auto; padding-block: 8px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 24px; }
+  h1, h2 { font-family: var(--serif); font-weight: 400; margin: 0; text-wrap: balance; }
+  h1 { font-size: 32px; line-height: 1.2; }
+  h2 { font-size: 22px; line-height: 1.3; }
+  .meta { font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--line); padding: 12px 0; }
+  .meta b { color: var(--text); font-weight: 500; }
+  .meta .velho { color: var(--bad); font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .num { font-size: 40px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lbl { font-size: 13px; color: var(--text-2); }
+  .pill { font-family: var(--sans); vertical-align: middle; display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .good { color: var(--good); background: var(--good-bg); }
+  .bad { color: var(--bad); background: var(--bad-bg); }
+  .watch { color: var(--watch); background: var(--watch-bg); }
+  .none { color: var(--text-2); background: transparent; border: 1px dashed var(--line); }
+  a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--line); }
+  a:hover { text-decoration-color: currentColor; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 4px; }
+
+  /* topo */
+  .pedidos { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .pedido { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 16px; border-radius: 12px; background: var(--soft); border-left: 4px solid var(--clay); }
+  .pedido.erro { border-left-color: var(--bad); }
+  .pedido.atencao { border-left-color: var(--watch); }
+  .pedido.nao_conferido { border-left-color: var(--line); }
+  .pedido b { font-weight: 600; }
+  .pedido .prazo { font-size: 13px; color: var(--text-2); }
+  .pedido a { font-size: 13px; margin-left: auto; color: var(--clay-strong); font-weight: 500; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 12px; }
+  .tile { gap: 8px; padding: 16px 18px; }
+  .tile .tag { font-size: 13px; color: var(--text-2); }
+
+  /* seções */
+  .duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 16px; align-items: start; }
+  .barras { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .barra-topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 16px; }
+  .barra-topo .v { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 13px; }
+  .barra-topo .v b { color: var(--text); font-size: 16px; font-weight: 500; }
+  .trilho { position: relative; height: 10px; border-radius: 5px; background: var(--soft); border: 1px solid var(--line); margin-top: 4px; overflow: hidden; }
+  .trilho i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--gray-bar); }
+  .trilho i.bad { background: var(--bad); }
+  .trilho i.watch { background: var(--watch); }
+  .trilho i.clay { background: var(--clay); }
+  .pct { font-weight: 600; }
+  .pct.bad { background: none; } .pct.watch { background: none; }
+
+  .caminho { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .caminho li { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .caminho .ponto { height: 6px; border-radius: 3px; background: var(--good); }
+  .caminho li.falta .ponto { background: var(--line); }
+  .caminho li.aqui .ponto { background: var(--clay); }
+  .caminho .n { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .caminho .nome { font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; line-height: 1.3; }
+  .caminho li.aqui .nome { color: var(--clay-strong); font-weight: 500; }
+
+  .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .lista li { padding: 10px 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; min-width: 0; }
+  .lista li:first-child { border-top: 0; padding-top: 0; }
+  .lista .t { min-width: 0; overflow-wrap: anywhere; }
+  .lista .d { font-size: 13px; color: var(--text-2); }
+  .marcas { display: flex; gap: 6px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; }
+  .marcas .ok { color: var(--good); }
+
+  .tabela-rolagem { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th { text-align: left; font-size: 13px; font-weight: 400; color: var(--text-2); padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 10px 10px 0; min-width: 4.5em; border-bottom: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  td .d { display: block; font-size: 13px; color: var(--text-2); }
+
+  details summary { cursor: pointer; font-size: 13px; color: var(--text-2); }
+  details[open] summary { margin-bottom: 10px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a { font-size: 13px; text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; background: var(--card); }
+  .links a.main { background: var(--clay-strong); color: #fff; border-color: transparent; }
+  @media (prefers-reduced-motion: no-preference) {
+    .trilho i, .caminho .ponto { transition: width .3s ease-out; }
+  }
+</style>
+
+<div class="pg" id="pg">
+  <div class="meta" id="meta">Painel Podlibris</div>
+  <h1 id="titulo">Carregando o painel…</h1>
+  <ul class="pedidos" id="pedidos"></ul>
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card" id="cotas">
+    <h2 id="cotas-h"></h2>
+    <ul class="barras" id="cotas-barras"></ul>
+    <details id="cotas-mais"><summary>Todos os números dos serviços</summary><ul class="lista" id="cotas-lista"></ul></details>
+  </section>
+
+  <section class="card" id="semana">
+    <h2 id="semana-h"></h2>
+    <ol class="caminho" id="semana-caminho"></ol>
+    <ul class="lista" id="semana-parados"></ul>
+    <details id="semana-mais"><summary id="semana-mais-s">Cada episódio, etapa por etapa</summary><ul class="lista" id="semana-lista"></ul></details>
+  </section>
+
+  <div class="duas">
+    <section class="card" id="acervo">
+      <h2 id="acervo-h"></h2>
+      <p id="acervo-motivo" style="margin:0"></p>
+      <ul class="barras" id="acervo-barras"></ul>
+      <details id="acervo-mais"><summary id="acervo-mais-s">Última leva</summary><ul class="lista" id="acervo-lista"></ul></details>
+    </section>
+    <section class="card" id="newsletter">
+      <h2 id="nl-h"></h2>
+      <ol class="caminho" id="nl-caminho"></ol>
+      <p id="nl-numeros" style="margin:0"></p>
+    </section>
+  </div>
+
+  <section class="card" id="rotinas">
+    <h2 id="rotinas-h"></h2>
+    <div class="tabela-rolagem"><table>
+      <thead><tr><th>Rotina</th><th>Última</th><th>Próxima</th><th>Situação</th></tr></thead>
+      <tbody id="rotinas-tb"></tbody>
+    </table></div>
+  </section>
+
+  <nav class="links" id="links">
+    <a href="https://claude.ai/artifact/5Rq8ymcDLy5a8gAk5FMyf1" target="_blank" rel="noopener">Pendências</a>
+    <a href="https://podlibris.com" target="_blank" rel="noopener">podlibris.com</a>
+    <a href="https://claude.ai/artifact/4u5wMLfnsJDpq7DDfaRhBk" target="_blank" rel="noopener">Guia da marca</a>
+    <a href="https://vercel.com/pauloruzanovskys-projects/podresumo/usage" target="_blank" rel="noopener">Vercel</a>
+    <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">Supabase</a>
+    <a href="https://resend.com/broadcasts" target="_blank" rel="noopener">Resend</a>
+    <a href="https://dashboard.webshare.io/" target="_blank" rel="noopener">Webshare</a>
+    <a href="https://github.com/pauloruzanovsky/podresumo/actions" target="_blank" rel="noopener">GitHub Actions</a>
+  </nav>
+</div>
+
+<script>
+const D = /*__DADOS__*/null;
+(function () {
+  if (!D) return;
+  const TZ = 'America/Sao_Paulo';
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const n = (v, casas) => typeof v === 'number' ? v.toLocaleString('pt-BR', {maximumFractionDigits: casas ?? (Math.abs(v) >= 100 ? 0 : 2)}) : String(v ?? '—');
+  const dia = (s) => s ? new Date(s).toLocaleString('pt-BR', {timeZone: TZ, weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}).replace('.', '') : '—';
+  const curto = (s) => s ? new Date(s).toLocaleString('pt-BR', {timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}).replace(',', '') : '—';
+  const diaMes = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '—';
+  const PILL = {ok: ['good', 'Em dia'], atencao: ['watch', 'Atenção'], erro: ['bad', 'Resolver'], nao_conferido: ['none', 'Não conferido']};
+  const pill = (st, txt) => el('span', 'pill ' + (PILL[st] || PILL.nao_conferido)[0], txt || (PILL[st] || PILL.nao_conferido)[1]);
+  const ok = (st) => st === 'feito' || st === 'deduzido';
+
+  const r = D.resumo[0], p = D.pagina;
+  const horas = (Date.now() - new Date(r.atualizado_em)) / 36e5;
+
+  // cabeçalho, título, pedidos
+  const meta = $('meta'); meta.replaceChildren();
+  meta.append(el('b', null, 'Painel Podlibris'), ' · ');
+  meta.append(el('span', horas > 30 ? 'velho' : null, 'dados de ' + dia(r.atualizado_em)));
+  meta.append(' · para o Paulo · ' + (p.pedidos.length ? p.pedidos.length + (p.pedidos.length === 1 ? ' coisa pra fazer' : ' coisas pra fazer') : 'nada pra fazer'));
+  $('titulo').textContent = p.titulo;
+  for (const x of p.pedidos) {
+    const li = el('li', 'pedido ' + x.nivel);
+    li.append(el('b', null, x.texto));
+    if (x.prazo) li.append(el('span', 'prazo', x.prazo));
+    if (x.link) { const a = el('a', null, 'Abrir'); a.href = x.link; a.target = '_blank'; a.rel = 'noopener'; li.append(a); }
+    $('pedidos').append(li);
+  }
+
+  // quatro números
+  const rot = D.rotinas, rotOk = rot.filter((x) => x.status === 'ok').length;
+  const eps = D.episodios, noSite = eps.filter((e) => ok(e.site)).length;
+  const prog = D.acervo_progresso, ac = D.acervo[0];
+  const acSite = prog.reduce((s, x) => s + x.no_site, 0), acTotal = prog.reduce((s, x) => s + x.elegiveis, 0);
+  const nl = D.newsletter, nlFeitas = nl.filter((e) => e.status === 'feito').length;
+  const tile = (lbl, num, tag, st) => {
+    const c = el('div', 'card tile');
+    const topo = el('div', 'lbl', lbl);
+    c.append(topo, el('div', 'num', num));
+    const t = el('div', 'tag'); if (st) t.append(pill(st[0], st[1]), ' '); t.append(tag || ''); c.append(t);
+    $('tiles').append(c);
+  };
+  tile('Rotinas no prazo', rotOk + ' de ' + rot.length, '', [rotOk === rot.length ? 'ok' : 'erro', rotOk === rot.length ? 'Em dia' : 'Resolver']);
+  tile('Episódios desde ' + p.desde + ' no site', noSite + ' de ' + eps.length, '', [noSite === eps.length ? 'ok' : 'atencao', noSite === eps.length ? 'Em dia' : 'Em andamento']);
+  tile('Acervo antigo no site', n(acSite), 'de ' + n(acTotal) + ' episódios', [{Rodando: 'ok', 'On hold': 'atencao', Travado: 'erro'}[ac.estado] || 'nao_conferido', ac.estado]);
+  tile('Newsletter ' + D.newsletter_resumo[0].semana, nlFeitas + ' de ' + nl.length, 'etapas feitas', null);
+
+  // 1. cotas
+  const comLimite = D.servicos.filter((s) => s.uso != null).sort((a, b) => b.uso - a.uso);
+  const estourou = comLimite.filter((s) => s.uso >= 1).length;
+  $('cotas-h').textContent = estourou ? (estourou === 1 ? '1 cota passou do limite do plano grátis' : estourou + ' cotas passaram do limite do plano grátis') : 'Todas as cotas estão dentro do limite';
+  const corDe = (s) => s.uso >= 1 ? 'bad' : s.uso >= .8 ? 'watch' : '';
+  for (const s of comLimite.slice(0, 5)) {
+    const li = el('li');
+    const topo = el('div', 'barra-topo');
+    topo.append(el('span', null, s.metrica + ' · ' + s.servico));
+    const v = el('span', 'v'); v.append(el('b', null, n(s.valor)), ' de ' + n(s.limite) + (s.unidade ? ' ' + s.unidade : '') + ' · ');
+    v.append(el('span', 'pct ' + corDe(s), Math.round(s.uso * 100) + '%'));
+    topo.append(v);
+    const tr = el('div', 'trilho'); const i = el('i', corDe(s)); i.style.width = Math.min(100, s.uso * 100) + '%'; tr.append(i);
+    li.append(topo, tr);
+    $('cotas-barras').append(li);
+  }
+  for (const s of D.servicos) {
+    const li = el('li');
+    const t = el('span', 't'); t.append(s.metrica + ' · ' + s.servico);
+    if (s.detalhe) { t.append(el('br')); t.append(el('span', 'd', s.detalhe)); }
+    const v = el('span', null);
+    if (s.valor == null) v.append(pill('nao_conferido'));
+    else v.append(n(s.valor) + (s.limite != null ? ' de ' + n(s.limite) : '') + (s.unidade ? ' ' + s.unidade : ''));
+    li.append(t, v);
+    $('cotas-lista').append(li);
+  }
+
+  // 2. episódios da semana
+  const PASSOS = [['cat', 'Catalogado'], ['tra', 'Transcrição'], ['ext', 'Livros'], ['cap', 'Capas e slug'], ['site', 'No site']];
+  $('semana-h').textContent = eps.length
+    ? (noSite === eps.length ? 'Os ' + eps.length + ' episódios lançados desde ' + p.desde + ' estão no site' : noSite + ' de ' + eps.length + ' episódios lançados desde ' + p.desde + ' estão no site')
+    : 'Nenhum episódio lançado desde ' + p.desde;
+  const travaEm = PASSOS.findIndex(([k]) => eps.some((e) => !ok(e[k])));
+  PASSOS.forEach(([k, nome], idx) => {
+    const feitos = eps.filter((e) => ok(e[k])).length;
+    const li = el('li', idx === travaEm ? 'aqui' : feitos < eps.length ? 'falta' : '');
+    li.append(el('span', 'ponto'), el('span', 'n', String(feitos)), el('span', 'nome', nome));
+    $('semana-caminho').append(li);
+  });
+  const parados = eps.filter((e) => !ok(e.site));
+  for (const e of parados.slice(0, 5)) {
+    const li = el('li');
+    const passo = PASSOS.find(([k]) => !ok(e[k]));
+    li.append(el('span', 't', e.titulo), el('span', 'd', e.podcast + ' · falta: ' + (passo ? passo[1].toLowerCase() : '?')));
+    $('semana-parados').append(li);
+  }
+  if (!parados.length) $('semana-parados').hidden = true;
+  const linhaEp = (e) => {
+    const li = el('li');
+    const t = el('span', 't');
+    const a = el('a', null, e.titulo); a.href = e.link || e.youtube; a.target = '_blank'; a.rel = 'noopener';
+    t.append(a, el('br'), el('span', 'd', e.podcast + ' · ' + diaMes(e.publicado)));
+    const m = el('span', 'marcas');
+    for (const [k, nome] of PASSOS) m.append(el('span', ok(e[k]) ? 'ok' : '', (ok(e[k]) ? '✓ ' : '○ ') + nome));
+    li.append(t, m);
+    return li;
+  };
+  eps.forEach((e) => $('semana-lista').append(linhaEp(e)));
+  if (!eps.length) $('semana-mais').hidden = true;
+
+  // 3a. acervo
+  const ESTADO = {Rodando: 'está rodando', 'On hold': 'está parado', Travado: 'travou'};
+  const h = $('acervo-h'); h.append('O acervo antigo ' + (ESTADO[ac.estado] || 'não foi conferido') + ' ');
+  h.append(pill({Rodando: 'ok', 'On hold': 'atencao', Travado: 'erro'}[ac.estado] || 'nao_conferido', ac.estado));
+  $('acervo-motivo').textContent = ac.detalhe || '';
+  for (const x of prog) {
+    const li = el('li');
+    const topo = el('div', 'barra-topo');
+    topo.append(el('span', null, x.podcast));
+    const v = el('span', 'v'); v.append(el('b', null, n(x.no_site)), ' de ' + n(x.elegiveis) + ' · ' + n(x.na_fila) + ' na fila');
+    topo.append(v);
+    const tr = el('div', 'trilho'); const i = el('i', 'clay'); i.style.width = (100 * x.no_site / Math.max(1, x.elegiveis)) + '%'; tr.append(i);
+    li.append(topo, tr);
+    $('acervo-barras').append(li);
+  }
+  if (ac.ultima_leva) $('acervo-mais-s').textContent = 'Última leva (' + ac.ultima_leva + '), ' + D.acervo_episodios.length + ' episódios';
+  D.acervo_episodios.forEach((e) => $('acervo-lista').append(linhaEp(e)));
+  if (!D.acervo_episodios.length) $('acervo-mais').hidden = true;
+
+  // 3b. newsletter
+  const CURTO = {'Episódios da semana': 'Episódios', 'Lote coletado': 'Lote coletado', 'Rascunho criado': 'Rascunho', 'Aprovado pelo Paulo': 'Seu ok', 'Enviado': 'Enviado'};
+  const ESPERA = {'Episódios da semana': 'espera a semana fechar', 'Lote coletado': 'espera a coleta do lote', 'Rascunho criado': 'espera o rascunho de segunda', 'Aprovado pelo Paulo': 'espera seu ok', 'Enviado': 'espera o envio'};
+  const nr = D.newsletter_resumo[0];
+  const atual = nl.find((e) => e.status !== 'feito');
+  $('nl-h').textContent = 'A newsletter de ' + nr.semana + ' ' + (atual ? ESPERA[atual.etapa] || 'está em andamento' : 'foi enviada');
+  for (const e of nl) {
+    const li = el('li', e === atual ? 'aqui' : e.status === 'feito' ? '' : 'falta');
+    li.append(el('span', 'ponto'), el('span', 'nome', CURTO[e.etapa] || e.etapa));
+    if (e.em) li.append(el('span', 'nome', dia(e.em).replace(/^\w+,? /, '')));
+    $('nl-caminho').append(li);
+  }
+  const num = $('nl-numeros');
+  if (nr.inscritos != null) { num.append(el('b', null, String(nr.inscritos))); num.append(nr.inscritos === 1 ? ' inscrito confirmado' : ' inscritos confirmados'); }
+  if (nr.ultimo_assunto) {
+    const ev = nr.ultimo_eventos || {}; const ab = (ev.opened || 0) + (ev.clicked || 0);
+    num.append(' · último envio em ' + diaMes(nr.ultimo_envio) + ': ' + nr.ultimo_destinatarios + ' destinatários, ' + ab + ' abertos');
+  }
+
+  // 4. rotinas
+  const app = rot.filter((x) => x.tipo === 'app'), gh = rot.filter((x) => x.tipo === 'github');
+  $('rotinas-h').textContent = rotOk === rot.length ? 'As ' + rot.length + ' rotinas rodaram no prazo' : (rot.length - rotOk) + ' de ' + rot.length + ' rotinas pedem atenção';
+  const linhaRot = (nome, ultima, proxima, st, txt) => {
+    const tr = el('tr');
+    const c1 = el('td'); c1.append(nome);
+    const c4 = el('td'); c4.append(pill(st)); if (txt) c4.append(el('span', 'd', txt));
+    tr.append(c1, el('td', null, ultima), el('td', null, proxima), c4);
+    $('rotinas-tb').append(tr);
+  };
+  for (const x of app) linhaRot(x.nome, curto(x.ultima), x.proxima ? curto(x.proxima) : '—', x.status, x.curto || '');
+  if (gh.length) {
+    const ghOk = gh.filter((x) => x.status === 'ok').length;
+    const pior = gh.find((x) => x.status !== 'ok');
+    const a = el('a', null, 'GitHub Actions (' + gh.length + ')'); a.href = 'https://github.com/pauloruzanovsky/podresumo/actions'; a.target = '_blank'; a.rel = 'noopener';
+    const ultima = gh.map((x) => x.ultima).filter(Boolean).sort().pop();
+    linhaRot(a, curto(ultima), 'todo dia', pior ? pior.status : 'ok', ghOk + ' de ' + gh.length + ' deram certo' + (pior ? ': ' + pior.nome + ' falhou' : ''));
+  }
+})();
+</script>

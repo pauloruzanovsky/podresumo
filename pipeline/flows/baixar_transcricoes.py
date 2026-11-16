@@ -32,6 +32,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import etapas
+from extract import transcript
 from extract.transcript import fetch_transcript
 from extract.youtube import fetch_episodes, fetch_videos
 from flows.reprocessar_batch import acha_podcast
@@ -137,6 +139,7 @@ def main():
 
     print()
     salvos, sem_transcricao, seguidas = 0, [], 0
+    bloqueio, por_proxy, tentativas = False, 0, 0
     inicio = time.time()
     for i, e in enumerate(novos):
         if salva_antes(e):
@@ -146,10 +149,12 @@ def main():
             if i:
                 time.sleep(args.pausa)
             transcricao = fetch_transcript(e["video_id"])
+            tentativas += 1
         if not transcricao:
             sem_transcricao.append(e)
             seguidas += 1
             if seguidas >= MAX_FALHAS_SEGUIDAS:
+                bloqueio = True
                 print(f"{seguidas} falhas seguidas: provável bloqueio do "
                       f"YouTube. Parando depois de {i + 1} tentativas em "
                       f"{int(time.time() - inicio)}s.")
@@ -171,7 +176,15 @@ def main():
             "transcricao": transcricao,
         }).execute()
         salvos += 1
+        via = "reaproveitada" if salva_antes(e) else transcript.ultima_via
+        por_proxy += via == "proxy"
+        etapas.registra("transcricao", id=e["video_id"], podcast=podcast["nome"], via=via)
 
+    etapas.registra(
+        "download", podcast=podcast["nome"], salvos=salvos, tentativas=tentativas,
+        falhas=[e["video_id"] for e in sem_transcricao], bloqueio=bloqueio,
+        por_proxy=por_proxy, erro_proxy=transcript.erro_proxy,
+    )
     print(f"\n=== {salvos} transcrição(ões) salva(s) como pending ===")
     if salvos:
         # endereço legível pros episódios que acabaram de entrar

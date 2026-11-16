@@ -10,12 +10,23 @@ subagentes da sessão, com `reprocessar_batch --exportar/--do-assinatura`.
 Arquivos em respostas/acervo/ (gitignored):
     <podcast>/canal.json   lista do canal, guardada pra não reconsultar
     <podcast>/leva-N.txt   ids de cada leva
-    log.jsonl              eventos e medições de cota, um por linha
-    painel/*.json          o que o painel mostra
+    painel/*.json          o painel antigo (aposentado em 16/11/2026)
+
+Eventos vão pro log único (etapas.py, respostas/etapas.jsonl) com
+area "acervo"; o log.jsonl antigo daqui segue lido como histórico.
+
+Estado do acervo, que o painel (flows.painel) mostra:
+    Rodando   há leva aberta e evento dela nas últimas HORAS_TRAVADO horas
+    Travado   há leva aberta e nada acontece há mais que isso
+    On hold   nenhuma leva aberta (mostra o motivo e a data da última)
+Uma leva fecha com `fim`, ou sozinha quando todos os ids dela estão no site
+ou marcados sem transcrição.
 
 Uso:
     python -m flows.acervo fila                     # quanto falta em cada podcast
     python -m flows.acervo leva --podcast ferriss --n 20
+    python -m flows.acervo fim --podcast ferriss --leva 3 --motivo "texto"
+    python -m flows.acervo estado                   # Rodando, On hold ou Travado
     python -m flows.acervo evento "texto" [--tipo aviso|falha|info]
     python -m flows.acervo cota --janela 34 --semana 19
     python -m flows.acervo painel                   # gera painel/*.json
@@ -30,6 +41,8 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import etapas
+import etapas
 from extract.youtube import fetch_episodes
 from flows.baixar_transcricoes import episodio_inteiro
 from load.supabase import supabase, todas
@@ -39,7 +52,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PASTA = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "respostas", "acervo"
 )
-LOG = os.path.join(PASTA, "log.jsonl")
+# leva aberta sem nenhum evento há mais que isto = Travado
+HORAS_TRAVADO = 6
 
 # chave curta -> (trecho do nome no banco, playlist de uploads do canal)
 PODCASTS = {
@@ -51,21 +65,12 @@ MIN_MINUTOS = 45
 EXCLUIR = ["Essentials"]
 
 
-def agora() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def registra(**evento):
-    os.makedirs(PASTA, exist_ok=True)
-    with open(LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"at": agora(), **evento}, ensure_ascii=False) + "\n")
+def registra(tipo, **evento):
+    etapas.registra(tipo, area="acervo", **evento)
 
 
 def eventos() -> list[dict]:
-    if not os.path.exists(LOG):
-        return []
-    with open(LOG, encoding="utf-8") as f:
-        return [json.loads(l) for l in f if l.strip()]
+    return [e for e in etapas.eventos() if e.get("area") == "acervo"]
 
 
 def canal(chave: str) -> list[dict]:
@@ -124,19 +129,89 @@ def cmd_leva(args):
     caminho = os.path.join(pasta, f"leva-{n}.txt")
     with open(caminho, "w", encoding="utf-8") as f:
         f.write("\n".join(e["video_id"] for e in falta) + "\n")
-    registra(tipo="leva", podcast=args.podcast, leva=n, ids=[e["video_id"] for e in falta])
+    registra("leva", podcast=args.podcast, leva=n, ids=[e["video_id"] for e in falta])
     print(caminho)
     for e in falta:
         print(f"  {e['video_id']}  {e['data']}  {e['titulo'][:70]}")
 
 
+def levas(log: list[dict], banco: dict[str, dict]) -> list[dict]:
+    """Cada leva com início, fim (ou None, se aberta) e o último evento dela."""
+    fins = {(e["podcast"], e["leva"]): e for e in log if e["tipo"] == "leva_fim"}
+    pulados = {e["id"] for e in log if e["tipo"] == "sem_transcricao"}
+    extraidos = {e["id"]: e["at"] for e in etapas.eventos() if e["tipo"] in ("extracao", "transcricao")}
+    saida = []
+    for e in log:
+        if e["tipo"] != "leva":
+            continue
+        chave = (e["podcast"], e["leva"])
+        resolvidos = [i for i in e["ids"] if banco.get(i, {}).get("status") == "done" or i in pulados]
+        fim = fins.get(chave)
+        ultimo = max([e["at"], *(extraidos[i] for i in e["ids"] if i in extraidos)])
+        if fim:
+            ultimo = max(ultimo, fim["at"])
+        completa = len(resolvidos) == len(e["ids"])
+        saida.append({
+            "podcast": e["podcast"], "leva": e["leva"], "inicio": e["at"], "ids": e["ids"],
+            "feitos": len(resolvidos),
+            "fim": fim["at"] if fim else (ultimo if completa else None),
+            "motivo": fim.get("motivo") if fim else ("completa" if completa else None),
+            "ultimo_evento": ultimo,
+        })
+    # O que sobra de uma leva (download que falhou) entra na seguinte do mesmo
+    # podcast: abrir a seguinte fecha a anterior.
+    for l in saida:
+        seguinte = next((s for s in saida if s["podcast"] == l["podcast"]
+                         and s["inicio"] > l["inicio"]), None)
+        if not l["fim"] and seguinte:
+            l["fim"] = seguinte["inicio"]
+            l["motivo"] = f"{l['feitos']} de {len(l['ids'])} feitos; o resto foi pra leva {seguinte['leva']}"
+    return saida
+
+
+def estado(log: list[dict] | None = None, banco: dict | None = None) -> dict:
+    """{"estado": Rodando|On hold|Travado, "detalhe", "desde", "leva"}."""
+    log = log if log is not None else eventos()
+    banco = banco if banco is not None else no_banco()
+    todas_levas = levas(log, banco)
+    abertas = [l for l in todas_levas if not l["fim"]]
+    # o que a sessão do acervo anota (info, aviso, falha) também é sinal de vida
+    ultimo_geral = max((e["at"] for e in log), default=None)
+    if abertas:
+        l = max(abertas, key=lambda l: l["inicio"])
+        ultimo = max(l["ultimo_evento"], ultimo_geral or "")
+        horas = (datetime.now(timezone.utc) - datetime.fromisoformat(ultimo)).total_seconds() / 3600
+        nome = f"{l['podcast']} {l['leva']}"
+        if horas > HORAS_TRAVADO:
+            return {"estado": "Travado", "leva": nome, "desde": ultimo,
+                    "detalhe": f"Leva {nome} aberta, {l['feitos']} de {len(l['ids'])} feitos, "
+                               f"sem nenhum evento há {horas:.0f} h."}
+        return {"estado": "Rodando", "leva": nome, "desde": l["inicio"],
+                "detalhe": f"Leva {nome}: {l['feitos']} de {len(l['ids'])} feitos."}
+    ultima = max(todas_levas, key=lambda l: l["fim"], default=None)
+    if not ultima:
+        return {"estado": "On hold", "leva": None, "desde": None, "detalhe": "Nenhuma leva ainda."}
+    return {"estado": "On hold", "leva": f"{ultima['podcast']} {ultima['leva']}", "desde": ultima["inicio"],
+            "detalhe": f"Leva {ultima['podcast']} {ultima['leva']}: {ultima['motivo']}."}
+
+
+def cmd_fim(args):
+    registra("leva_fim", podcast=args.podcast, leva=args.leva, motivo=args.motivo)
+    print("ok")
+
+
+def cmd_estado(_args):
+    e = estado()
+    print(f"{e['estado']}: {e['detalhe']}")
+
+
 def cmd_evento(args):
-    registra(tipo=args.tipo, texto=args.texto, id=args.id)
+    registra(args.tipo, texto=args.texto, id=args.id)
     print("ok")
 
 
 def cmd_cota(args):
-    registra(tipo="cota", janela=args.janela, semana=args.semana)
+    registra("cota", janela=args.janela, semana=args.semana)
     print("ok")
 
 
@@ -224,6 +299,11 @@ def main():
     s = sub.add_parser("leva")
     s.add_argument("--podcast", required=True, choices=list(PODCASTS))
     s.add_argument("--n", type=int, default=20)
+    s = sub.add_parser("fim")
+    s.add_argument("--podcast", required=True, choices=list(PODCASTS))
+    s.add_argument("--leva", type=int, required=True)
+    s.add_argument("--motivo", required=True)
+    sub.add_parser("estado")
     s = sub.add_parser("evento")
     s.add_argument("texto")
     s.add_argument("--tipo", default="info",
@@ -234,8 +314,8 @@ def main():
     s.add_argument("--semana", type=int, required=True)
     sub.add_parser("painel")
     args = p.parse_args()
-    {"fila": cmd_fila, "leva": cmd_leva, "evento": cmd_evento,
-     "cota": cmd_cota, "painel": cmd_painel}[args.cmd](args)
+    {"fila": cmd_fila, "leva": cmd_leva, "evento": cmd_evento, "fim": cmd_fim,
+     "estado": cmd_estado, "cota": cmd_cota, "painel": cmd_painel}[args.cmd](args)
 
 
 if __name__ == "__main__":

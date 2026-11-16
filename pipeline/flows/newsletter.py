@@ -474,6 +474,8 @@ def criar_rascunho(assunto: str, html_email: str):
         "html": html_email,
         "name": assunto[:80],
     })
+    import etapas
+    etapas.registra("newsletter_rascunho", id=dados.get("id"), assunto=assunto)
     print(f"Rascunho criado: {assunto}\n  id no Resend: {dados.get('id')}")
     print("  revise e envie em resend.com/broadcasts")
 
@@ -489,6 +491,9 @@ def enviar(broadcast_id: str):
     if b.get("status") != "draft":
         sys.exit(f"Esse broadcast não é rascunho (status: {b.get('status')}); nada enviado.")
     resend(f"broadcasts/{broadcast_id}/send", {})
+    # só chega aqui pelo botão de aprovar do Paulo: enviado = aprovado
+    import etapas
+    etapas.registra("newsletter_enviada", id=broadcast_id, assunto=b.get("subject"))
     print(f"Enviado pra lista: {b.get('subject')}  ({broadcast_id})")
 
 

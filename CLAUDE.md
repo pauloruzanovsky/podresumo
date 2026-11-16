@@ -66,6 +66,24 @@ comitar chave.
 11. `pendencias` — relatório do que precisa de decisão humana. Só lê. A rotina
     de segunda publica na página privada:
     https://claude.ai/artifact/5Rq8ymcDLy5a8gAk5FMyf1
+12. `painel` — painel de controle: rotinas (app e GitHub Actions), etapas de
+    cada episódio da semana, acervo (Rodando, On hold ou Travado), newsletter e
+    cartões de Supabase, Vercel (consumo da cota pela API de cobrança), Resend
+    e Webshare. Só lê; grava `respostas/painel.json` e a página pronta
+    `respostas/painel.html` (o modelo `pipeline/painel/modelo.html` com os dados
+    embutidos). Serviço que não respondeu sai "não conferido", nunca "ok".
+    Painel privado: https://claude.ai/artifact/N51qkMrsGWiZ4ejZs1f7Qm (receita
+    de republicar em `pipeline/painel/PUBLICAR.md`). Segue as regras de
+    github.com/rubenhassid1/grenade: cabeçalho com o pedido, título que diz o
+    ponto, no máximo 4 seções, 5 itens por bloco e 1 tabela, cores do Claude.
+13. `acervo` — extração do acervo antigo, à mão, em levas (`fila`, `leva`,
+    `fim`, `estado`, `evento`, `cota`). Uma leva fecha com `fim --motivo`, quando
+    a seguinte do mesmo podcast abre, ou quando todos os ids estão no site.
+
+**Log de etapas:** `pipeline/etapas.py` grava `respostas/etapas.jsonl` (download,
+transcrição com a via direta/proxy, extração, lote, slugs, capas, deploy,
+rascunho e envio da newsletter, levas do acervo). É de onde o painel tira os
+checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
 
 ## Regras que o Paulo pediu
 
@@ -104,8 +122,13 @@ comitar chave.
   preenche os slugs), grava os títulos PT/EN da semana anterior e envia os dos
   livros novos (`titulos_alt`, só se a estimativa for até US$ 1), busca capas e
   cria o rascunho da newsletter.
+- `podlibris-painel` — todo dia às 4h: roda `flows.painel` e republica o
+  painel de controle seguindo `pipeline/painel/PUBLICAR.md`. As rotinas de
+  domingo e segunda também republicam no fim. Não gasta API.
 - GitHub Actions `manter-banco-ativo.yml` — acesso diário ao Supabase, de
   reserva.
+- GitHub Actions `deploy-diario.yml` (7h) e `backup-banco.yml` (domingo 3h,
+  exporta e criptografa as tabelas). `sync-podcasts.yml` está desligado.
 - GitHub Actions `aquecer-cache.yml` — quando a Vercel termina um deploy,
   visita a home e tudo que ela linka (~80 páginas), porque deploy zera o
   cache e a primeira visita a um livro levava de 1,5 a 6 s.

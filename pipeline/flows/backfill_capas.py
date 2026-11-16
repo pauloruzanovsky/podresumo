@@ -312,6 +312,8 @@ def main():
     if args.simular:
         print("SIMULAÇÃO — nada foi gravado.")
         return
+    import etapas
+    etapas.registra("capas", consultados=len(alvos), achados=achou)
     print(f"acervo com capa real: {total_com_capa}/{len(livros)} "
           f"({100 * total_com_capa // max(len(livros), 1)}%)")
     print("O resto usa a capa gerada — nenhum card fica vazio.")

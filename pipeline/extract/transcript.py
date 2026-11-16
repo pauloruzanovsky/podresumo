@@ -38,6 +38,10 @@ def api_proxy() -> YouTubeTranscriptApi | None:
 
 # Depois do primeiro bloqueio, o resto da execução vai direto pro proxy.
 _direta_bloqueada = False
+# Pro log de etapas: por onde veio a última transcrição ("direta" ou "proxy")
+# e o último erro do proxy (ex.: 402 com a banda do mês esgotada).
+ultima_via = None
+erro_proxy = None
 
 
 def idiomas_da_faixa(video_id: str) -> list[str]:
@@ -69,12 +73,15 @@ def fetch_transcript(video_id: str) -> str:
     """
     print(f"📝 Buscando transcrição do vídeo {video_id}...")
 
-    global _direta_bloqueada
+    global _direta_bloqueada, ultima_via, erro_proxy
     idiomas = idiomas_da_faixa(video_id)
+    ultima_via = None
 
     if not _direta_bloqueada:
         try:
-            return _formata(_baixa(YouTubeTranscriptApi(), video_id, idiomas))
+            texto = _formata(_baixa(YouTubeTranscriptApi(), video_id, idiomas))
+            ultima_via = "direta"
+            return texto
         except RequestBlocked:
             _direta_bloqueada = True
             print("🚫 Conexão direta bloqueada pelo YouTube; tentando pelo proxy.")
@@ -84,8 +91,11 @@ def fetch_transcript(video_id: str) -> str:
         print("❌ Bloqueado e sem proxy configurado no .env.")
         return ""
     try:
-        return _formata(_baixa(proxy, video_id, idiomas))
+        texto = _formata(_baixa(proxy, video_id, idiomas))
+        ultima_via = "proxy"
+        return texto
     except Exception as e:
+        erro_proxy = str(e)[:200]
         print(f"❌ Proxy falhou: {e}")
         return ""
 

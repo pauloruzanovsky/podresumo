@@ -79,6 +79,8 @@ def grava_campos_ia(
         "tags": ai_data.get("tags", []),
         **campos_extras(ai_data),
     }).eq("id", video_id).execute()
+    import etapas
+    etapas.registra("extracao", id=video_id, extrator=extrator)
 
 
 def upsert_episode(video_id: str, podcast_id: str, metadata: dict, ai_data: dict, transcript: str = None, extrator: str = None) -> str:

@@ -37,6 +37,7 @@ load_dotenv()
 import jsonschema
 from anthropic import Anthropic
 
+import etapas
 from extract.youtube import fetch_descricoes
 from load.supabase import grava_campos_ia, supabase, upsert_livros
 from transform.claude import (
@@ -260,6 +261,7 @@ def enviar(eps):
     lote = client.messages.batches.create(requests=requests)
     with open(ULTIMO_LOTE, "w", encoding="utf-8") as f:
         f.write(lote.id)
+    etapas.registra("lote_enviado", batch_id=lote.id, n=len(eps), ids=[e["id"] for e in eps])
     print(f"batch_id: {lote.id}")
     print(f"status:   {lote.processing_status}")
     print(f"\nGuarde o batch_id. Pra buscar o resultado depois:")
@@ -333,6 +335,8 @@ def coletar(batch_id, esperar=True):
     print(f"  citações gravadas:  {total_livros}")
     print(f"  tokens: {tokens_in:,} entrada / {tokens_out:,} saída")
     print(f"  custo real: US$ {custo:.2f}  (R$ {custo * USD_BRL:.2f})")
+    etapas.registra("lote_coletado", batch_id=batch_id, ok=ok, falhas=falhas,
+                    citacoes=total_livros, custo_brl=round(custo * USD_BRL, 2))
     # episódio e livro novos ganham endereço legível (/livro/titulo)
     from flows.preencher_slugs import main as preencher_slugs
     preencher_slugs()
@@ -425,6 +429,7 @@ def grava_assinatura():
         print(f"  OK {ep['titulo'][:50]} — {n} obras")
 
     print(f"\n  episódios gravados: {ok}  |  falhas: {falhas}  |  citações: {total_livros}")
+    etapas.registra("assinatura", ok=ok, falhas=falhas, citacoes=total_livros)
     if ok:
         from flows.preencher_slugs import main as preencher_slugs
         preencher_slugs()

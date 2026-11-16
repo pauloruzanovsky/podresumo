@@ -81,6 +81,9 @@ def preencher(tabela: str, campos: str, candidatos, ordem: str, prioridade=None)
         supabase.table(tabela).update({"slug": slug}).eq("id", linha["id"]).execute()
         usados.add(slug)
     print(f"{tabela}: {len(sem)} slug(s) novo(s), {len(linhas) - len(sem)} já tinham")
+    if sem and tabela == "episodes":
+        import etapas
+        etapas.registra("slugs", episodios=[l["id"] for l in sem])
     return len(sem)
 
 

@@ -48,6 +48,9 @@ def main(agora: bool = False):
     except Exception as erro:
         print(f"  site: pedido de deploy falhou ({erro}); entra no deploy diário")
         return False
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import etapas
+    etapas.registra("deploy", ok=ok)
     if ok:
         os.makedirs(os.path.dirname(MARCA), exist_ok=True)
         with open(MARCA, "w", encoding="utf-8") as f:
