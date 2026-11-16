@@ -43,3 +43,20 @@ export async function carregarIndice(podcastId: string): Promise<ItemIndice[]> {
     ).length,
   }));
 }
+
+/**
+ * Pedaço do índice em volta do episódio aberto: `raio` de cada lado (21 no
+ * total), encostando no começo ou no fim quando ele está na ponta.
+ *
+ * A página de episódio levava o índice inteiro (~900 itens no Modern Wisdom),
+ * no HTML e de novo no payload do React: mais da metade da página. A Vercel
+ * cobra o ISR write por 8 KB gravados, e os robôs regravam as ~2.100 páginas
+ * de episódio a cada deploy (cota estourada em nov/2026). A lista inteira fica
+ * na estante do podcast.
+ */
+export function vizinhos(itens: ItemIndice[], atualId: string, raio = 10): ItemIndice[] {
+  const tamanho = 2 * raio + 1;
+  const pos = itens.findIndex((i) => i.id === atualId);
+  const inicio = Math.max(0, Math.min(pos - raio, itens.length - tamanho));
+  return itens.slice(inicio, inicio + tamanho);
+}

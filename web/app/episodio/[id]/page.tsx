@@ -6,7 +6,7 @@ import BookCover from "@/components/BookCover";
 import Compartilhar from "@/components/Compartilhar";
 import EpisodeIndex from "@/components/EpisodeIndex";
 import Estante from "@/components/Estante";
-import { carregarIndice } from "@/lib/indice";
+import { carregarIndice, vizinhos } from "@/lib/indice";
 import { podcastVisivel } from "@/lib/podcasts";
 import { slugify } from "@/lib/slug";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -157,7 +157,9 @@ export default async function EpisodioPage({
   if (!ep || ep.status !== "done" || !podcastVisivel(ep.podcasts?.nome))
     return notFound();
 
-  const indice = await carregarIndice(ep.podcast_id);
+  // só os vizinhos: a lista inteira pesava mais que o resto da página
+  const indiceTodo = await carregarIndice(ep.podcast_id);
+  const indice = vizinhos(indiceTodo, id);
 
   const livros: LivroCitado[] = ((ep.episode_livros ?? []) as any[])
     .filter((rel) => rel.livros && rel.livros.tipo === "livro")
@@ -196,7 +198,15 @@ export default async function EpisodioPage({
     // no celular o índice vai pro fim: antes ele empurrava o episódio pra baixo
     <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:items-start">
     <div className="order-last lg:order-none lg:contents">
-      <EpisodeIndex itens={indice} atualId={id} podcastNome={ep.podcasts?.nome ?? ""} />
+      <EpisodeIndex
+        itens={indice}
+        atualId={id}
+        podcastNome={ep.podcasts?.nome ?? ""}
+        todos={{
+          total: indiceTodo.length,
+          href: `/podcast/${slugify(ep.podcasts?.nome ?? "")}#episodios`,
+        }}
+      />
     </div>
     <div className="min-w-0 max-w-4xl">
       <Link

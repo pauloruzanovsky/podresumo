@@ -11,14 +11,24 @@
  * Na Vercel, banco fora do ar faz o build falhar, e a versão no ar continua.
  * Na máquina local, se já houver um retrato, ele fica e o build segue.
  *
- *   node scripts/retrato.mjs
+ * Versão: um hash do conteúdo (sem a hora do retrato), gravado no retrato e em
+ * public/retrato-versao.txt, que o site serve como arquivo estático. O deploy
+ * diário (.github/workflows/deploy-diario.yml) roda `--versao`, que só lê o
+ * banco e imprime o hash, e só pede deploy se ele mudou: cada deploy zera o
+ * cache e os robôs regravam o site inteiro (ISR writes, cota da Vercel).
+ *
+ *   node scripts/retrato.mjs            # grava o retrato
+ *   node scripts/retrato.mjs --versao   # só imprime a versão do banco
  */
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SAIDA = join(RAIZ, "retrato", "dados.json");
+const ARQ_VERSAO = join(RAIZ, "public", "retrato-versao.txt");
+const SO_VERSAO = process.argv.includes("--versao");
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL && existsSync(join(RAIZ, ".env.local"))) {
   process.loadEnvFile(join(RAIZ, ".env.local"));
@@ -86,20 +96,33 @@ async function main() {
   const feitos = new Set(episodes.map((e) => e.id));
   const episode_livros = (await tabela("episode_livros")).filter((r) => feitos.has(r.episode_id));
 
-  const dados = { gerado_em: new Date().toISOString(), podcasts, episodes, livros, episode_livros };
+  // as consultas têm ordem fixa, então o mesmo banco dá o mesmo hash
+  const versao = createHash("sha256")
+    .update(JSON.stringify({ podcasts, episodes, livros, episode_livros }))
+    .digest("hex")
+    .slice(0, 16);
+  if (SO_VERSAO) {
+    console.log(versao);
+    return;
+  }
+
+  const dados = { gerado_em: new Date().toISOString(), versao, podcasts, episodes, livros, episode_livros };
   mkdirSync(dirname(SAIDA), { recursive: true });
   // grava ao lado e troca: build interrompido não deixa retrato pela metade
   writeFileSync(`${SAIDA}.tmp`, JSON.stringify(dados));
   renameSync(`${SAIDA}.tmp`, SAIDA);
+  mkdirSync(dirname(ARQ_VERSAO), { recursive: true });
+  writeFileSync(ARQ_VERSAO, `${versao}
+`);
   const mb = (statSync(SAIDA).size / 1e6).toFixed(1);
   console.log(
     `  retrato: ${podcasts.length} podcasts, ${episodes.length} episódios, ${livros.length} livros, ` +
-      `${episode_livros.length} citações, ${mb} MB em ${((Date.now() - inicio) / 1000).toFixed(0)} s`
+      `${episode_livros.length} citações, ${mb} MB, versão ${versao}, em ${((Date.now() - inicio) / 1000).toFixed(0)} s`
   );
 }
 
 main().catch((erro) => {
-  if (!process.env.VERCEL && existsSync(SAIDA)) {
+  if (!SO_VERSAO && !process.env.VERCEL && existsSync(SAIDA)) {
     console.warn(`  retrato: banco falhou (${erro.message}); sigo com o retrato que já existe`);
     return;
   }
