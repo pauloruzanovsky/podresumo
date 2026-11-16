@@ -610,9 +610,8 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log) -> dict:
     etapa = {e["etapa"]: e["status"] for e in nl_etapas}
     if etapa.get("Rascunho criado") == "feito" and etapa.get("Enviado") != "feito":
         frases.append("a newsletter espera seu ok")
-        ultimo = next((e for e in reversed(log) if e["tipo"] == "newsletter_rascunho"), None)
-        dia = "segunda" if ultimo and datetime.fromisoformat(ultimo["at"]).weekday() == 0 else "domingo"
-        pedidos.append({"texto": f"Aprovar o rascunho da newsletter no chat da rotina de {dia}",
+        # o botão de aprovar fica no chat onde o rascunho foi mostrado
+        pedidos.append({"texto": "Aprovar o rascunho da newsletter (botão no chat onde ele foi mostrado)",
                         "prazo": "terça de manhã", "link": "https://resend.com/broadcasts", "nivel": "atencao"})
     if any(s["servico"] == "Vercel" and s["status"] == "erro" for s in servicos):
         frases.append("a Vercel passou da cota grátis")
