@@ -590,13 +590,14 @@ def webshare_cartao(servicos: list[dict], log: list[dict]):
 # ───────────────────────────────────────────────────────── main ───
 
 def livros_duplicados() -> dict:
-    """O plano do normalize_livros sem aplicar: quantas fusões esperam leitura.
-    Fundir sozinho não dá, porque já propôs fusão errada de homônimos."""
-    from flows.normalize_livros import monta_plano
+    """Duplicatas que esperam leitura: as óbvias a rotina de domingo funde
+    sozinha (normalize_livros --auto); aqui só contam as duvidosas
+    (homônimos, autores que divergem)."""
+    from flows import normalize_livros as nl
     linhas = todas(lambda: supabase.table("livros").select(
         "id, titulo, autor, tipo, titulo_alt, episode_livros(episode_id)").order("id"))
-    _, _, merges, _, _ = monta_plano(linhas)  # os de autoria incerta já estão em merges
-    return {"fusoes": len(merges), "removidos": sum(len(dups) for _, dups in merges)}
+    _, _, obvias, _, _ = nl.monta_plano(linhas, so_obvios=True)
+    return {"duvidosas": len(nl.duvidosos), "obvias": len(obvias)}
 
 
 def lembretes() -> list[dict]:
@@ -640,13 +641,13 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log, duplicados=None) -
                         "link": vercel, "nivel": "erro"})
     banda = next((s for s in servicos if s["metrica"] == "Banda do mês"), None)
     if banda and banda["status"] == "erro":
+        # Sem pedido: em 16/11/2026 o Paulo decidiu deixar renovar sozinho; o
+        # acervo segue pela conexão direta enquanto isso.
         frases.append(f"o proxy de reserva está sem banda até {banda.get('renova')}")
-        pedidos.append({"texto": "Decidir se aumenta a banda do Webshare", "prazo": f"até {banda.get('renova')}",
-                        "link": banda["link"], "nivel": "erro"})
-    if duplicados and duplicados["fusoes"]:
-        pedidos.append({"texto": f"Revisar {numero(duplicados['fusoes'])} fusões de livros duplicados "
-                                 f"({numero(duplicados['removidos'])} entradas a menos): peça pro Claude o plano do normalize_livros",
-                        "prazo": "esta semana", "link": None, "nivel": "atencao"})
+    if duplicados and duplicados["duvidosas"]:
+        pedidos.append({"texto": f"Decidir {numero(duplicados['duvidosas'])} possíveis livros duplicados que não são óbvios "
+                                 "(homônimos, autor diferente): peça pro Claude a lista do normalize_livros --auto",
+                        "prazo": "quando puder", "link": None, "nivel": "atencao"})
     for l in lembretes():
         pedidos.append({"texto": l["texto"], "prazo": l.get("prazo"), "link": l.get("link"), "nivel": "atencao"})
     for s in servicos:

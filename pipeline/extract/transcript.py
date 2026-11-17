@@ -42,6 +42,9 @@ _direta_bloqueada = False
 # e o último erro do proxy (ex.: 402 com a banda do mês esgotada).
 ultima_via = None
 erro_proxy = None
+# False = só conexão direta (o acervo antigo não gasta a banda do Webshare,
+# que fica de reserva pros episódios novos).
+usar_proxy = True
 
 
 def idiomas_da_faixa(video_id: str) -> list[str]:
@@ -86,6 +89,9 @@ def fetch_transcript(video_id: str) -> str:
             _direta_bloqueada = True
             print("🚫 Conexão direta bloqueada pelo YouTube; tentando pelo proxy.")
 
+    if not usar_proxy:
+        print("❌ Bloqueado, e esta execução não usa o proxy.")
+        return ""
     proxy = api_proxy()
     if proxy is None:
         print("❌ Bloqueado e sem proxy configurado no .env.")

@@ -28,6 +28,7 @@ import os
 import sys
 import time
 import unicodedata
+from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -154,7 +155,7 @@ def episodios(limite=None, podcast=None, pendentes=False, novos=False):
     # `pending` = transcrição baixada por baixar_transcricoes, ainda sem
     # extração. Vira `done` quando o resultado é gravado.
     consulta = supabase.table("episodes").select(
-        "id, titulo, transcricao, extrator, podcast_id"
+        "id, titulo, data, transcricao, extrator, podcast_id"
     ).in_("status", ["pending"] if novos else ["done", "pending"])
 
     if podcast:
@@ -511,6 +512,9 @@ def main():
                    help=f"só os ainda não extraídos com o prompt {VERSAO_PROMPT}")
     p.add_argument("--novos", action="store_true",
                    help="só os que nunca foram extraídos (status pending)")
+    p.add_argument("--desde-dias", type=int, metavar="N",
+                   help="só episódio lançado nos últimos N dias: o lote pago de domingo "
+                        "não pega o acervo antigo, que precisa de ok do Paulo")
     p.add_argument("--exceto", nargs="+", default=[], metavar="ID",
                    help="ids de episódio a deixar de fora")
     args = p.parse_args()
@@ -518,6 +522,9 @@ def main():
     def alvo():
         eps = episodios(None, args.podcast, args.pendentes, args.novos)
         eps = [e for e in eps if e["id"] not in args.exceto]
+        if args.desde_dias is not None:
+            corte = (date.today() - timedelta(days=args.desde_dias)).isoformat()
+            eps = [e for e in eps if (e.get("data") or "") >= corte]
         return eps[:args.limite] if args.limite else eps
 
     # Antes de qualquer coisa, inclusive da estimativa: a seleção dos

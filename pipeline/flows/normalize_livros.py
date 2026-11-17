@@ -315,8 +315,52 @@ def escolhe_forma(counter: Counter) -> str:
 
 # ----------------------------------------------------------------- plano ----
 
-def monta_plano(livros):
-    """Decide tudo em memória, a partir do snapshot. Não escreve nada."""
+def chave_titulo_inteiro(titulo: str) -> str:
+    """Título inteiro, com subtítulo, sem acento, caixa nem pontuação."""
+    t = sem_acento(titulo).lower()
+    t = re.sub(r"[^\w\s]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def autor_que_cobre(autores: list[str]) -> str | None:
+    """O nome que contém todos os outros ("Sheryl Sandberg e Adam Grant" cobre
+    "Sheryl Sandberg"), ou None se não há autor ou se eles divergem."""
+    if not autores:
+        return None
+    tokens = {a: set(re.sub(r"[^\w\s]", " ", sem_acento(a).lower()).split()) for a in autores}
+    maior = max(autores, key=lambda a: len(tokens[a]))
+    if all(tokens[a] <= tokens[maior] for a in autores):
+        return maior
+    return None
+
+
+def obvio(chave: str, membros: list[dict], autores: list[str], unico: str | None) -> bool:
+    """Fusão que não precisa de leitura humana:
+    - par PT/EN que já está em ALIASES (alguém já decidiu);
+    - mesmo tipo (nada de livro com filme) e
+      - um autor só (ou coautoria que um nome cobre), ou
+      - ninguém com autor, mas o título inteiro igual (só caixa, acento e
+        pontuação mudam): "Cartas" sem autor e "Cartas: ..." sem autor podem
+        ser livros diferentes.
+    Autores que divergem ("Jaws" de Benchley e de outro) ficam pra leitura."""
+    if chave.startswith("alias:"):
+        return True
+    if len({m["tipo"] for m in membros}) > 1:
+        return False
+    if autores:
+        return unico is not None
+    return len({chave_titulo_inteiro(m["titulo"]) for m in membros}) == 1
+
+
+# Grupos que o modo automático deixou pra leitura (preenchido por monta_plano).
+duvidosos: list[list[dict]] = []
+
+
+def monta_plano(livros, so_obvios=False):
+    """Decide tudo em memória, a partir do snapshot. Não escreve nada.
+
+    so_obvios: só as fusões de `obvio()`; as outras vão pra `duvidosos` e
+    ficam como estão (nem o canônico delas muda)."""
     nao_livro_slugs = {slug_titulo(t) for t in NAO_LIVRO_TITULOS}
     # por chave (sem artigo, acento, subtítulo), não pelo texto exato
     autor_por_slug = {slug_titulo(t): a for t, a in AUTHOR_FIXES.items()}
@@ -402,6 +446,7 @@ def monta_plano(livros):
         grupos[chave].append(e)
 
     merges, incertos = [], []
+    duvidosos.clear()
     for chave, membros in grupos.items():
         if len(membros) < 2:
             continue
@@ -411,6 +456,25 @@ def monta_plano(livros):
         # separados por " / " — a incerteza fica visível na UI em vez de o
         # script fingir que sabe qual está certo.
         autores = sorted({m["autor"] for m in membros if m["autor"]})
+
+        if so_obvios:
+            # Filme e livro do mesmo nome ficam separados: só os livros do
+            # grupo se juntam ("Duna" de Herbert com "Duna" sem autor), e o
+            # filme continua sendo filme.
+            so_livros = [m for m in membros if m["tipo"] == "livro"]
+            if so_livros and len(so_livros) < len(membros) and not chave.startswith("alias:"):
+                membros = so_livros
+                if len(membros) < 2:
+                    continue
+                autores = sorted({m["autor"] for m in membros if m["autor"]})
+            unico = autor_que_cobre(autores)
+            if not obvio(chave, membros, autores, unico):
+                # grupo só de filmes não aparece no site: nem vai pra leitura
+                if so_livros:
+                    duvidosos.append(membros)
+                continue
+            # coautoria ("Sandberg" e "Sandberg e Grant"): fica o nome completo
+            autores = [unico] if unico else []
 
         if chave.startswith("alias:"):
             membros.sort(key=lambda m: ordem_alias.get(slug_titulo(m["titulo"]), 99))
@@ -551,6 +615,14 @@ def imprime_plano(estado, splits, merges, incertos, updates):
     print(f"  no site: {visiveis_hoje} → {len(visiveis) + novos_por_split} livros")
 
 
+def imprime_duvidosos():
+    print(f"\n=== DUVIDOSOS: FICAM PRA LEITURA ({len(duvidosos)}) ===")
+    for membros in sorted(duvidosos, key=lambda g: -sum(m["citacoes"] for m in g)):
+        print("  ? " + "  ×  ".join(
+            f"\"{m['titulo']}\" / {m['autor'] or 'sem autor'} ({m['tipo']}, {m['citacoes']} cit.)"
+            for m in membros))
+
+
 # ---------------------------------------------------------------- execução ---
 
 def busca_ou_cria(titulo: str, autor):
@@ -648,6 +720,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true",
                         help="executa as mudanças (sem esta flag é só dry-run)")
+    parser.add_argument("--auto", action="store_true",
+                        help="só as fusões óbvias (ver obvio()); as duvidosas ficam listadas "
+                             "pro Paulo e o painel as conta. Com --apply, grava.")
+    parser.add_argument("--sem-deploy", action="store_true",
+                        help="com --apply: não pede deploy (a rotina de domingo pede um só no fim)")
     args = parser.parse_args()
 
     try:
@@ -662,8 +739,10 @@ def main():
         ).order("id"))
         migrado = False
 
-    estado, splits, merges, incertos, updates = monta_plano(linhas)
+    estado, splits, merges, incertos, updates = monta_plano(linhas, so_obvios=args.auto)
     imprime_plano(estado, splits, merges, incertos, updates)
+    if args.auto:
+        imprime_duvidosos()
 
     if not migrado:
         print("\nAs colunas `tipo` e `titulo_alt` ainda não existem no banco.")
@@ -680,9 +759,13 @@ def main():
     aplica_splits(splits)
     aplica_merges(merges)
     aplica_updates(updates)
+    import etapas
+    etapas.registra("normalize", fusoes=len(merges), removidos=sum(len(d) for _, d in merges),
+                    duvidosos=len(duvidosos) if args.auto else None)
 
-    from flows.atualizar_site import main as atualizar_site
-    atualizar_site()
+    if not args.sem_deploy:
+        from flows.atualizar_site import main as atualizar_site
+        atualizar_site()
 
     final = supabase.table("livros").select("id", count="exact").execute()
     livros = supabase.table("livros").select(

@@ -43,9 +43,12 @@ comitar chave.
    Sem API: `--exportar --novos` grava os prompts em `respostas/assinatura/`,
    o Claude da assinatura escreve `<id>.json` ao lado e `--do-assinatura`
    valida no schema e grava (inválido fica `pending`).
-4. `normalize_livros` — funde livros duplicados. **Rodar sem `--apply`, ler o
-   plano, só então aplicar**: já propôs fusão errada de homônimos
-   (`TITULOS_HOMONIMOS`, `ALIASES` no arquivo).
+4. `normalize_livros` — funde livros duplicados. `--auto` só junta o óbvio
+   (`obvio()`: mesmo título e mesmo autor, coautoria que um nome cobre, pares
+   de `ALIASES`; filme fica separado do livro homônimo) e lista os
+   "DUVIDOSOS", que o painel conta pro Paulo decidir. A rotina de domingo roda
+   `--auto --apply --sem-deploy`. **Sem `--auto`, nunca aplicar sem ler o
+   plano**: já propôs fusão errada de homônimos (`TITULOS_HOMONIMOS`).
 5. `backfill_capas` — capas via Open Library e Google Books;
    `capas_manuais.json` sobrepõe.
 6. `preencher_slugs` — gera os endereços `/livro/<slug>` e `/episodio/<slug>`
@@ -74,7 +77,8 @@ comitar chave.
     e Webshare. Só lê; grava `respostas/painel.json` e a página pronta
     `respostas/painel.html` (o modelo `pipeline/painel/modelo.html` com os dados
     embutidos). Serviço que não respondeu sai "não conferido", nunca "ok".
-    Painel privado: https://claude.ai/artifact/N51qkMrsGWiZ4ejZs1f7Qm (receita
+    Pedidos à mão (ex.: publicar um post) ficam em `pipeline/painel/lembretes.json`
+    (`texto`, `prazo`, `link`, `ate`). Painel privado: https://claude.ai/artifact/N51qkMrsGWiZ4ejZs1f7Qm (receita
     de republicar em `pipeline/painel/PUBLICAR.md`). Segue as regras de
     github.com/rubenhassid1/grenade: cabeçalho com o pedido, título que diz o
     ponto, no máximo 4 seções, 5 itens por bloco e 1 tabela, cores do Claude.
@@ -114,12 +118,17 @@ checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
 - `podresumo-baixar-transcricoes` — 8h e 20h: mantém o Supabase ativo (o plano
   grátis pausa por inatividade) e baixa uma leva de transcrições dos 4
   podcasts. Dos em inglês, só episódio a partir de 02/11/2026, com 45 min ou
-  mais e sem "Essentials" (`--desde`, `--min-minutos`, `--excluir`). Não gasta API.
+  mais e sem "Essentials" (`--desde`, `--min-minutos`, `--excluir`). Episódio
+  novo sempre primeiro; só na leva da manhã, de segunda a sábado e sem
+  bloqueio, abre uma leva de 5 do acervo antigo (`flows.acervo`), baixa com
+  `--sem-proxy` e extrai na assinatura (`--do-assinatura --sem-deploy`). No
+  domingo, nada de acervo: o IP fica livre pros episódios da semana. Não gasta API.
 - `podlibris-lote-semanal` — domingo 21h: extrai os episódios novos dos 4
   podcasts na assinatura (um subagente Opus por episódio; teste de 03/11
   empatou com a API). O que falhar vai pro lote da API, os mais recentes que
-  cabem em R$ 10 no pior caso (`--ate-caber`); o resto espera a semana
-  seguinte. Episódio longo ≈ R$ 1 no pior caso. Depois busca capas, pede UM
+  cabem em R$ 10 no pior caso (`--ate-caber`), só lançados nos últimos 14
+  dias (`--desde-dias 14`: acervo antigo nunca vai pra API); o resto espera a
+  semana seguinte. Funde os livros duplicados óbvios (`normalize_livros --auto`). Episódio longo ≈ R$ 1 no pior caso. Depois busca capas, pede UM
   deploy com extração e capas juntas (`--sem-deploy` nos dois passos, depois
   `atualizar_site --agora`) e cria o rascunho da newsletter da semana, com o
   botão de aprovar no chat da rotina: o Paulo acha o rascunho e o site

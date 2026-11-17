@@ -113,7 +113,11 @@ def main():
                    help="ignora vídeo mais curto (corte, short)")
     p.add_argument("--excluir", nargs="+", default=[], metavar="TRECHO",
                    help='ignora vídeo com este trecho no título, ex.: "Essentials"')
+    p.add_argument("--sem-proxy", action="store_true",
+                   help="só a conexão direta: bloqueou, para (o acervo antigo não gasta o Webshare)")
     args = p.parse_args()
+    if args.sem_proxy:
+        transcript.usar_proxy = False
 
     podcast = acha_podcast(args.podcast)
     if args.ids_arquivo:
