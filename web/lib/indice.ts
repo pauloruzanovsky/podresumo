@@ -11,6 +11,8 @@ export interface ItemIndice {
   id: string;
   slug: string | null;
   numero: string | null;
+  /** Data de lançamento (AAAA-MM-DD). */
+  data: string | null;
   titulo: string;
   /** Livros citados. */
   livros: number;
@@ -25,7 +27,7 @@ export async function carregarIndice(podcastId: string): Promise<ItemIndice[]> {
   const { data } = await todas((de, ate) =>
     supabase
       .from("episodes")
-      .select("id, slug, ep_number, titulo, episode_livros(livros(tipo))")
+      .select("id, slug, ep_number, data, titulo, episode_livros(livros(tipo))")
       .eq("podcast_id", podcastId)
       .eq("status", "done")
       .order("data", { ascending: false })
@@ -37,6 +39,7 @@ export async function carregarIndice(podcastId: string): Promise<ItemIndice[]> {
     id: e.id,
     slug: e.slug ?? null,
     numero: e.ep_number ?? null,
+    data: e.data ?? null,
     titulo: e.ep_number ? semSufixo(e.titulo) : e.titulo,
     livros: ((e.episode_livros ?? []) as any[]).filter(
       (r) => r.livros?.tipo === "livro"

@@ -115,7 +115,8 @@ export default function RootLayout({
               <span className="font-semibold text-foreground">{SITE_NAME}</span>{" "}
               — os livros citados nos podcasts, com o minuto de cada menção.
               Extraído por IA a partir das transcrições; pode conter erros.
-              Como associado da Amazon, o {SITE_NAME} ganha com compras qualificadas.
+              Como participante do Programa de Associados da Amazon, o {SITE_NAME} é
+              remunerado pelas compras qualificadas efetuadas.
             </p>
             <Newsletter variante="rodape" />
           </div>

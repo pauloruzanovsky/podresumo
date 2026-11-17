@@ -5,6 +5,15 @@ import Link from "next/link";
 import { hrefEpisodio } from "@/lib/links";
 import type { ItemIndice } from "@/lib/indice";
 
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/** "2026-11-12" -> { diaMes: "12 nov", ano: "2026" }, sem fuso no meio. */
+function dataCurta(data: string | null) {
+  const m = data?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return { diaMes: `${Number(m[3])} ${MESES[Number(m[2]) - 1]}`, ano: m[1] };
+}
+
 /**
  * Índice lateral do podcast: os episódios com página, cada um com quantos
  * livros cita.
@@ -87,9 +96,13 @@ export default function EpisodeIndex({
         >
           {itens.map((item) => {
             const ehAtual = item.id === atualId;
+            // Data no lugar do número: só Os Sócios numera os episódios, e o
+            // "—" dos outros não dizia nada. O número vai pra linha de baixo.
+            const d = dataCurta(item.data);
             const numero = (
-              <span className="font-mono text-[11px] w-9 shrink-0 pt-px">
-                {item.numero ? `#${item.numero}` : "—"}
+              <span className="w-10 shrink-0 pt-px leading-tight tabular-nums">
+                <span className="block text-[11px]">{d?.diaMes ?? ""}</span>
+                <span className="block text-[10px] font-normal text-muted">{d?.ano ?? ""}</span>
               </span>
             );
 
@@ -112,6 +125,7 @@ export default function EpisodeIndex({
                       {item.titulo}
                     </span>
                     <span className="block text-[11px] text-muted mt-0.5">
+                      {item.numero && <span className="font-mono">#{item.numero} · </span>}
                       {item.livros === 0
                         ? "nenhum livro citado"
                         : `${item.livros} ${item.livros === 1 ? "livro" : "livros"}`}

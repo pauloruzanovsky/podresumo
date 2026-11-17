@@ -234,6 +234,7 @@ export default async function PodcastPage({
     id: e.id,
     slug: e.slug,
     numero: e.numero,
+    data: e.data,
     titulo: e.titulo,
     livros: new Set(e.citacoes.map((c) => c.livroId)).size,
   }));

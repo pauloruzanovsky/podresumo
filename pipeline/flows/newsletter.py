@@ -439,7 +439,9 @@ def montar(episodios, citacoes, placar, fora, acervo=None, abertura=None, hoje=N
     partes.append(
         f'<p style="margin:18px 0 0;font-family:{SANS};font-size:12px;line-height:1.5;color:{APAGADO};">'
         f'Você recebe este e-mail porque se inscreveu em {link(SITE, "podlibris.com", APAGADO)}. '
-        'Como associado da Amazon, o Podlibris ganha com compras qualificadas. '
+        # frase do Contrato Operacional da Amazon Brasil (cláusula 5)
+        'Como participante do Programa de Associados da Amazon, o Podlibris é '
+        'remunerado pelas compras qualificadas efetuadas. '
         f'{link(DESCADASTRO, "Sair da lista", APAGADO)}.</p>'
     )
     return assunto, documento(assunto, fala or acervo, "\n".join(partes))

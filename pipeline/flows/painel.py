@@ -589,7 +589,28 @@ def webshare_cartao(servicos: list[dict], log: list[dict]):
 
 # ───────────────────────────────────────────────────────── main ───
 
-def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log) -> dict:
+def livros_duplicados() -> dict:
+    """O plano do normalize_livros sem aplicar: quantas fusões esperam leitura.
+    Fundir sozinho não dá, porque já propôs fusão errada de homônimos."""
+    from flows.normalize_livros import monta_plano
+    linhas = todas(lambda: supabase.table("livros").select(
+        "id, titulo, autor, tipo, titulo_alt, episode_livros(episode_id)").order("id"))
+    _, _, merges, _, _ = monta_plano(linhas)  # os de autoria incerta já estão em merges
+    return {"fusoes": len(merges), "removidos": sum(len(dups) for _, dups in merges)}
+
+
+def lembretes() -> list[dict]:
+    """Pedidos à mão (painel/lembretes.json): {texto, prazo?, link?, ate?}.
+    Some sozinho depois de `ate` (AAAA-MM-DD); apagar a linha quando feito."""
+    caminho = os.path.join(RAIZ, "painel", "lembretes.json")
+    if not os.path.exists(caminho):
+        return []
+    hoje = date.today().isoformat()
+    with open(caminho, encoding="utf-8") as f:
+        return [l for l in json.load(f) if not l.get("ate") or l["ate"] >= hoje]
+
+
+def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log, duplicados=None) -> dict:
     """O título (o ponto, numa frase) e os pedidos do topo da página."""
     frases, pedidos = [], []
     vercel = "https://vercel.com/pauloruzanovskys-projects/podresumo/usage"
@@ -622,6 +643,12 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log) -> dict:
         frases.append(f"o proxy de reserva está sem banda até {banda.get('renova')}")
         pedidos.append({"texto": "Decidir se aumenta a banda do Webshare", "prazo": f"até {banda.get('renova')}",
                         "link": banda["link"], "nivel": "erro"})
+    if duplicados and duplicados["fusoes"]:
+        pedidos.append({"texto": f"Revisar {numero(duplicados['fusoes'])} fusões de livros duplicados "
+                                 f"({numero(duplicados['removidos'])} entradas a menos): peça pro Claude o plano do normalize_livros",
+                        "prazo": "esta semana", "link": None, "nivel": "atencao"})
+    for l in lembretes():
+        pedidos.append({"texto": l["texto"], "prazo": l.get("prazo"), "link": l.get("link"), "nivel": "atencao"})
     for s in servicos:
         if s["status"] == "nao_conferido":
             pedidos.append({"texto": f"Ver por que não deu pra conferir {s['metrica'].lower()} ({s['servico']})",
@@ -632,7 +659,7 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log) -> dict:
         titulo = "tudo rodou, com algo pra ficar de olho"
     else:
         titulo = "tudo em dia: as rotinas rodaram e o site está atualizado"
-    return {"titulo": titulo[0].upper() + titulo[1:], "pedidos": pedidos[:3],
+    return {"titulo": titulo[0].upper() + titulo[1:], "pedidos": pedidos[:5],
             "desde": f"{semana_passada(date.today())[0]:%d/%m}"}
 
 
@@ -712,7 +739,8 @@ def main():
         "newsletter": nl_etapas,
         "newsletter_resumo": [nl_resumo],
         "servicos": servicos,
-        "pagina": pagina(lista_rotinas, acervo_resumo, nl_etapas, servicos, log),
+        "pagina": pagina(lista_rotinas, acervo_resumo, nl_etapas, servicos, log,
+                         secao("duplicados", livros_duplicados) if banco_ok else None),
     }
     with open(SAIDA, "w", encoding="utf-8") as f:
         json.dump(painel, f, ensure_ascii=False, indent=1)
