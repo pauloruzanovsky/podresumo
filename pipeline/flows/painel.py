@@ -17,6 +17,7 @@ Uso:
     python -m flows.painel
 """
 
+import calendar
 import json
 import os
 import subprocess
@@ -37,7 +38,7 @@ import etapas
 from extract.youtube import fetch_episodes
 from flows import acervo
 from flows.baixar_transcricoes import SEM_LEGENDA, episodio_inteiro
-from flows.newsletter import semana_passada
+from flows.newsletter import semana_de, semana_passada
 from load.supabase import supabase, todas
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -64,6 +65,7 @@ LIMITE_HORAS = {
     "podlibris-lote-semanal": 7 * 24 + 4,
     "podlibris-newsletter-semanal": 7 * 24 + 4,
     "podlibris-painel": 26,
+    "podlibris-post-semanal": 7 * 24 + 4,
 }
 
 # Workflows do GitHub Actions: (arquivo, nome, quando roda, horas pra contar como atrasado)
@@ -74,16 +76,12 @@ WORKFLOWS = [
     ("backup-banco.yml", "Backup do banco", "domingo às 3h", 7 * 24 + 4),
 ]
 
-# Limites do plano grátis (Hobby) da Vercel: a API dá o consumo, não o limite.
+# Vercel Pro (desde nov/2026): sem limite por recurso, US$ 20 de crédito por
+# mês que cobrem qualquer consumo; passou disso, cobra à parte.
 VERCEL_TEAM = "team_gEWElu3dp9k9R4Wl6EeBpjES"
-VERCEL_LIMITES = [
-    ("ISR Writes", "ISR writes", 200_000, ""),
-    ("Fluid Active CPU", "CPU ativa", 4, "h"),
-    ("Fast Origin Transfer", "Fast Origin Transfer", 10, "GB"),
-    ("Function Invocations", "Invocações de função", 1_000_000, ""),
-    ("ISR Reads", "ISR reads", 1_000_000, ""),
-    ("Fast Data Transfer", "Fast Data Transfer", 100, "GB"),
-]
+VERCEL_CREDITO_USD = 20
+UNIDADES = {"writes": "escritas", "reads": "leituras", "gigabyte": "GB", "minute": "min", "hour": "h",
+            "invocations": "invocações", "requests": "pedidos"}
 RESEND_LIMITE_MES, RESEND_LIMITE_DIA = 3000, 100
 SUPABASE_LIMITE_GB = 0.5
 
@@ -294,9 +292,20 @@ def linha_episodio(ep, grupo, log_ids, capas_at, deploys, podcast_nome):
     }
 
 
+def inicio_semana(log: list[dict]) -> date:
+    """Primeiro dia da seção de episódios: a semana fechada da newsletter até
+    ela ser enviada; depois do envio, só a semana corrente."""
+    hoje = date.today()
+    inicio, atual = semana_passada(hoje)[0], semana_de(hoje)[0]
+    fechou = (inicio + timedelta(days=7)).isoformat()
+    if inicio < atual and any(e["tipo"] == "newsletter_enviada" and e["at"][:10] >= fechou for e in log):
+        return atual
+    return inicio
+
+
 def episodios(log: list[dict], deploys) -> tuple[list[dict], dict]:
     hoje = date.today()
-    inicio = semana_passada(hoje)[0]
+    inicio = inicio_semana(log)
     pods = {p["id"]: p["nome"] for p in supabase.table("podcasts").select("id, nome").execute().data}
     banco = {e["id"]: e for e in supabase.table("episodes").select(
         "id, podcast_id, titulo, data, status, extraido_em, slug, created_at"
@@ -323,7 +332,7 @@ def episodios(log: list[dict], deploys) -> tuple[list[dict], dict]:
         ep = banco.get(i) or {**vistos[i], "status": None}
         nome = pods.get(ep.get("podcast_id")) or ep.get("podcast")
         data = ep.get("data") or ""
-        grupo = "Esta semana" if data >= (inicio + timedelta(days=7)).isoformat() else "Semana passada"
+        grupo = "Esta semana" if data >= semana_de(hoje)[0].isoformat() else "Semana passada"
         linhas.append(linha_episodio(ep, grupo, log_ids, capas_at, deploys, nome))
     linhas.sort(key=lambda r: r["publicado"] or "", reverse=True)
     return linhas, {"avisos": avisos, "log_ids": log_ids, "capas_at": capas_at}
@@ -522,26 +531,41 @@ def vercel_cartao(servicos: list[dict], deploys):
                                 sum(datetime.fromtimestamp(x["created"] / 1000, timezone.utc) >= um_dia for x in deploys),
                                 detalhe="cada deploy zera o cache"))
     try:
+        inicio = agora().astimezone(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         r = requests.get(f"https://api.vercel.com/v1/billing/charges?teamId={VERCEL_TEAM}"
-                         f"&from={(agora() - timedelta(days=31)).astimezone(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+                         f"&from={inicio:%Y-%m-%dT%H:%M:%SZ}"
                          f"&to={agora().astimezone(timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
                          headers={"Authorization": f"Bearer {os.environ['VERCEL_TOKEN']}"}, timeout=60)
         r.raise_for_status()
         linhas = [json.loads(l) for l in r.text.splitlines() if l.strip()]
-        desde = min(l["ChargePeriodStart"] for l in linhas)[:10]
-        soma, ontem = Counter(), Counter()
-        dia_ontem = max(l["ChargePeriodStart"] for l in linhas)
+        custo, qtd, unid, ontem = Counter(), Counter(), {}, Counter()
+        dia_ontem = max((l["ChargePeriodStart"] for l in linhas), default="")
+        # só consumo: a mensalidade do Pro (ChargeCategory "Purchase") não sai do crédito
+        linhas = [l for l in linhas if l.get("ChargeCategory") == "Usage"]
         for l in linhas:
-            soma[l["ServiceName"]] += float(l.get("ConsumedQuantity") or 0)
+            nome = l["ServiceName"]
+            custo[nome] += float(l.get("EffectiveCost") or 0)
+            qtd[nome] += float(l.get("ConsumedQuantity") or 0)
+            unid[nome] = l.get("ConsumedUnit") or ""
             if l["ChargePeriodStart"] == dia_ontem:
-                ontem[l["ServiceName"]] += float(l.get("ConsumedQuantity") or 0)
-        for chave, nome, limite, unidade in VERCEL_LIMITES:
-            valor = round(soma[chave], 2)
-            servicos.append(metrica("Vercel", nome, valor, limite, unidade, status=pelo_uso(valor / limite),
-                                    detalhe=f"desde {desde[8:10]}/{desde[5:7]}; no último dia: {numero(ontem[chave])}",
+                ontem[nome] += float(l.get("ConsumedQuantity") or 0)
+        total = round(sum(custo.values()), 2)
+        dias = max(1, (agora().astimezone(timezone.utc) - inicio).days)
+        no_mes = calendar.monthrange(inicio.year, inicio.month)[1]
+        projecao = total / dias * no_mes
+        servicos.append(metrica("Vercel", "Crédito do mês (Pro)", total, VERCEL_CREDITO_USD, "US$",
+                                status=pelo_uso(total / VERCEL_CREDITO_USD),
+                                detalhe=f"desde 01/{inicio:%m}; no ritmo atual, US$ {numero(projecao, 2)} no mês",
+                                link=painel))
+        for nome in sorted(custo, key=custo.get, reverse=True)[:4]:
+            if custo[nome] < 0.01:
+                continue
+            servicos.append(metrica("Vercel", nome, round(custo[nome], 2), None, "US$",
+                                    detalhe=f"{numero(qtd[nome])} {UNIDADES.get(unid[nome].lower(), unid[nome].lower())} no mês; "
+                                            f"no último dia: {numero(ontem[nome])}",
                                     link=painel))
     except Exception as erro:
-        servicos.append(metrica("Vercel", "Consumo da cota", None, status="nao_conferido",
+        servicos.append(metrica("Vercel", "Crédito do mês (Pro)", None, status="nao_conferido",
                                 detalhe=f"A API de uso não respondeu ({str(erro)[:80]})", link=painel))
 
 
@@ -636,8 +660,8 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log, duplicados=None) -
         pedidos.append({"texto": "Aprovar o rascunho da newsletter (botão no chat onde ele foi mostrado)",
                         "prazo": "terça de manhã", "link": "https://resend.com/broadcasts", "nivel": "atencao"})
     if any(s["servico"] == "Vercel" and s["status"] == "erro" for s in servicos):
-        frases.append("a Vercel passou da cota grátis")
-        pedidos.append({"texto": "Descobrir por que a Vercel passou da cota grátis", "prazo": "esta semana",
+        frases.append("a Vercel passou do crédito de US$ 20 do mês")
+        pedidos.append({"texto": "Ver na Vercel o que passou do crédito do Pro (o excesso é cobrado)", "prazo": "esta semana",
                         "link": vercel, "nivel": "erro"})
     banda = next((s for s in servicos if s["metrica"] == "Banda do mês"), None)
     if banda and banda["status"] == "erro":
@@ -648,6 +672,14 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log, duplicados=None) -
         pedidos.append({"texto": f"Decidir {numero(duplicados['duvidosas'])} possíveis livros duplicados que não são óbvios "
                                  "(homônimos, autor diferente): peça pro Claude a lista do normalize_livros --auto",
                         "prazo": "quando puder", "link": None, "nivel": "atencao"})
+    try:
+        from flows import posts
+        post = posts.proximo_post()
+        if post:
+            pedidos.append({"texto": f"Revisar e postar no LinkedIn: “{post['titulo']}”",
+                            "prazo": posts.data_br(post["data"]), "link": posts.URL_PAGINA, "nivel": "atencao"})
+    except Exception as erro:
+        print(f"  posts: falhou ({erro})")
     for l in lembretes():
         pedidos.append({"texto": l["texto"], "prazo": l.get("prazo"), "link": l.get("link"), "nivel": "atencao"})
     for s in servicos:
@@ -661,7 +693,7 @@ def pagina(rotinas_, acervo_resumo, nl_etapas, servicos, log, duplicados=None) -
     else:
         titulo = "tudo em dia: as rotinas rodaram e o site está atualizado"
     return {"titulo": titulo[0].upper() + titulo[1:], "pedidos": pedidos[:5],
-            "desde": f"{semana_passada(date.today())[0]:%d/%m}"}
+            "desde": f"{inicio_semana(log):%d/%m}"}
 
 
 def grava_html(dados: dict):

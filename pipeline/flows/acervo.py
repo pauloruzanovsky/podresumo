@@ -54,6 +54,8 @@ PASTA = os.path.join(
 )
 # leva aberta sem nenhum evento há mais que isto = Travado
 HORAS_TRAVADO = 6
+# última leva fechada há até isto = a rotina diária segue rodando
+HORAS_ENTRE_LEVAS = 50
 
 # chave curta -> (trecho do nome no banco, playlist de uploads do canal)
 PODCASTS = {
@@ -191,8 +193,18 @@ def estado(log: list[dict] | None = None, banco: dict | None = None) -> dict:
     ultima = max(todas_levas, key=lambda l: l["fim"], default=None)
     if not ultima:
         return {"estado": "On hold", "leva": None, "desde": None, "detalhe": "Nenhuma leva ainda."}
-    return {"estado": "On hold", "leva": f"{ultima['podcast']} {ultima['leva']}", "desde": ultima["inicio"],
-            "detalhe": f"Leva {ultima['podcast']} {ultima['leva']}: {ultima['motivo']}."}
+    nome = f"{ultima['podcast']} {ultima['leva']}"
+    # Desde 16/11/2026 a rotina das 8h (seg–sáb) abre e fecha uma leva de 5
+    # na mesma execução: leva fechada há menos de HORAS_ENTRE_LEVAS (cobre o
+    # domingo sem acervo) ainda é o acervo andando, não parado.
+    horas = (datetime.now(timezone.utc) - datetime.fromisoformat(ultima["fim"])).total_seconds() / 3600
+    if horas <= HORAS_ENTRE_LEVAS:
+        quando = datetime.fromisoformat(ultima["inicio"]).strftime("%d/%m")
+        return {"estado": "Rodando", "leva": nome, "desde": ultima["inicio"],
+                "detalhe": f"5 por manhã, sem proxy, de segunda a sábado. Última leva ({nome}, {quando}): "
+                           f"{ultima['feitos']} de {len(ultima['ids'])} no site."}
+    return {"estado": "On hold", "leva": nome, "desde": ultima["inicio"],
+            "detalhe": f"Leva {nome}: {ultima['motivo']}."}
 
 
 def cmd_fim(args):

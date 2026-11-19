@@ -1,0 +1,86 @@
+<title>Posts do Podlibris</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+  /* Uma coluna: o calendário das sextas (mais nova em cima) e, embaixo, o post da vez com texto e slides.
+     Modelo do flows.posts pagina: os comentários CALENDARIO, DETALHE e ATUALIZADO são trocados pelo script. */
+  :root {
+    --fundo: #f7f2e7; --texto: #2b2521; --card: #fffcf6; --borda: #e8e3d7;
+    --apagado: #6b6155; --acao: #0f2e24; --sobre-acao: #ffffff; --destaque: #1f5240;
+    --ok: #1f6b3a; --ok-bg: rgba(46,139,87,.14); --vez: #7a4a06; --vez-bg: rgba(201,160,107,.28);
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: Geist, ui-sans-serif, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --fundo: #0f2e24; --texto: #f7f2e7; --card: #143a2e; --borda: #2b5143;
+    --apagado: #b8b4a4; --acao: #c9a06b; --sobre-acao: #0f2e24; --destaque: #dcbb84;
+    --ok: #7fd49a; --ok-bg: rgba(127,212,154,.14); --vez: #e8c58f; --vez-bg: rgba(201,160,107,.2); color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --fundo: #0f2e24; --texto: #f7f2e7; --card: #143a2e; --borda: #2b5143;
+    --apagado: #b8b4a4; --acao: #c9a06b; --sobre-acao: #0f2e24; --destaque: #dcbb84;
+    --ok: #7fd49a; --ok-bg: rgba(127,212,154,.14); --vez: #e8c58f; --vez-bg: rgba(201,160,107,.2); color-scheme: dark; }
+  body { background: var(--fundo); color: var(--texto); font: 16px/1.6 var(--sans); }
+  .pg { max-width: 46rem; margin: 0 auto; padding-block: 24px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 36px; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.2; }
+  h1 { font-size: 34px; }
+  h2 { font-size: 22px; }
+  .rotulo { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); margin: 0; }
+  .sub { color: var(--apagado); margin: 0; }
+  section { display: flex; flex-direction: column; gap: 14px; }
+  .cal { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--borda); border-radius: 14px; }
+  .semana { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; gap: 4px 14px; align-items: baseline; padding: 14px 18px; border-top: 1px solid var(--borda); }
+  .semana:first-child { border-top: 0; }
+  .dia { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .t { min-width: 0; overflow-wrap: anywhere; }
+  .t b { font-weight: 600; }
+  .nota { display: block; font-size: 13px; color: var(--apagado); }
+  .semana.vazio .t, .semana.vazio .dia { color: var(--apagado); }
+  .pill { font-size: 13px; font-weight: 500; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .pill.publicado { color: var(--ok); background: var(--ok-bg); }
+  .pill.preparado { color: var(--vez); background: var(--vez-bg); }
+  .pill.falta { color: var(--apagado); border: 1px dashed var(--borda); }
+  .pill.vazio, .pill.cancelado { color: var(--apagado); }
+  .post { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 20px; white-space: pre-wrap; min-width: 0; overflow-wrap: anywhere; }
+  .linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  button { font: 500 14px var(--sans); background: var(--acao); color: var(--sobre-acao); border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+  code { font-size: 13px; background: var(--card); border: 1px solid var(--borda); border-radius: 6px; padding: 2px 6px; overflow-wrap: anywhere; }
+  .slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 12px; }
+  .slides figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .slides img { width: 100%; border-radius: 10px; border: 1px solid var(--borda); display: block; }
+  figcaption { font-size: 13px; color: var(--apagado); }
+  @media (max-width: 30rem) { .semana { grid-template-columns: minmax(0, 1fr) auto; } .semana .t { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+
+<div class="pg">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <p class="rotulo">LinkedIn · atualizado em <!--ATUALIZADO--></p>
+    <h1>Posts do Podlibris</h1>
+    <p class="sub">Um post por semana, na sexta. A rotina de segunda prepara o texto e o carrossel da sexta seguinte, pra dar tempo de ler e ajustar.</p>
+  </header>
+
+  <section>
+    <h2>Calendário</h2>
+    <ul class="cal">
+<!--CALENDARIO-->
+    </ul>
+  </section>
+<!--DETALHE-->
+</div>
+
+<script>
+  const botao = document.getElementById('copiar');
+  if (botao) botao.addEventListener('click', () => {
+    const caixa = document.getElementById('texto');
+    navigator.clipboard.writeText(caixa.innerText).then(() => {
+      botao.textContent = 'Copiado';
+      setTimeout(() => { botao.textContent = 'Copiar texto'; }, 2000);
+    }).catch(() => {
+      const r = document.createRange(); r.selectNodeContents(caixa);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      botao.textContent = 'Texto selecionado: Ctrl+C';
+    });
+  });
+</script>

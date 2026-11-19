@@ -9,7 +9,7 @@ Diretório de trabalho: `C:\Users\Paulo\Desktop\Atalhos\CLAUDE COWORK\PROJECTS\p
 Se um passo falhar, siga com os outros e diga qual falhou no relatório.
 
 1. **Rotinas do app** (só o app sabe quando rodaram). Com `list_scheduled_tasks`
-   e, pra cada uma das quatro abaixo, `list_task_runs` com `limit: 1`, grave
+   e, pra cada uma das cinco abaixo, `list_task_runs` com `limit: 1`, grave
    `respostas\rotinas-painel.json` (UTF-8) assim:
 
    ```json
@@ -17,7 +17,8 @@ Se um passo falhar, siga com os outros e diga qual falhou no relatório.
      "ultima": "<lastRunAt>", "proxima": "<nextRunAt>", "status": "<status da última execução>", "resumo": "<summary dela, ou null>"},
     {"id": "podlibris-lote-semanal", "nome": "Extração semanal", "quando": "domingo às 21h", ...},
     {"id": "podlibris-newsletter-semanal", "nome": "Coleta e newsletter", "quando": "segunda às 9h", ...},
-    {"id": "podlibris-painel", "nome": "Painel", "quando": "todo dia às 4h", ...}]
+    {"id": "podlibris-painel", "nome": "Painel", "quando": "todo dia às 4h", ...},
+    {"id": "podlibris-post-semanal", "nome": "Post do LinkedIn", "quando": "segunda às 10h30", ...}]
    ```
 
    Sem `lastRunAt`, `"ultima": null`. Se as ferramentas não estiverem
@@ -31,5 +32,11 @@ Se um passo falhar, siga com os outros e diga qual falhou no relatório.
    `Artifact` publish com a mesma `url` e `file_path` no caminho absoluto de
    `respostas\painel.html`. Sem `icon`. Não mexa em mais nada.
 
-4. No relatório, uma linha: painel atualizado (ou o passo que falhou), o
+4. **Desligar a escuta:** publicar faz esta sessão escutar os comentários do
+   painel, e quem responde comentário é a sessão em que o Paulo estiver
+   trabalhando. Logo depois do publish, `ArtifactComments` com
+   `action: "watch"`, `on: false` e `url` https://claude.ai/artifact/N51qkMrsGWiZ4ejZs1f7Qm.
+   Não responda nem resolva comentários aqui.
+
+5. No relatório, uma linha: painel atualizado (ou o passo que falhou), o
    título que o `flows.painel` imprimiu e os alertas.

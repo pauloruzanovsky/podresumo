@@ -73,10 +73,14 @@ comitar chave.
     https://claude.ai/artifact/5Rq8ymcDLy5a8gAk5FMyf1
 12. `painel` — painel de controle: rotinas (app e GitHub Actions), etapas de
     cada episódio da semana, acervo (Rodando, On hold ou Travado), newsletter e
-    cartões de Supabase, Vercel (consumo da cota pela API de cobrança), Resend
+    cartões de Supabase, Vercel (plano Pro desde nov/2026: gasto do mês contra
+    o crédito de US$ 20, pela API de cobrança), Resend
     e Webshare. Só lê; grava `respostas/painel.json` e a página pronta
     `respostas/painel.html` (o modelo `pipeline/painel/modelo.html` com os dados
     embutidos). Serviço que não respondeu sai "não conferido", nunca "ok".
+    Comentário no painel é respondido pela sessão em que o Paulo estiver
+    trabalhando (ela liga a escuta com `ArtifactComments watch`); as rotinas
+    desligam a escuta logo depois de publicar (passo 4 do PUBLICAR.md).
     Pedidos à mão (ex.: publicar um post) ficam em `pipeline/painel/lembretes.json`
     (`texto`, `prazo`, `link`, `ate`). Painel privado: https://claude.ai/artifact/N51qkMrsGWiZ4ejZs1f7Qm (receita
     de republicar em `pipeline/painel/PUBLICAR.md`). Segue as regras de
@@ -141,6 +145,12 @@ checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
 - `podlibris-painel` — todo dia às 4h: roda `flows.painel` e republica o
   painel de controle seguindo `pipeline/painel/PUBLICAR.md`. As rotinas de
   domingo e segunda também republicam no fim. Não gasta API.
+- `podlibris-post-semanal` — segunda 10h30: prepara o post de LinkedIn da
+  sexta (texto no estilo do Paulo, carrossel 1080×1350 renderizado pelo
+  Chrome com `flows.posts render`), grava em `posts/<pasta>/`, marca
+  "preparado" em `posts/calendario.json` e republica a página dos posts
+  (https://claude.ai/artifact/9D5RAD7eHcEo1VDxENnD8c) e o painel, que mostra
+  o pedido de revisar. Nunca posta. Não gasta API.
 - GitHub Actions `manter-banco-ativo.yml` — acesso diário ao Supabase, de
   reserva.
 - GitHub Actions `deploy-diario.yml` (7h) e `backup-banco.yml` (domingo 3h,
@@ -180,7 +190,9 @@ checks. Etapa nova do pipeline registra ali com `etapas.registra(tipo, ...)`.
   guardados até o próximo deploy (os dados só mudam com deploy). Com 60 s e
   depois 1 dia, os robôs estouraram a cota grátis da Vercel em nov/2026 (695
   mil ISR writes de 200 mil, 4h06 de CPU de 4h). Não pôr prazo de volta, e
-  não multiplicar deploys: cada um zera o cache.
+  não multiplicar deploys: cada um zera o cache. A Vercel conta 1 escrita a
+  cada 8 KB, e quem mais gerava escrita eram robôs de IA (meta-webindexer,
+  GPTBot): estão barrados em `app/robots.ts` desde 19/11/2026.
   Endereço antigo por id redireciona pro slug.
 - Newsletter: inscrição em `/api/inscrever` manda o link assinado
   (`lib/confirmacao.ts`); o contato só entra no segmento do Resend pelo botão de

@@ -1,0 +1,26 @@
+[
+ {
+  "data": "2026-11-07",
+  "titulo": "Lançamento do Podlibris",
+  "formato": "vídeo de tela",
+  "status": "publicado",
+  "pasta": null,
+  "nota": "Post pessoal contando por que o site existe. O vídeo comeu o texto: testar imagem ou carrossel."
+ },
+ {
+  "data": "2026-11-13",
+  "titulo": "Os 33 livros que os quatro podcasts citam",
+  "formato": "carrossel",
+  "status": "publicado",
+  "pasta": "2026-11-livros-em-comum",
+  "nota": "Carrossel de 7 slides e 3 stories com menção ao Os Sócios."
+ },
+ {
+  "data": "2026-11-20",
+  "titulo": "Os livros que o Bruno Perini mais cita",
+  "formato": "carrossel",
+  "status": "preparado",
+  "pasta": "2026-11-livros-do-perini",
+  "nota": "Ranking da página /pessoa/bruno-perini (250 livros em 217 episódios), com as falas repetidas ao longo dos anos."
+ }
+]
