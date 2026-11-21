@@ -296,7 +296,10 @@ def coletar(batch_id, esperar=True):
             sys.exit(3)
     aguardar(batch_id)
 
-    titulos = {e["id"]: e["titulo"] for e in episodios()}
+    # Só o título: trazer as transcrições do banco inteiro aqui gastava o
+    # Disk IO do Supabase grátis à toa (travou em 19/11/2026).
+    titulos = {e["id"]: e["titulo"] for e in supabase.table("episodes")
+               .select("id, titulo").execute().data}
     ok = falhas = 0
     total_livros = 0
     tokens_in = tokens_out = 0
