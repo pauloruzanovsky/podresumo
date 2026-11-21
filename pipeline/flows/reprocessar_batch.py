@@ -553,7 +553,9 @@ def main():
             batch_id = open(ULTIMO_LOTE, encoding="utf-8").read().strip()
         coletar(batch_id, esperar=not args.sem_esperar)
         # coletado: some o marcador, pra não coletar o mesmo lote de novo
-        if args.coletar == "ultimo":
+        # (vale também quando o lote foi coletado pelo id, não por "ultimo")
+        if (os.path.exists(ULTIMO_LOTE)
+                and open(ULTIMO_LOTE, encoding="utf-8").read().strip() == batch_id):
             os.remove(ULTIMO_LOTE)
     elif args.enviar:
         eps = alvo()
