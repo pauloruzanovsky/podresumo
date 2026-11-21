@@ -292,6 +292,37 @@ def linha_episodio(ep, grupo, log_ids, capas_at, deploys, podcast_nome):
     }
 
 
+def proxima_etapa(ep: dict, lista_rotinas: list[dict]) -> dict | None:
+    """Quando roda a próxima etapa que falta a um episódio, e qual rotina a faz.
+    `atrasada` = a hora já passou e a etapa não andou: é o sinal de travado."""
+    def quando(rid):
+        r = next((x for x in lista_rotinas if x["id"] == rid), None)
+        return (r or {}).get("proxima"), (r or {}).get("nome", rid)
+
+    if ep["tra"] == "falta":
+        hora, rotina = quando("podresumo-baixar-transcricoes")
+        etapa = "Transcrição"
+    elif ep["ext"] == "falta":
+        hora, rotina = quando("podlibris-lote-semanal")
+        etapa = "Livros"
+    elif ep["cap"] == "falta" or ep["site"] == "falta":
+        # capas, slug e deploy saem juntos na extração de domingo; o deploy
+        # diário das 7h (GitHub) pega o que tiver ficado pra trás
+        hora, rotina = quando("podlibris-lote-semanal")
+        sete = agora().replace(hour=7, minute=0, second=0, microsecond=0)
+        if sete <= agora():
+            sete += timedelta(days=1)
+        if ep["site"] == "falta" and (not hora or iso(sete) < hora):
+            hora, rotina = iso(sete), "Deploy diário"
+        etapa = "Capas e slug" if ep["cap"] == "falta" else "No site"
+    else:
+        return None
+    if not hora:
+        return {"etapa": etapa, "quando": None, "rotina": rotina, "atrasada": False}
+    return {"etapa": etapa, "quando": hora, "rotina": rotina,
+            "atrasada": hora < iso(agora() - timedelta(minutes=30))}
+
+
 def inicio_semana(log: list[dict]) -> date:
     """Primeiro dia da seção de episódios: a semana fechada da newsletter até
     ela ser enviada; depois do envio, só a semana corrente."""
@@ -728,6 +759,8 @@ def main():
     else:
         acervo_resumo = {"estado": "não conferido", "detalhe": "Não deu pra ler o acervo."}
         acervo_progresso, acervo_eps, acervo_ocorrencias = [], [], []
+    for e in eps:
+        e["proxima"] = proxima_etapa(e, lista_rotinas)
     nl = secao("newsletter", newsletter, log, servicos, padrao=None) if banco_ok else None
     nl_etapas, nl_resumo = nl or ([], {"etapa_atual": "não conferido"})
     secao("vercel", vercel_cartao, servicos, deploys)
@@ -739,6 +772,12 @@ def main():
     for r in lista_rotinas:
         if r["status"] in ("erro", "atencao", "nao_conferido"):
             alertas.append({"nivel": r["status"], "area": "Rotinas", "texto": f"{r['nome']}: {r['resumo']}"})
+    atrasados = [e for e in eps if (e.get("proxima") or {}).get("atrasada") and e["site"] == "falta"]
+    if atrasados:
+        px = atrasados[0]["proxima"]
+        alertas.append({"nivel": "erro", "area": "Episódios",
+                        "texto": f"{len(atrasados)} episódio(s) parado(s) em {px['etapa'].lower()}: "
+                                 f"{px['rotina']} devia ter rodado {px['quando'][:16].replace('T', ' ')}"})
     if acervo_resumo.get("estado") == "Travado":
         alertas.append({"nivel": "erro", "area": "Acervo", "texto": acervo_resumo["detalhe"]})
     for s in servicos:

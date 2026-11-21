@@ -121,6 +121,7 @@
   <section class="card" id="semana">
     <h2 id="semana-h"></h2>
     <ol class="caminho" id="semana-caminho"></ol>
+    <div id="semana-proxima" style="display:flex;flex-direction:column;gap:6px"></div>
     <ul class="lista" id="semana-parados"></ul>
     <details id="semana-mais"><summary id="semana-mais-s">Cada episódio, etapa por etapa</summary><ul class="lista" id="semana-lista"></ul></details>
   </section>
@@ -249,10 +250,31 @@ const D = /*__DADOS__*/null;
     $('semana-caminho').append(li);
   });
   const parados = eps.filter((e) => !ok(e.site));
+  // quando anda: a próxima rotina que faz a etapa que falta (atrasada = já devia ter rodado)
+  const hora = (s) => dia(s).replace(/,/, '').replace(/(\d{2}):(\d{2})$/, '$1h$2');
+  const anda = (px) => !px ? '' : px.atrasada
+    ? 'atrasada: ' + px.rotina + ' devia ter rodado ' + hora(px.quando)
+    : px.quando ? 'anda ' + hora(px.quando) + ' (' + px.rotina + ')' : 'espera ' + px.rotina;
+  const grupos = new Map();
+  for (const e of parados) {
+    const px = e.proxima; if (!px) continue;
+    const k = px.etapa + '|' + px.quando + '|' + px.rotina;
+    if (!grupos.has(k)) grupos.set(k, {px, n: 0});
+    grupos.get(k).n++;
+  }
+  for (const {px, n} of [...grupos.values()].sort((a, b) => (a.px.quando || '').localeCompare(b.px.quando || ''))) {
+    const pr = el('p', null); pr.style.margin = '0';
+    pr.append(pill(px.atrasada ? 'erro' : 'ok', px.atrasada ? 'Atrasada' : 'No prazo'), ' ');
+    pr.append(el('b', null, (n === 1 ? '1 episódio espera ' : n + ' episódios esperam ') + px.etapa.toLowerCase()));
+    pr.append(' · ' + anda(px));
+    $('semana-proxima').append(pr);
+  }
+  if (!grupos.size) $('semana-proxima').hidden = true;
   for (const e of parados.slice(0, 5)) {
     const li = el('li');
     const passo = PASSOS.find(([k]) => !ok(e[k]));
-    li.append(el('span', 't', e.titulo), el('span', 'd', e.podcast + ' · falta: ' + (passo ? passo[1].toLowerCase() : '?')));
+    const d = e.podcast + ' · falta: ' + (passo ? passo[1].toLowerCase() : '?') + (e.proxima ? ' · ' + anda(e.proxima) : '');
+    li.append(el('span', 't', e.titulo), el('span', 'd' + (e.proxima && e.proxima.atrasada ? ' pct bad' : ''), d));
     $('semana-parados').append(li);
   }
   if (!parados.length) $('semana-parados').hidden = true;
