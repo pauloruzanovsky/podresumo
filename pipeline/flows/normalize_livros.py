@@ -93,6 +93,11 @@ TITLE_FIXES = {
     "Four Thousand Weeks": "Quatro Mil Semanas",
     "Start with Why": "Comece pelo Porquê",
     "Leaders Eat Last": "Líderes se Servem por Último",
+    # duas revisões diferentes do mesmo grupo: sem o ":" a chave não junta as duas
+    "Electrolyzed-Reduced Water: Review II: Safety Concerns and Effectiveness as a Source of Hydrogen Water":
+        "Electrolyzed-Reduced Water Review II: Safety Concerns and Effectiveness as a Source of Hydrogen Water",
+    "Electrolyzed-Reduced Water: Review I. Molecular Hydrogen Is the Exclusive Agent Responsible for the Therapeutic Effects":
+        "Electrolyzed-Reduced Water Review I: Molecular Hydrogen Is the Exclusive Agent Responsible for the Therapeutic Effects",
 }
 
 AUTHOR_FIXES = {
@@ -138,6 +143,42 @@ AUTHOR_FIXES = {
     "Studying Studies": "Peter Attia",
     # a de Homero, citada no Modern Wisdom sem autor
     "Odisseia": "Homero",
+    # Duvidosos revisados pelo Paulo em 21/11/2026: mesma obra, o autor só
+    # veio escrito de outro jeito (ou faltou em uma das entradas)
+    "The Innovator's Dilemma": "Clayton Christensen",
+    "Conscious Loving": "Gay Hendricks e Kathlyn Hendricks",
+    "Freakonomics": "Steven Levitt e Stephen J. Dubner",
+    "Mental Toughness Training for Sports": "Jim Loehr",
+    "A Wandering Mind Is an Unhappy Mind": "Matthew Killingsworth e Daniel Gilbert",
+    "The Healthy Writer": "Joanna Penn e Euan Lawson",
+    "O Profeta": "Kahlil Gibran",
+    "The Prophet": "Kahlil Gibran",
+    # Haleh Liza Gafori é a tradutora
+    "Gold": "Rumi",
+    "Team of Teams": "Stanley McChrystal",
+    "Criticism Capture Is More Dangerous Than Audience Capture": "Ethan Strauss",
+    "What We Owe the Future": "William MacAskill",
+    "I Don't Want to Talk About It": "Terrence Real",
+    "Consilience": "Edward O. Wilson",
+    "Brain Energy": "Christopher M. Palmer",
+    "Chatter": "Ethan Kross",
+    "Arquipélago Gulag": "Aleksandr Soljenítsin",
+    "The Evolution of Human Sexuality": "Donald Symons",
+    "A Second Chance": "Catherine Hoke",
+    "Aerobics": "Kenneth Cooper",
+    "Voluntary activation of the sympathetic nervous system and attenuation of the innate immune response in humans": "Kox et al.",
+    "The Anabolic Diet": "Mauro Di Pasquale",
+    "Hillbilly Elegy": "J.D. Vance",
+    "Marketing Myopia": "Theodore Levitt",
+    "Good Reasons for Bad Feelings": "Randolph Nesse",
+    "Blind Artist": "Gary Haun",
+    "Make the First Move": "Jon Birger",
+    # o post favorito do Chris Williamson; "Kailash Nadh" foi autor errado
+    "What Do You Want to Want?": "Kyle Eschenroeder",
+    # homônimos (ver TITULOS_HOMONIMOS): a entrada sem autor é desta obra
+    "Hamlet": "William Shakespeare",
+    "Spark": "John Ratey",
+    "Endurance": "Alfred Lansing",
 }
 
 # Uma entrada que na verdade são duas obras. O extrator às vezes junta dois
@@ -216,6 +257,19 @@ ALIASES = [
     ["Por que nós dormimos", "Why We Sleep"],
     ["Armas, Germes e Aço", "Guns, Germs, and Steel"],
     ["Nação Dopamina", "Dopamine Nation"],
+    # Duvidosos revisados pelo Paulo em 21/11/2026: mesma obra sem autor,
+    # com o título escrito de outro jeito
+    ["O Profeta", "The Prophet"],
+    ["Epopeia de Gilgamesh", "Epopeia de Gilgámesh", "A Epopeia de Gilgamesh"],
+    ["DSM", "DSM - Manual Diagnóstico e Estatístico de Transtornos Mentais"],
+    ["Dying Every Day", "Dying Every Day: Seneca at the Court of Nero"],
+    ["Light-Emitting Diodes in Dermatology",
+     "Light-Emitting Diodes in Dermatology: A Systematic Review of Randomized Controlled Trials"],
+    ["Cluster Training", "Cluster Training: A Novel Approach to Developing Maximal Strength"],
+    ["The Adventures of Huckleberry Finn", "Adventures of Huckleberry Finn"],
+    ["The Oxygen Advantage", "Oxygen Advantage"],
+    ["The Ethnopharmacologic Search for Psychoactive Drugs",
+     "Ethnopharmacologic Search for Psychoactive Drugs"],
 ]
 
 # Títulos genéricos que são de fato obras diferentes de autores diferentes.
@@ -250,6 +304,15 @@ TITULOS_HOMONIMOS = {
     # a série "The Rings of Power" — o subtítulo cai na chave e juntava os dois
     "Predator",
     "The Lord of the Rings",
+    # Duvidosos revisados pelo Paulo em 21/11/2026: obras diferentes com o
+    # mesmo título (a entrada sem autor, quando há, vai pro autor de
+    # AUTHOR_FIXES)
+    "Hamlet", "Spark", "The Gift", "Kissinger", "Endurance", "Endure",
+    "Open", "Blueprint", "True Believer", "Truth", "Mindfulness",
+    "The Art of Nonfiction", "Peak", "The Second World War", "Abundance",
+    "Tough", "Confidence", "Shift", "Adrift", "Chaos", "Henry V", "The Bear",
+    "Leadership", "Principia Mathematica", "The First World War", "Outraged",
+    "The Secret History",
 }
 
 # Entradas que precisam de decisão humana e que o script não tenta consertar.
@@ -279,6 +342,13 @@ def slug_titulo(titulo: str) -> str:
     # Artigo inicial não distingue livro: "A Psicologia Financeira" e
     # "Psicologia Financeira" ficavam em grupos separados e nunca se fundiam.
     return re.sub(r"^(a|o|as|os|um|uma|the|an)\s+", "", t)
+
+
+def sobrenomes(autor: str) -> set[str]:
+    """Último nome de cada autor. Comparar o nome inteiro juntava homônimos
+    pelo prenome: o "Hamlet" de William Faulkner com o de William Shakespeare."""
+    normal = re.sub(r"[^\w\s,/&]", " ", sem_acento(autor).lower())
+    return {p.split()[-1] for p in re.split(r"\s+e\s+|\s+and\s+|[,/&]", normal) if p.split()}
 
 
 def chave_autor(autor: str) -> str:
@@ -389,7 +459,7 @@ def monta_plano(livros, so_obvios=False):
         # "Jaws" de Peter Benchley não pode virar o de Kahn e Ehrlich
         outro_autor = (
             slug_titulo(titulo) in homonimos and autor
-            and not set(chave_autor(autor).split()) & set(chave_autor(correcao or "").split())
+            and not sobrenomes(autor) & sobrenomes(correcao or "")
         )
         if correcao and not eh_outro and not outro_autor:
             autor = correcao
@@ -462,7 +532,9 @@ def monta_plano(livros, so_obvios=False):
             # grupo se juntam ("Duna" de Herbert com "Duna" sem autor), e o
             # filme continua sendo filme.
             so_livros = [m for m in membros if m["tipo"] == "livro"]
-            if so_livros and len(so_livros) < len(membros) and not chave.startswith("alias:"):
+            # (vale pra ALIASES também: "A Prophet", o filme, tem a mesma
+            # chave de "The Prophet" e entraria no "O Profeta")
+            if so_livros and len(so_livros) < len(membros):
                 membros = so_livros
                 if len(membros) < 2:
                     continue
